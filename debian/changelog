@@ -1,3 +1,9 @@
+lm-sensors (1:2.9.0-18) unstable; urgency=medium
+
+  * Also detect udev with /dev/.udevdb (closes: bug#299563).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 15 Mar 2005 10:47:49 +0100
+
 lm-sensors (1:2.9.0-17) unstable; urgency=high
 
   * Don't build p4b_smbus.o on non-x86 machines
