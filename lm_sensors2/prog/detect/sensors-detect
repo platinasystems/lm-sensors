@@ -100,9 +100,8 @@ use vars qw(@pci_adapters @chip_ids @undetectable_adapters);
        vendid => 0x1039,
        devid  => 0x0008,
        func => 0,
-       procid => "Silicon Integrated Systems SIS5595",
-       driver => "i2c-sis5595",
-       match => sub {  $_[0] =~ /^SMBus SIS5595 adapter at [0-9,a-f]{4}/ },
+       procid => "Silicon Integrated Systems 85C503",
+       match => sub { 0 },
      } ,
      {
        vendid => 0x10b9,
@@ -120,21 +119,13 @@ use vars qw(@pci_adapters @chip_ids @undetectable_adapters);
        driver => "i2c-hydra",
        match => sub { $_[0] =~ /^Hydra i2c/ },
      },
-     { 
-       vendid => 0x1022,
-       devid  => 0x740b,
-       func => 3,
-       procid => "AMD-756 Athlon ACPI",
-       driver => "i2c-amd756",
-       match => sub { $_[0] =~ /^SMBus AMD756 adapter at [0-9,a-f]{4}/ },
-     },
 );
 
 use subs qw(lm78_detect lm78_isa_detect lm78_alias_detect lm75_detect 
             lm80_detect w83781d_detect w83781d_alias_detect
             w83781d_isa_detect gl518sm_detect gl520sm_detect adm9240_detect 
             adm1021_detect sis5595_isa_detect eeprom_detect
-            adm1022_detect ltc1710_detect gl525sm_detect);
+            adm1022_detect ltc1710_detect);
 
 # This is a list of all recognized chips. 
 # Each entry must have the following fields:
@@ -240,13 +231,6 @@ use subs qw(lm78_detect lm78_isa_detect lm78_alias_detect lm75_detect
        alias_detect => sub { w83781d_alias_detect 3, @_ },
      } ,
      {
-       name => "Asus AS99127F",
-       driver => "w83781d",
-       i2c_addrs => [0x00..0x68,0x6a..0x7f], 
-       i2c_driver_addrs => [0x20..0x2f], 
-       i2c_detect => sub { w83781d_detect 4, @_},
-     } ,
-     {
        name => "Genesys Logic GL518SM Revision 0x00",
        driver => "gl518sm",
        i2c_addrs => [0x2c, 0x2d],
@@ -263,12 +247,6 @@ use subs qw(lm78_detect lm78_isa_detect lm78_alias_detect lm75_detect
        driver => "gl520sm",
        i2c_addrs => [0x2c, 0x2d],
        i2c_detect => sub { gl520sm_detect @_} ,
-     },
-     {
-       name => "Genesys Logic GL525SM",
-#        driver => "xxxxxxx",
-       i2c_addrs => [0x2d],
-       i2c_detect => sub { gl525sm_detect @_} ,
      },
      {
        name => "Analog Devices ADM9240",
@@ -311,18 +289,6 @@ use subs qw(lm78_detect lm78_isa_detect lm78_alias_detect lm75_detect
        driver => "adm1021",
        i2c_addrs => [0x18..0x1a,0x29..0x2b,0x4c..0x4e],
        i2c_detect => sub { adm1021_detect 3, @_ },
-     },
-     {
-       name => "National Semiconductor LM84",
-       driver => "adm1021",
-       i2c_addrs => [0x18..0x1a,0x29..0x2b,0x4c..0x4e],
-       i2c_detect => sub { adm1021_detect 4, @_ },
-     },
-     {
-       name => "Genesys Logic GL523SM",
-       driver => "adm1021",
-       i2c_addrs => [0x18..0x1a,0x29..0x2b,0x4c..0x4e],
-       i2c_detect => sub { adm1021_detect 5, @_ },
      },
      {
        name => "Analog Devices ADM1022",
@@ -636,7 +602,6 @@ $IOCTL_I2C_MDELAY = 0x0706;
 $IOCTL_I2C_SLAVE = 0x0703;
 $IOCTL_I2C_TENBIT = 0x0704;
 $IOCTL_I2C_SMBUS = 0x0720;
-
 
 
 use vars qw($SMBUS_READ $SMBUS_WRITE $SMBUS_QUICK $SMBUS_BYTE $SMBUS_BYTE_DATA 
@@ -974,13 +939,13 @@ sub add_isa_to_chips_detected
         not exists $new_misdetected_ref->[$i]->{isa_addr} and
         defined $alias_detect and
         $new_misdetected_ref->[$i]->{chipname} eq $datahash->{chipname}) {
-      open FILE,"/dev/i2c-$new_misdetected_ref->[$i]->{i2c_devnr}" or
+      open FILE,"/dev/i2c$new_misdetected_ref->[$i]->{i2c_devnr}" or
            print("Can't open ",
-                 "/dev/i2c-$new_misdetected_ref->[$i]->{i2c_devnr}?!?\n"),
+                 "/dev/i2c$new_misdetected_ref->[$i]->{i2c_devnr}?!?\n"),
            next;
       i2c_set_slave_addr \*FILE,$new_misdetected_ref->[$i]->{i2c_addr} or
            print("Can't set I2C address for ",
-                 "/dev/i2c-$new_misdetected_ref->[$i]->{i2c_devnr}?!?\n"),
+                 "/dev/i2c$new_misdetected_ref->[$i]->{i2c_devnr}?!?\n"),
            next;
       if (&$alias_detect ($datahash->{isa_addr},\*FILE,
                           $new_misdetected_ref->[$i]->{i2c_addr})) {
@@ -1000,13 +965,13 @@ sub add_isa_to_chips_detected
         not exists $new_detected_ref->[$i]->{isa_addr} and
         defined $alias_detect and
         $new_detected_ref->[$i]->{chipname} eq $datahash->{chipname}) {
-      open FILE,"/dev/i2c-$new_detected_ref->[$i]->{i2c_devnr}" or
+      open FILE,"/dev/i2c$new_detected_ref->[$i]->{i2c_devnr}" or
            print("Can't open ",
-                 "/dev/i2c-$new_detected_ref->[$i]->{i2c_devnr}?!?\n"),
+                 "/dev/i2c$new_detected_ref->[$i]->{i2c_devnr}?!?\n"),
            next;
       i2c_set_slave_addr \*FILE,$new_detected_ref->[$i]->{i2c_addr} or
            print("Can't set I2C address for ",
-                 "/dev/i2c-$new_detected_ref->[$i]->{i2c_devnr}?!?\n"),
+                 "/dev/i2c$new_detected_ref->[$i]->{i2c_devnr}?!?\n"),
            next;
       if (&$alias_detect ($datahash->{isa_addr},\*FILE,
                           $new_detected_ref->[$i]->{i2c_addr})) {
@@ -1060,8 +1025,8 @@ sub scan_adapter
   # As we modify it, we need a copy
   my @not_to_scan = @$not_to_scan;
 
-  open FILE,"/dev/i2c-$adapter_nr" or 
-       (print "Can't open /dev/i2c-$adapter_nr ($!)\n"), return;
+  open FILE,"/dev/i2c$adapter_nr" or 
+       (print "Can't open /dev/i2c$adapter_nr ($!)\n"), return;
 
   # Now scan each address in turn
   foreach $addr (0..0x7f) {
@@ -1281,8 +1246,7 @@ sub lm80_detect
   return (3);
 }
   
-# $_[0]: Chip to detect (0 = W83781D, 1 = W83782D, 2 = W83783S,
-#                        3 = W83627HF, 4 = AS99127F)
+# $_[0]: Chip to detect (0 = W83781D, 1 = W83782D, 2 = W83783S, 3 = W83627HF)
 # $_[1]: A reference to the file descriptor to access this chip.
 #        We may assume an i2c_set_slave_addr was already done.
 # $_[2]: Address
@@ -1293,33 +1257,25 @@ sub lm80_detect
 #   0x4a: I2C addresses of emulated LM75 chips
 #   0x4e: Vendor ID byte selection, and bank selection
 #   0x4f: Vendor ID
-#   0x58: Device ID (only when in bank 0); ignore LSB.
+#   0x58: Device ID (only when in bank 0); both 0x10 and 0x11 is seen for
+#         W83781D though Winbond documents 0x10 only.
 # Note: Fails if the W8378xD is not in bank 0!
 # Note: Detection overrules a previous LM78 detection
-# Note: AS99127F address register 0x48 not supported?
 sub w83781d_detect
 {
   my ($reg1,$reg2,@res);
   my ($chip,$file,$addr) = @_;
-  return unless (i2c_smbus_read_byte_data($file,0x48) == $addr)
-    or ($chip == 4);
+  return unless i2c_smbus_read_byte_data($file,0x48) == $addr;
   $reg1 = i2c_smbus_read_byte_data($file,0x4e);
   $reg2 = i2c_smbus_read_byte_data($file,0x4f);
-  if ($chip < 4) {
-    return unless (($reg1 & 0x80) == 0x00 and $reg2 == 0xa3) or 
-                  (($reg1 & 0x80) == 0x80 and $reg2 == 0x5c);
-  }
-  if ($chip == 4) {
-    return unless (($reg1 & 0x80) == 0x00 and $reg2 == 0xc3) or 
-                  (($reg1 & 0x80) == 0x80 and $reg2 == 0x12);
-  }
+  return unless (($reg1 & 0x80) == 0x00 and $reg2 == 0xa3) or 
+                (($reg1 & 0x80) == 0x80 and $reg2 == 0x5c);
   return unless ($reg1 & 0x07) == 0x00;
   $reg1 = i2c_smbus_read_byte_data($file,0x58) & 0xfe;
   return if $chip == 0 and  $reg1 != 0x10;
   return if $chip == 1 and  $reg1 != 0x30;
   return if $chip == 2 and  $reg1 != 0x40;
   return if $chip == 3 and  $reg1 != 0x20;
-  return if $chip == 4 and  $reg1 != 0x30;
   $reg1 = i2c_smbus_read_byte_data($file,0x4a);
   @res = (8);
   push @res, ($reg1 & 0x07) + 0x48 unless $reg1 & 0x08;
@@ -1416,20 +1372,6 @@ sub gl520sm_detect
   return (5);
 }
 
-# $_[0]: A reference to the file descriptor to access this chip.
-#        We may assume an i2c_set_slave_addr was already done.
-# $_[1]: Address
-# Returns: undef if not detected, (5) if detected.
-# Registers used:
-#   0x00: Device ID
-# Mediocre detection
-sub gl525sm_detect
-{
-  my ($file,$addr) = @_;
-  return unless i2c_smbus_read_byte_data($file,0x00) == 0x25;
-  return (5);
-}
-
 # $_[0]: Chip to detect (0 = ADM9240, 1 = DS1780, 2 = LM81)
 # $_[1]: A reference to the file descriptor to access this chip.
 #        We may assume an i2c_set_slave_addr was already done.
@@ -1477,16 +1419,13 @@ sub adm1022_detect
   return (8);
 }
 
-# $_[0]: Chip to detect
-#   (0 = ADM1021, 1 = MAX1617, 2 = MAX1617A, 3 = THMC10, 4 = LM84, 5 = GL523)
+# $_[0]: Chip to detect (0 = ADM1021, 1 = MAX1617, 2 = MAX1617A, 3 = THMC10)
 # $_[1]: A reference to the file descriptor to access this chip.
 #        We may assume an i2c_set_slave_addr was already done.
 # $_[2]: Address
 # Returns: undef if not detected, (6) or (3) if detected.
 # Registers used:
-#   0x04: Company ID (LM84 only)
 #   0xfe: Company ID
-#   0xff: Revision (Maxim only)
 #   0x02: Status
 # Note: Especially the Maxim has very bad detection; we give it a low 
 # confidence value.
@@ -1496,8 +1435,6 @@ sub adm1021_detect
   my ($chip, $file,$addr) = @_;
   return if $chip == 0 and i2c_smbus_read_byte_data($file,0xfe) != 0x41;
   return if $chip == 3 and i2c_smbus_read_byte_data($file,0xfe) != 0x49;
-  return if $chip == 4 and i2c_smbus_read_byte_data($file,0x04) != 0x00;
-  return if $chip == 5 and i2c_smbus_read_byte_data($file,0xfe) != 0x23;
   return if $chip == 2 and i2c_smbus_read_byte_data($file,0xfe) != 0x4d and
                            i2c_smbus_read_byte_data($file,0xff) != 0x01;
   # The remaining things are flaky at best. Perhaps something can be done
@@ -1651,7 +1588,7 @@ sub generate_modprobes
   }
   for ($i = 0; $i < $nr; $i ++) {
     foreach $detection (keys %adapters) {
-      $modprobes .= "modprobe $detection\n", last 
+      $modprobes .= "$detection\n", last 
                  if $adapters{$detection} == $i;
     }
   }
@@ -1660,7 +1597,7 @@ sub generate_modprobes
   $modprobes .= "# I2C chip drivers\n";
   foreach $chip (@chips_detected) {
     next if not @{$chip->{detected}};
-    $modprobes .= "modprobe $chip->{driver}\n";
+    $modprobes .= "$chip->{driver}\n";
     @optionlist = ();
     @probelist = ();
 
@@ -1732,18 +1669,10 @@ sub main
   print " This program will help you to determine which I2C/SMBus modules you ",
         "need to\n",
         " load to use lm_sensors most effectively.\n";
-  print " You need to have done a `make install', issued a `depmod -a' and ",
-        "made sure\n",
-        " `/etc/conf.modules' (or `/etc/modules.conf') contains the ",
-        "appropriate\n",
-        " module path before you can use some functions of this utility. ",
-        "Read\n",
-        " doc/modules for more information.\n";
-  print " Also, you need to be `root', or at least have access to the ",
-        "/dev/i2c-* files\n",
-        " for some things. You can use prog/mkdev/mkdev.sh to create these ",
-        "/dev files\n",
-        " if you do not have them already.\n";
+  print " You need to have installed lm-sensors modules\n",
+  	" before you can use some functions of this utility.\n";
+  print " Also, you need to be root', or at least have access to\n",
+  	" the /dev/i2c* files for some things.";
   print " If you have patched your kernel and have some drivers built-in ",
         "you can\n",
         " safely answer NO if asked to load some modules. In this case, ",
@@ -1813,7 +1742,7 @@ sub main
             "you edited\n",
             " `/etc/conf.modules' (or `/etc/modules.conf') for automatic ",
             "loading of\n",
-            " this module. If not, you won't be able to open any /dev/i2c-* ",
+            " this module. If not, you won't be able to open any /dev/i2c* ",
             "file.\n";
     } else {
       print " i2c-dev is not loaded. Do you want to load it now? (YES/no): ";
@@ -1822,7 +1751,7 @@ sub main
               "`/etc/conf.modules'\n",
               " (or `/etc/modules.conf') for automatic loading of this ",
               "module. If not,\n",
-              " you won't be able to open any /dev/i2c-* file (unless you",
+              " you won't be able to open any /dev/i2c* file (unless you",
               "have it built-in\n",
               " into your kernel)\n";
       } elsif (system "modprobe","i2c-dev") {
@@ -1847,9 +1776,8 @@ sub main
   my ($inp,@not_to_scan,$inp2);
   open INPUTFILE,"/proc/bus/i2c" or die "Couldn't open /proc/bus/i2c?!?";
   while (<INPUTFILE>) {
-    my ($dev_nr,$type,$adap,$algo) = /^i2c-(\S+)\s+(\S+)\s+(.*?)\s*\t\s*(.*?)\s+$/;
-    next if ($type eq "dummy");
     print "\n";
+    my ($dev_nr,$adap,$algo) = /^i2c-(\S+)\s+\S+\s+(.*?)\s*\t\s*(.*?)\s+$/;
     print "Next adapter: $adap ($algo)\n";
     print "Do you want to scan it? (YES/no/selectively): ";
     
@@ -1929,14 +1857,14 @@ sub main
   my ($modprobes,$configfile) = generate_modprobes $use_isa;
   print "\nWARNING! If you have some things built into your kernel, the \n",
         "below list will contain too many modules. Skip the appropriate ones!";
-  print "\nTo load everything that is needed, add this to some /etc/rc* ",
-        "file:\n\n";
+  print "\nTo load everything that is needed, edit /etc/modules and add the modules\n";
+  print "listed here to it:\n\n";
   print "#----cut here----\n";
   print $modprobes;
   print "#----cut here----\n";
   print "\nTo make the sensors modules behave correctly, add these lines to ",
-        "either\n",
-        "/etc/modules.conf or /etc/conf.modules:\n\n";
+  	"\n",
+	"/etc/modutils/local and run update-modules:\n\n";
   print "#----cut here----\n";
   print $configfile;
   print "#----cut here----\n";

@@ -40,7 +40,7 @@ COMPILE_KERNEL := 1
 # /usr/local/include/linux), set that directory here. Please check this out
 # if you get strange compilation errors; the default Linux i2c headers
 # may be used mistakenly.
-I2C_HEADERS=/usr/local/include
+I2C_HEADERS=../i2c
 #I2C_HEADERS=$(LINUX_HEADERS)
 
 # Uncomment the third line on SMP systems if the magic invocation fails. It

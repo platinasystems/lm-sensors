@@ -1,0 +1,5 @@
+This package is a source package that can be used to build modules that work
+with your custom built linux kernel. To do this, you probably want to use
+kernel-package. Install it and read /usr/share/kernel-package/README.modules .
+
+-- Joey Hess <joeyh@debian.org>

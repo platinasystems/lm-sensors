@@ -1,0 +1,5 @@
+#!/bin/sh
+
+depmod -a > /dev/null
+
+#DEBHELPER#

@@ -1,0 +1,18 @@
+Source: lm-sensors
+Section: misc
+Priority: optional
+Build-Depends: debhelper, bison, flex
+Maintainer: Joey Hess <joeyh@debian.org>
+Standards-Version: 2.4.0.0
+
+Package: lm-sensors-#KVERS#
+Architecture: i386
+Provides: lm-sensors-mod
+Recommends: lm-sensors (>= 2.3.2)
+Description: Kernel drivers to read temperature/voltage/fan sensors
+ Lm-sensors is a hardware health monitoring package for Linux. It allows you
+ to access information from temperature, voltage, and fan speed sensors. It
+ works with most newer systems.
+ .
+ This package contains the drivers, compiled for linux kernel
+ #KVERS#

@@ -1,0 +1,153 @@
+#!/usr/bin/make -f
+# This is fairly complicated since it can be called either to build the
+# source package, or to build a kernel module package.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# Strip epoch, which is at the _end_ of KDREV
+baseepoch=$(shell expr $(KDREV) : '.*:\([0-9]*\)' 2>/dev/null )
+ifneq ($(baseepoch),)
+EPOCH=$(baseepoch):
+endif
+REV=$(shell expr $(KDREV) : '\(.*\):[0-9]*' 2>/dev/null)
+ifeq ($(REV),)
+REV=$(KDREV)
+endif
+VERSION=$(shell dpkg-parsechangelog | grep ^Version: | cut -d ' ' -f 2)
+KSRC:=/usr/src/linux
+
+# Build everything except kernel modules.
+build:
+	dh_testdir
+	ln -sf kernel i2c/linux # A hack to make includes work.
+	$(MAKE) -C lm_sensors2 all-lib all-prog-sensors COMPILE_KERNEL=0 LINUX=$(KSRC)
+
+# Build kernel modules.
+build-modules:
+	dh_testdir
+	ln -sf kernel i2c/linux # A hack to make includes work.
+	cd lm_sensors2 && $(MAKE) LINUX=$(KSRC)
+	cd i2c && $(MAKE) LINUX=$(KSRC)
+
+clean:
+	dh_testdir
+	dh_testroot
+	cp -f debian/control.source debian/control
+	$(MAKE) -C lm_sensors2 clean  LINUX=$(KSRC)
+	$(MAKE) -C i2c clean  LINUX=$(KSRC)
+	dh_clean debian/lm-sensors-$(KVERS).* i2c/linux
+
+# Build the kernel module .deb.
+binary-modules: build-modules
+	# We have to hack the control file first.
+	sed 's/#KVERS#/$(KVERS)/g' debian/control.modules > debian/control
+	# And set up scripts so it can find them.
+	ln -sf lm-sensors-mod.postinst debian/lm-sensors-$(KVERS).postinst
+	ln -sf lm-sensors-mod.postrm debian/lm-sensors-$(KVERS).postrm
+	ln -sf lm-sensors-mod.README.Debian debian/lm-sensors-$(KVERS).README.debian
+
+	dh_clean -k
+	dh_testdir
+	dh_testroot
+	dh_installdirs lib/modules/$(KVERS)/misc
+	find -name \*.o | grep /kernel/ | \
+		xargs -i install -m 0644 {} debian/tmp/lib/modules/$(KVERS)/misc
+	dh_installdocs
+	dh_installexamples
+	dh_installmenu
+	dh_installemacsen
+	dh_installinit
+	dh_installcron
+#	dh_installmanpages
+	dh_undocumented
+	dh_installchangelogs lm_sensors2/CHANGES
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_suidregister
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol -u"-v$(EPOCH)$(VERSION)+$(REV)"
+	dh_makeshlibs
+	dh_md5sums
+	dh_builddeb --destdir=$(KSRC)/..
+
+# Build architecture-independent files here.
+binary-indep:
+	# Nothing to do.
+
+# Build architecture-dependant files that arn't kernel modules here.
+binary-arch: build
+	dh_clean -k
+	dh_testversion
+	dh_testdir
+	dh_testroot
+	dh_installdirs usr/bin usr/sbin etc
+	
+	# Copy this whole source tree into the temp directory and clean it.
+	find . -path ./debian/tmp -prune -o -print | \
+		cpio -admp debian/lm-sensors-source/usr/src/modules/lm-sensors
+	cd debian/lm-sensors-source/usr/src/modules/lm-sensors; \
+		$(MAKE) -f debian/rules clean
+
+	install -m 0644 lm_sensors2/lib/libsensors.so.0.0.2 debian/libsensors0/usr/lib/
+	install -m 0755 lm_sensors2/prog/detect/sensors-detect debian/tmp/usr/sbin/
+	install -m 0755 lm_sensors2/prog/sensors/sensors debian/tmp/usr/bin/
+	install -m 0644 lm_sensors2/etc/sensors.conf.eg debian/tmp/etc/sensors.conf
+	install -m 0644 lm_sensors2/lib/error.h lm_sensors2/lib/sensors.h \
+		lm_sensors2/lib/chips.h \
+		debian/libsensors-dev/usr/include/sensors/
+	install -m 0644 lm_sensors2/lib/libsensors.3 debian/libsensors-dev/usr/share/man/man3/
+	install -m 0644 lm_sensors2/lib/libsensors.a debian/libsensors-dev/usr/lib/
+
+	dh_link -plibsensors0 usr/lib/libsensors.so.0.0.2 usr/lib/libsensors.so.0
+	dh_link -plibsensors-dev usr/lib/libsensors.so.0 usr/lib/libsensors.so
+	dh_installdocs lm_sensors2/BACKGROUND lm_sensors2/BUGS \
+		lm_sensors2/CONTRIBUTORS lm_sensors2/INSTALL \
+		lm_sensors2/README lm_sensors2/TODO \
+		lm_sensors2/doc/FAQ lm_sensors2/doc/busses \
+		lm_sensors2/doc/chips lm_sensors2/doc/modules \
+		lm_sensors2/doc/progs lm_sensors2/doc/temperature-sensors \
+		lm_sensors2/doc/useful_addresses.html \
+		lm_sensors2/doc/version-2 \
+		i2c/IMPORTANT_CHANGES i2c/doc
+	dh_installexamples lm_sensors2/prog/config lm_sensors2/prog/daemon \
+		lm_sensors2/prog/eeprom lm_sensors2/prog/xeon \
+		lm_sensors2/prog/matorb
+	chmod -x debian/tmp/usr/share/doc/lm-sensors/examples/eeprom/decode-dimms.pl
+	dh_installmenu
+	dh_installcron
+	dh_installmodules
+	dh_installmanpages -plm-sensors libsensors.3
+	dh_installchangelogs lm_sensors2/CHANGES
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_suidregister
+	dh_installdeb
+	dh_shlibdeps
+	cp -f debian/control.source debian/control
+	dh_gencontrol
+	dh_makeshlibs
+	dh_md5sums
+	dh_builddeb
+
+# This is used when kernel-package is building the package.
+kdist_image: binary-modules clean
+	# The dependancies take care of building the module package.
+kdist: clean binary-modules
+	# Build a .changes file.
+	KVERS="$(KVERS)" KSRC="$(KSRC)" KMAINT="$(KMAINT)" \
+	REV="$(REV)" KEMAIL="$(KEMAIL)" \
+		sh -v debian/genchanges.sh
+	# Only now can we clean up.
+	debian/rules clean
+kdist_configure:
+	# Nothing to do when configured.
+
+source diff:                                                                  
+	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
+
+binary: binary-arch binary-indep
+.PHONY: build clean binary-indep binary-arch binary kdist kdist_image kdist_configure

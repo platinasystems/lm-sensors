@@ -1,0 +1,8 @@
+To use lm-sensors, you need to lm-sensors module package installed. You will
+need to build a modules package from source, using the lm-sensors-source
+package.
+
+Once you have the modules built, you need to probe for the sensors available
+on your system. You can use the sensors-detect program to do this.
+
+-- Joey Hess <joeyh@debian.org>
