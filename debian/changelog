@@ -1,3 +1,9 @@
+lm-sensors (1:2.9.0-15) unstable; urgency=low
+
+  * Added support for it8712 in sensord (closes: bug#298168). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun,  6 Mar 2005 00:57:07 +0100
+
 lm-sensors (1:2.9.0-14) unstable; urgency=low
 
   * Remove wrong installed file /etc/blacklist.d/lm-sensors and the
