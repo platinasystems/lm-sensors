@@ -251,14 +251,18 @@ ifeq ($(KMAJ), 2.4)
 		LINUX=$(KSRC) \
 		I2C_HEADERS=$(CURDIR)/debian/modules/i2c \
 		MODPREF=/lib/modules/$(KVERS)
+ifeq ($(DEB_HOST_ARCH),i386)
 	$(MAKE) -C prog/hotplug -f Makefile.p4b \
-		LINUX=$(KSRC)		
+		LINUX=$(KSRC)
+endif
 	$(MAKE) install-kernel-chips install-kernel-busses \
 		DESTDIR=$(CURDIR)/debian/lm-sensors-$(KVERS) \
 		LINUX=$(KSRC) \
 		I2C_HEADERS=$(CURDIR)/debian/modules/i2c \
 		MODPREF=/lib/modules/$(KVERS)
+ifeq ($(DEB_HOST_ARCH),i386)
 	install -m 0644 prog/hotplug/p4b_smbus.o debian/lm-sensors-$(KVERS)/lib/modules/$(KVERS)/lm-sensors
+endif
 	rm -rf debian/modules
 	
 	dh_testdir
