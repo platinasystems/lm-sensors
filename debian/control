@@ -1,7 +1,7 @@
 Source: lm-sensors
 Section: utils
 Priority: extra
-Build-Depends: bison, flex, librrd0-dev, debhelper (>= 4.1.16), i2c-source (>= 1:2.9.0), kernel-build-2.4.27-2 [i386]
+Build-Depends: bison, flex, librrd0-dev, debhelper (>= 4.1.16), i2c-source (>= 1:2.9.0-13) [i386], kernel-build-2.4.27-2 [i386]
 Build-Depends-Indep: debhelper (>> 4.0.0), dh-kpatches (>= 0.99.27), perl, bzip2, kernel-patch-2.4-i2c (>= 2.9.0-1), kernel-source-2.4.27
 Maintainer: Aurelien Jarno <aurel32@debian.org>
 Standards-Version: 3.6.1
@@ -117,7 +117,7 @@ Package: lm-sensors-2.4.27-2-386
 Architecture: i386
 Provides: lm-sensors-mod-2.9
 Depends: kernel-image-2.4.27-2-386, i2c-2.4.27-2-386 (>= 1:2.9.0)
-Conflicts: libsensors3 (<< 2.8.6-8)
+Conflicts: libsensors3 (<< 2.8.6-8), i2c-2.4.27-2-386 (<< 2.9.0-13)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -133,7 +133,7 @@ Package: lm-sensors-2.4.27-2-586tsc
 Architecture: i386
 Provides: lm-sensors-mod-2.9
 Depends: kernel-image-2.4.27-2-586tsc, i2c-2.4.27-2-586tsc (>= 1:2.9.0)
-Conflicts: libsensors3 (<< 2.8.6-8)
+Conflicts: libsensors3 (<< 2.8.6-8), i2c-2.4.27-2-586tsc (<< 2.9.0-13)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -149,7 +149,7 @@ Package: lm-sensors-2.4.27-2-686
 Architecture: i386
 Provides: lm-sensors-mod-2.9
 Depends: kernel-image-2.4.27-2-686, i2c-2.4.27-2-686 (>= 1:2.9.0)
-Conflicts: libsensors3 (<< 2.8.6-8)
+Conflicts: libsensors3 (<< 2.8.6-8), i2c-2.4.27-2-686 (<< 2.9.0-13)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -165,7 +165,7 @@ Package: lm-sensors-2.4.27-2-686-smp
 Architecture: i386
 Provides: lm-sensors-mod-2.9
 Depends: kernel-image-2.4.27-2-686-smp, i2c-2.4.27-2-686-smp (>= 1:2.9.0)
-Conflicts: libsensors3 (<< 2.8.6-8)
+Conflicts: libsensors3 (<< 2.8.6-8), i2c-2.4.27-2-686-smp (<< 2.9.0-13)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -181,7 +181,7 @@ Package: lm-sensors-2.4.27-2-k6
 Architecture: i386
 Provides: lm-sensors-mod-2.9
 Depends: kernel-image-2.4.27-2-k6, i2c-2.4.27-2-k6 (>= 1:2.9.0)
-Conflicts: libsensors3 (<< 2.8.6-8)
+Conflicts: libsensors3 (<< 2.8.6-8), i2c-2.4.27-2-k6 (<< 2.9.0-13)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -197,7 +197,7 @@ Package: lm-sensors-2.4.27-2-k7
 Architecture: i386
 Provides: lm-sensors-mod-2.9
 Depends: kernel-image-2.4.27-2-k7, i2c-2.4.27-2-k7 (>= 1:2.9.0)
-Conflicts: libsensors3 (<< 2.8.6-8)
+Conflicts: libsensors3 (<< 2.8.6-8), i2c-2.4.27-2-k7 (<< 2.9.0-13)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -213,7 +213,7 @@ Package: lm-sensors-2.4.27-2-k7-smp
 Architecture: i386
 Provides: lm-sensors-mod-2.9
 Depends: kernel-image-2.4.27-2-k7-smp, i2c-2.4.27-2-k7-smp (>= 1:2.9.0)
-Conflicts: libsensors3 (<< 2.8.6-8)
+Conflicts: libsensors3 (<< 2.8.6-8), i2c-2.4.27-2-k7-smp (<< 2.9.0-13)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you

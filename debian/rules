@@ -42,6 +42,7 @@ clean:
 	
 	rm -rf $(CURDIR)/debian/build
 	rm -f $(KPATCHESFILE)
+	rm -f debian/lm-sensors-*.README.Debian
 	
 	rm -f *-stamp
 	dh_clean 
