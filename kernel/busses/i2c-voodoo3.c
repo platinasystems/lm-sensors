@@ -27,26 +27,17 @@
 /* This interfaces to the I2C bus of the Voodoo3 to gain access to
     the BT869 and possibly other I2C devices. */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/pci.h>
-#include <asm/io.h>
 #include <linux/i2c.h>
 #include <linux/i2c-algo-bit.h>
-#include "version.h"
 #include <linux/init.h>
+#include <asm/io.h>
+#include <asm/param.h>	/* for HZ */
+#include "version.h"
+#include "sensors_compat.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-/* 3DFX defines */
-#ifndef PCI_DEVICE_ID_3DFX_VOODOO3
-#define PCI_DEVICE_ID_3DFX_VOODOO3 0x05
-#endif
-#ifndef PCI_DEVICE_ID_3DFX_BANSHEE
-#define PCI_DEVICE_ID_3DFX_BANSHEE 0x03
-#endif
 
 /* the only registers we use */
 #define REG	0x78
@@ -70,38 +61,12 @@ MODULE_LICENSE("GPL");
 
 /* delays */
 #define CYCLE_DELAY	10
-#define TIMEOUT		50
+#define TIMEOUT		(HZ / 2)
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init i2c_voodoo3_init(void);
-static int __init voodoo3_cleanup(void);
-static int voodoo3_setup(void);
+
 static void config_v3(struct pci_dev *dev);
-static void voodoo3_inc(struct i2c_adapter *adapter);
-static void voodoo3_dec(struct i2c_adapter *adapter);
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-
-static int __initdata voodoo3_initialized;
-static unsigned char *mem;
-
-extern inline void outlong(unsigned int dat)
-{
-	*((unsigned int *) (mem + REG)) = dat;
-}
-
-extern inline unsigned int readlong(void)
-{
-	return *((unsigned int *) (mem + REG));
-}
+static unsigned long ioaddr;
 
 /* The voo GPIO registers don't have individual masks for each bit
    so we always have to read before writing. */
@@ -109,23 +74,25 @@ extern inline unsigned int readlong(void)
 static void bit_vooi2c_setscl(void *data, int val)
 {
 	unsigned int r;
-	r = readlong();
+	r = readl(ioaddr + REG);
 	if(val)
 		r |= I2C_SCL_OUT;
 	else
 		r &= ~I2C_SCL_OUT;
-	outlong(r);
+	writel(r, ioaddr + REG);
+	readl(ioaddr + REG);	/* flush posted write */
 }
 
 static void bit_vooi2c_setsda(void *data, int val)
 {
 	unsigned int r;
-	r = readlong();
+	r = readl(ioaddr + REG);
 	if(val)
 		r |= I2C_SDA_OUT;
 	else
 		r &= ~I2C_SDA_OUT;
-	outlong(r);
+	writel(r, ioaddr + REG);
+	readl(ioaddr + REG);	/* flush posted write */
 }
 
 /* The GPIO pins are open drain, so the pins always remain outputs.
@@ -134,85 +101,48 @@ static void bit_vooi2c_setsda(void *data, int val)
 
 static int bit_vooi2c_getscl(void *data)
 {
-	return (0 != (readlong() & I2C_SCL_IN));
+	return (0 != (readl(ioaddr + REG) & I2C_SCL_IN));
 }
 
 static int bit_vooi2c_getsda(void *data)
 {
-	return (0 != (readlong() & I2C_SDA_IN));
+	return (0 != (readl(ioaddr + REG) & I2C_SDA_IN));
 }
 
 static void bit_vooddc_setscl(void *data, int val)
 {
 	unsigned int r;
-	r = readlong();
+	r = readl(ioaddr + REG);
 	if(val)
 		r |= DDC_SCL_OUT;
 	else
 		r &= ~DDC_SCL_OUT;
-	outlong(r);
+	writel(r, ioaddr + REG);
+	readl(ioaddr + REG);	/* flush posted write */
 }
 
 static void bit_vooddc_setsda(void *data, int val)
 {
 	unsigned int r;
-	r = readlong();
+	r = readl(ioaddr + REG);
 	if(val)
 		r |= DDC_SDA_OUT;
 	else
 		r &= ~DDC_SDA_OUT;
-	outlong(r);
+	writel(r, ioaddr + REG);
+	readl(ioaddr + REG);	/* flush posted write */
 }
 
 static int bit_vooddc_getscl(void *data)
 {
-	return (0 != (readlong() & DDC_SCL_IN));
+	return (0 != (readl(ioaddr + REG) & DDC_SCL_IN));
 }
 
 static int bit_vooddc_getsda(void *data)
 {
-	return (0 != (readlong() & DDC_SDA_IN));
+	return (0 != (readl(ioaddr + REG) & DDC_SDA_IN));
 }
 
-static struct i2c_algo_bit_data voo_i2c_bit_data = {
-	NULL,
-	bit_vooi2c_setsda,
-	bit_vooi2c_setscl,
-	bit_vooi2c_getsda,
-	bit_vooi2c_getscl,
-	CYCLE_DELAY, CYCLE_DELAY, TIMEOUT
-};
-
-static struct i2c_adapter voodoo3_i2c_adapter = {
-	"I2C Voodoo3/Banshee adapter",
-	I2C_HW_B_VOO,
-	NULL,
-	&voo_i2c_bit_data,
-	voodoo3_inc,
-	voodoo3_dec,
-	NULL,
-	NULL,
-};
-
-static struct i2c_algo_bit_data voo_ddc_bit_data = {
-	NULL,
-	bit_vooddc_setsda,
-	bit_vooddc_setscl,
-	bit_vooddc_getsda,
-	bit_vooddc_getscl,
-	CYCLE_DELAY, CYCLE_DELAY, TIMEOUT
-};
-
-static struct i2c_adapter voodoo3_ddc_adapter = {
-	"DDC Voodoo3/Banshee adapter",
-	I2C_HW_B_VOO,
-	NULL,
-	&voo_ddc_bit_data,
-	voodoo3_inc,
-	voodoo3_dec,
-	NULL,
-	NULL,
-};
 
 /* Configures the chip */
 
@@ -221,141 +151,146 @@ void config_v3(struct pci_dev *dev)
 	unsigned int cadr;
 
 	/* map Voodoo3 memory */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,3,13)
 	cadr = dev->resource[0].start;
-#else
-	cadr = dev->base_address[0];
-#endif
 	cadr &= PCI_BASE_ADDRESS_MEM_MASK;
-	mem = ioremap_nocache(cadr, 0x1000);
-
-	*((unsigned int *) (mem + REG2)) = 0x8160;
-	*((unsigned int *) (mem + REG)) = 0xcffc0020;
-	printk("i2c-voodoo3: Using Banshee/Voodoo3 at 0x%p\n", mem);
-}
-
-/* Detect whether a Voodoo3 or a Banshee can be found,
-   and initialize it. */
-static int voodoo3_setup(void)
-{
-	struct pci_dev *dev;
-	int v3_num;
-
-	v3_num = 0;
-
-	dev = NULL;
-	do {
-		if ((dev = pci_find_device(PCI_VENDOR_ID_3DFX,
-					   PCI_DEVICE_ID_3DFX_VOODOO3,
-					   dev))) {
-			if (!v3_num)
-				config_v3(dev);
-			v3_num++;
-		}
-	} while (dev);
-
-	dev = NULL;
-	do {
-		if ((dev = pci_find_device(PCI_VENDOR_ID_3DFX,
-					   PCI_DEVICE_ID_3DFX_BANSHEE,
-					   dev))) {
-			if (!v3_num)
-				config_v3(dev);
-			v3_num++;
-		}
-	} while (dev);
-
-	if (v3_num > 0) {
-		printk("i2c-voodoo3: %d Banshee/Voodoo3 found.\n", v3_num);
-		if (v3_num > 1)
-			printk("i2c-voodoo3: warning: only 1 supported.\n");
-		return 0;
-	} else {
-		printk("i2c-voodoo3: No Voodoo3 found.\n");
-		return -ENODEV;
+	ioaddr = (unsigned long)ioremap_nocache(cadr, 0x1000);
+	if(ioaddr) {
+		writel(0x8160, ioaddr + REG2);
+		writel(0xcffc0020, ioaddr + REG);
+		printk("i2c-voodoo3: Using Banshee/Voodoo3 at 0x%lx\n", ioaddr);
 	}
 }
 
-void voodoo3_inc(struct i2c_adapter *adapter)
+static void voodoo3_inc(struct i2c_adapter *adapter)
 {
+#ifdef MODULE
 	MOD_INC_USE_COUNT;
+#endif
 }
 
 void voodoo3_dec(struct i2c_adapter *adapter)
 {
-	MOD_DEC_USE_COUNT;
-}
-
-int __init i2c_voodoo3_init(void)
-{
-	int res;
-	printk("i2c-voodoo3.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	voodoo3_initialized = 0;
-	if ((res = voodoo3_setup())) {
-		printk
-		    ("i2c-voodoo3.o: Voodoo3 not detected, module not inserted.\n");
-		voodoo3_cleanup();
-		return res;
-	}
-	if ((res = i2c_bit_add_bus(&voodoo3_i2c_adapter))) {
-		printk("i2c-voodoo3.o: I2C adapter registration failed\n");
-	} else {
-		printk("i2c-voodoo3.o: I2C bus initialized\n");
-		voodoo3_initialized |= INIT2;
-	}
-	if ((res = i2c_bit_add_bus(&voodoo3_ddc_adapter))) {
-		printk("i2c-voodoo3.o: DDC adapter registration failed\n");
-	} else {
-		printk("i2c-voodoo3.o: DDC bus initialized\n");
-		voodoo3_initialized |= INIT3;
-	}
-	if(!(voodoo3_initialized & (INIT2 | INIT3))) {
-		printk("i2c-voodoo3.o: Both registrations failed, module not inserted\n");
-		voodoo3_cleanup();
-		return res;
-	}
-	return 0;
-}
-
-int __init voodoo3_cleanup(void)
-{
-	int res;
-
-	iounmap(mem);
-	if (voodoo3_initialized & INIT3) {
-		if ((res = i2c_bit_del_bus(&voodoo3_ddc_adapter))) {
-			printk
-			    ("i2c-voodoo3.o: i2c_bit_del_bus failed, module not removed\n");
-			return res;
-		}
-	}
-	if (voodoo3_initialized & INIT2) {
-		if ((res = i2c_bit_del_bus(&voodoo3_i2c_adapter))) {
-			printk
-			    ("i2c-voodoo3.o: i2c_bit_del_bus failed, module not removed\n");
-			return res;
-		}
-	}
-	return 0;
-}
-
-EXPORT_NO_SYMBOLS;
-
 #ifdef MODULE
+	MOD_DEC_USE_COUNT;
+#endif
+}
+
+static struct i2c_algo_bit_data voo_i2c_bit_data = {
+	.setsda		= bit_vooi2c_setsda,
+	.setscl		= bit_vooi2c_setscl,
+	.getsda		= bit_vooi2c_getsda,
+	.getscl		= bit_vooi2c_getscl,
+	.udelay		= CYCLE_DELAY,
+	.mdelay		= CYCLE_DELAY,
+	.timeout	= TIMEOUT
+};
+
+static struct i2c_adapter voodoo3_i2c_adapter = {
+	.name		= "I2C Voodoo3/Banshee adapter",
+	.id		= I2C_HW_B_VOO,
+	.algo_data	= &voo_i2c_bit_data,
+	.inc_use	= voodoo3_inc,
+	.dec_use	= voodoo3_dec,
+};
+
+static struct i2c_algo_bit_data voo_ddc_bit_data = {
+	.setsda		= bit_vooddc_setsda,
+	.setscl		= bit_vooddc_setscl,
+	.getsda		= bit_vooddc_getsda,
+	.getscl		= bit_vooddc_getscl,
+	.udelay		= CYCLE_DELAY,
+	.mdelay		= CYCLE_DELAY,
+	.timeout	= TIMEOUT
+};
+
+static struct i2c_adapter voodoo3_ddc_adapter = {
+	.name		= "DDC Voodoo3/Banshee adapter",
+	.id		= I2C_HW_B_VOO,
+	.algo_data	= &voo_ddc_bit_data,
+	.inc_use	= voodoo3_inc,
+	.dec_use	= voodoo3_dec,
+};
+
+
+static struct pci_device_id voodoo3_ids[] __devinitdata = {
+	{
+		.vendor =	PCI_VENDOR_ID_3DFX,
+		.device =	PCI_DEVICE_ID_3DFX_VOODOO3,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_3DFX,
+		.device =	PCI_DEVICE_ID_3DFX_BANSHEE,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{ 0, }
+};
+
+static int __devinit voodoo3_probe(struct pci_dev *dev, const struct pci_device_id *id)
+{
+	int retval;
+
+	config_v3(dev);
+	retval = i2c_bit_add_bus(&voodoo3_i2c_adapter);
+	if(retval)
+		return retval;
+	retval = i2c_bit_add_bus(&voodoo3_ddc_adapter);
+	if(retval)
+		i2c_bit_del_bus(&voodoo3_i2c_adapter);
+	return retval;
+}
+
+static void __devexit voodoo3_remove(struct pci_dev *dev)
+{
+	i2c_bit_del_bus(&voodoo3_i2c_adapter);
+ 	i2c_bit_del_bus(&voodoo3_ddc_adapter);
+}
+
+
+/* Don't register driver to avoid driver conflicts */
+/*
+static struct pci_driver voodoo3_driver = {
+	.name		= "voodoo3 smbus",
+	.id_table	= voodoo3_ids,
+	.probe		= voodoo3_probe,
+	.remove		= __devexit_p(voodoo3_remove),
+};
+*/
+
+static int __init i2c_voodoo3_init(void)
+{
+	struct pci_dev *dev;
+	const struct pci_device_id *id;
+
+	printk("i2c-voodoo3.o version %s (%s)\n", LM_VERSION, LM_DATE);
+/*
+	return pci_module_init(&voodoo3_driver);
+*/
+	pci_for_each_dev(dev) {
+		id = pci_match_device(voodoo3_ids, dev);
+		if(id)
+			if(voodoo3_probe(dev, id) >= 0)
+				return 0;
+	}
+	return -ENODEV;
+}
+
+
+static void __exit i2c_voodoo3_exit(void)
+{
+/*
+	pci_unregister_driver(&voodoo3_driver);
+*/
+	voodoo3_remove(NULL);
+	iounmap((void *)ioaddr);
+}
+
 
 MODULE_AUTHOR
     ("Frodo Looijaard <frodol@dds.nl>, Philip Edelbrock <phil@netroedge.com>, Ralph Metzler <rjkm@thp.uni-koeln.de>, and Mark D. Studebaker <mdsxyz123@yahoo.com>");
 MODULE_DESCRIPTION("Voodoo3 I2C/SMBus driver");
 
-
-int init_module(void)
-{
-	return i2c_voodoo3_init();
-}
-
-int cleanup_module(void)
-{
-	return voodoo3_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(i2c_voodoo3_init);
+module_exit(i2c_voodoo3_exit);

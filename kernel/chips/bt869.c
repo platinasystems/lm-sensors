@@ -23,27 +23,14 @@
 
 #define DEBUG 1
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include "sensors.h"
-#include "version.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include "version.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
-
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -73,6 +60,7 @@ SENSORS_INSMOD_1(bt869);
 
 /* Each client has this additional data */
 struct bt869_data {
+	struct i2c_client client;
 	int sysctl_id;
 
 	struct semaphore update_lock;
@@ -88,27 +76,11 @@ struct bt869_data {
         u8 svideo;              /* output format: (2=RGB) 1=SVIDEO, 0=Composite */
 };
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_bt869_init(void);
-static int __init bt869_cleanup(void);
 static int bt869_attach_adapter(struct i2c_adapter *adapter);
 static int bt869_detect(struct i2c_adapter *adapter, int address,
 			unsigned short flags, int kind);
 static void bt869_init_client(struct i2c_client *client);
 static int bt869_detach_client(struct i2c_client *client);
-static int bt869_command(struct i2c_client *client, unsigned int cmd,
-			 void *arg);
-static void bt869_inc_use(struct i2c_client *client);
-static void bt869_dec_use(struct i2c_client *client);
 static int bt869_read_value(struct i2c_client *client, u8 reg);
 static int bt869_write_value(struct i2c_client *client, u8 reg, u16 value);
 static void bt869_write_values(struct i2c_client *client, u16 *values);
@@ -131,15 +103,23 @@ static void bt869_update_client(struct i2c_client *client);
 
 /* This is the driver that will be inserted */
 static struct i2c_driver bt869_driver = {
-	/* name */ "BT869 video-output chip driver",
-	/* id */ I2C_DRIVERID_BT869,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &bt869_attach_adapter,
-	/* detach_client */ &bt869_detach_client,
-	/* command */ &bt869_command,
-	/* inc_use */ &bt869_inc_use,
-	/* dec_use */ &bt869_dec_use
+	.name		= "BT869 video-output chip driver",
+	.id		= I2C_DRIVERID_BT869,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= bt869_attach_adapter,
+	.detach_client	= bt869_detach_client,
 };
+
+/* -- SENSORS SYSCTL START -- */
+#define BT869_SYSCTL_STATUS 1000
+#define BT869_SYSCTL_NTSC   1001
+#define BT869_SYSCTL_HALF   1002
+#define BT869_SYSCTL_RES    1003
+#define BT869_SYSCTL_COLORBARS    1004
+#define BT869_SYSCTL_DEPTH  1005
+#define BT869_SYSCTL_SVIDEO 1006
+
+/* -- SENSORS SYSCTL END -- */
 
 /* These files are created for each detected bt869. This is just a template;
    though at first sight, you might think we could use a statically
@@ -487,12 +467,9 @@ static u16 registers_720_480[] =
     };
 
 
-/* Used by init/cleanup */
-static int __initdata bt869_initialized = 0;
-
 int bt869_id = 0;
 
-int bt869_attach_adapter(struct i2c_adapter *adapter)
+static int bt869_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, bt869_detect);
 }
@@ -526,15 +503,12 @@ int bt869_detect(struct i2c_adapter *adapter, int address,
 	/* OK. For now, we presume we have a valid client. We now create the
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access bt869_{read,write}_value. */
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct bt869_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct bt869_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data =
-	    (struct bt869_data *) (((struct i2c_client *) new_client) + 1);
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -591,12 +565,12 @@ int bt869_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int bt869_detach_client(struct i2c_client *client)
+static int bt869_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -609,38 +583,16 @@ int bt869_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
 
-
-/* No commands defined yet */
-int bt869_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-/* Nothing here yet */
-void bt869_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-/* Nothing here yet */
-void bt869_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
 
 /* All registers are byte-sized.
    bt869 uses a high-byte first convention, which is exactly opposite to
    the usual practice. */
-int bt869_read_value(struct i2c_client *client, u8 reg)
+static int bt869_read_value(struct i2c_client *client, u8 reg)
 {
 	return i2c_smbus_read_byte(client);
 }
@@ -648,7 +600,7 @@ int bt869_read_value(struct i2c_client *client, u8 reg)
 /* All registers are byte-sized.
    bt869 uses a high-byte first convention, which is exactly opposite to
    the usual practice. */
-int bt869_write_value(struct i2c_client *client, u8 reg, u16 value)
+static int bt869_write_value(struct i2c_client *client, u8 reg, u16 value)
 {
 #ifdef DEBUG
         printk("bt869.o: write_value(0x%X, 0x%X)\n", reg, value);
@@ -656,7 +608,7 @@ int bt869_write_value(struct i2c_client *client, u8 reg, u16 value)
 	return i2c_smbus_write_byte_data(client, reg, value);
 }
 
-void bt869_write_values(struct i2c_client *client, u16 *values)
+static void bt869_write_values(struct i2c_client *client, u16 *values)
 {
   /* writes set of registers from array.  0,0 marks end of table */
   while (*values) {
@@ -665,7 +617,7 @@ void bt869_write_values(struct i2c_client *client, u16 *values)
   }
 }
 
-void bt869_init_client(struct i2c_client *client)
+static void bt869_init_client(struct i2c_client *client)
 {
 	struct bt869_data *data = client->data;
 
@@ -690,7 +642,7 @@ void bt869_init_client(struct i2c_client *client)
 
 }
 
-void bt869_update_client(struct i2c_client *client)
+static void bt869_update_client(struct i2c_client *client)
 {
 	struct bt869_data *data = client->data;
 
@@ -917,54 +869,22 @@ void bt869_depth(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_bt869_init(void)
+static int __init sm_bt869_init(void)
 {
-	int res;
-
 	printk("bt869.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	bt869_initialized = 0;
-	if ((res = i2c_add_driver(&bt869_driver))) {
-		printk
-		    ("bt869.o: Driver registration failed, module not inserted.\n");
-		bt869_cleanup();
-		return res;
-	}
-	bt869_initialized++;
-	return 0;
+	return i2c_add_driver(&bt869_driver);
 }
 
-int __init bt869_cleanup(void)
+static void __exit sm_bt869_exit(void)
 {
-	int res;
-
-	if (bt869_initialized >= 1) {
-		if ((res = i2c_del_driver(&bt869_driver))) {
-			printk
-			    ("bt869.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		bt869_initialized--;
-	}
-
-	return 0;
+	i2c_del_driver(&bt869_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR
     ("Frodo Looijaard <frodol@dds.nl>, Philip Edelbrock <phil@netroedge.com>, Stephen Davies <steve@daviesfam.org>");
 MODULE_DESCRIPTION("bt869 driver");
 
-int init_module(void)
-{
-	return sensors_bt869_init();
-}
-
-int cleanup_module(void)
-{
-	return bt869_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_bt869_init);
+module_exit(sm_bt869_exit);

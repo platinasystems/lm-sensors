@@ -19,32 +19,14 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include "version.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -87,10 +69,10 @@ SENSORS_INSMOD_1(lm80);
    these macros are called: arguments may be evaluated more than once.
    Fixing this is just not worth it. */
 
-#define IN_TO_REG(val,nr) (SENSORS_LIMIT((val),0,255))
-#define IN_FROM_REG(val,nr) (val)
+#define IN_TO_REG(val) (SENSORS_LIMIT((val),0,255))
+#define IN_FROM_REG(val) (val)
 
-extern inline unsigned char FAN_TO_REG(unsigned rpm, unsigned div)
+static inline unsigned char FAN_TO_REG(unsigned rpm, unsigned div)
 {
 	if (rpm == 0)
 		return 255;
@@ -102,16 +84,16 @@ extern inline unsigned char FAN_TO_REG(unsigned rpm, unsigned div)
 #define FAN_FROM_REG(val,div) ((val)==0?-1:\
                                (val)==255?0:1350000/((div)*(val)))
 
-extern inline long TEMP_FROM_REG(u16 temp)
+static inline long TEMP_FROM_REG(u16 temp)
 {
 	long res;
 
-	temp = temp >> 4;
-	if (temp < 0x0800) {
-		res = (625 * (long) temp);
-	} else {
+	temp >>= 4;
+	if (temp < 0x0800)
+		res = 625 * (long) temp;
+	else
 		res = ((long) temp - 0x01000) * 625;
-	}
+
 	return res / 100;
 }
 
@@ -126,64 +108,8 @@ extern inline long TEMP_FROM_REG(u16 temp)
 #define DIV_FROM_REG(val) (1 << (val))
 #define DIV_TO_REG(val) ((val)==8?3:(val)==4?2:(val)==1?0:1)
 
-/* Initial limits */
-#define LM80_INIT_IN_0 190
-#define LM80_INIT_IN_1 190
-#define LM80_INIT_IN_2 190
-#define LM80_INIT_IN_3 190
-#define LM80_INIT_IN_4 190
-#define LM80_INIT_IN_5 190
-#define LM80_INIT_IN_6 190
-
-#define LM80_INIT_IN_PERCENTAGE 10
-
-#define LM80_INIT_IN_MIN_0 \
-        (LM80_INIT_IN_0 - LM80_INIT_IN_0 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MAX_0 \
-        (LM80_INIT_IN_0 + LM80_INIT_IN_0 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MIN_1 \
-        (LM80_INIT_IN_1 - LM80_INIT_IN_1 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MAX_1 \
-        (LM80_INIT_IN_1 + LM80_INIT_IN_1 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MIN_2 \
-        (LM80_INIT_IN_2 - LM80_INIT_IN_2 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MAX_2 \
-        (LM80_INIT_IN_2 + LM80_INIT_IN_2 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MIN_3 \
-        (LM80_INIT_IN_3 - LM80_INIT_IN_3 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MAX_3 \
-        (LM80_INIT_IN_3 + LM80_INIT_IN_3 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MIN_4 \
-        (LM80_INIT_IN_4 - LM80_INIT_IN_4 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MAX_4 \
-        (LM80_INIT_IN_4 + LM80_INIT_IN_4 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MIN_5 \
-        (LM80_INIT_IN_5 - LM80_INIT_IN_5 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MAX_5 \
-        (LM80_INIT_IN_5 + LM80_INIT_IN_5 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MIN_6 \
-        (LM80_INIT_IN_6 - LM80_INIT_IN_6 * LM80_INIT_IN_PERCENTAGE / 100)
-#define LM80_INIT_IN_MAX_6 \
-        (LM80_INIT_IN_6 + LM80_INIT_IN_6 * LM80_INIT_IN_PERCENTAGE / 100)
-
-#define LM80_INIT_FAN_MIN_1 3000
-#define LM80_INIT_FAN_MIN_2 3000
-
-#define LM80_INIT_TEMP_OS_MAX 600
-#define LM80_INIT_TEMP_OS_HYST 500
-#define LM80_INIT_TEMP_HOT_MAX 700
-#define LM80_INIT_TEMP_HOT_HYST 600
-
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-/* For each registered LM80, we need to keep some data in memory. That
-   data is pointed to by lm80_list[NR]->data. The structure itself is
-   dynamically allocated, at the same time when a new lm80 client is
-   allocated. */
 struct lm80_data {
+	struct i2c_client client;
 	int sysctl_id;
 
 	struct semaphore update_lock;
@@ -205,26 +131,14 @@ struct lm80_data {
 };
 
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_lm80_init(void);
-static int __init lm80_cleanup(void);
 
 static int lm80_attach_adapter(struct i2c_adapter *adapter);
 static int lm80_detect(struct i2c_adapter *adapter, int address,
 		       unsigned short flags, int kind);
 static int lm80_detach_client(struct i2c_client *client);
-static int lm80_command(struct i2c_client *client, unsigned int cmd,
-			void *arg);
-static void lm80_inc_use(struct i2c_client *client);
-static void lm80_dec_use(struct i2c_client *client);
 
-static int lm80_read_value(struct i2c_client *client, u8 register);
-static int lm80_write_value(struct i2c_client *client, u8 register,
-			    u8 value);
+static int lm80_read_value(struct i2c_client *client, u8 reg);
+static int lm80_write_value(struct i2c_client *client, u8 reg, u8 value);
 static void lm80_update_client(struct i2c_client *client);
 static void lm80_init_client(struct i2c_client *client);
 
@@ -243,20 +157,47 @@ static void lm80_fan_div(struct i2c_client *client, int operation,
 static int lm80_id = 0;
 
 static struct i2c_driver lm80_driver = {
-	/* name */ "LM80 sensor driver",
-	/* id */ I2C_DRIVERID_LM80,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &lm80_attach_adapter,
-	/* detach_client */ &lm80_detach_client,
-	/* command */ &lm80_command,
-	/* inc_use */ &lm80_inc_use,
-	/* dec_use */ &lm80_dec_use
+	.name		= "LM80 sensor driver",
+	.id		= I2C_DRIVERID_LM80,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= lm80_attach_adapter,
+	.detach_client	= lm80_detach_client,
 };
 
-/* Used by lm80_init/cleanup */
-static int __initdata lm80_initialized = 0;
-
 /* The /proc/sys entries */
+
+/* -- SENSORS SYSCTL START -- */
+
+#define LM80_SYSCTL_IN0 1000	/* Volts * 100 */
+#define LM80_SYSCTL_IN1 1001
+#define LM80_SYSCTL_IN2 1002
+#define LM80_SYSCTL_IN3 1003
+#define LM80_SYSCTL_IN4 1004
+#define LM80_SYSCTL_IN5 1005
+#define LM80_SYSCTL_IN6 1006
+#define LM80_SYSCTL_FAN1 1101	/* Rotations/min */
+#define LM80_SYSCTL_FAN2 1102
+#define LM80_SYSCTL_TEMP 1250	/* Degrees Celcius * 100 */
+#define LM80_SYSCTL_FAN_DIV 2000	/* 1, 2, 4 or 8 */
+#define LM80_SYSCTL_ALARMS 2001	/* bitvector */
+
+#define LM80_ALARM_IN0 0x0001
+#define LM80_ALARM_IN1 0x0002
+#define LM80_ALARM_IN2 0x0004
+#define LM80_ALARM_IN3 0x0008
+#define LM80_ALARM_IN4 0x0010
+#define LM80_ALARM_IN5 0x0020
+#define LM80_ALARM_IN6 0x0040
+#define LM80_ALARM_FAN1 0x0400
+#define LM80_ALARM_FAN2 0x0800
+#define LM80_ALARM_TEMP_HOT 0x0100
+#define LM80_ALARM_TEMP_OS 0x2000
+#define LM80_ALARM_CHAS 0x1000
+#define LM80_ALARM_BTI 0x0200
+#define LM80_ALARM_INT_IN 0x0080
+
+/* -- SENSORS SYSCTL END -- */
+
 /* These files are created for each detected LM80. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -290,7 +231,7 @@ static ctl_table lm80_dir_table_template[] = {
 	{0}
 };
 
-int lm80_attach_adapter(struct i2c_adapter *adapter)
+static int lm80_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, lm80_detect);
 }
@@ -320,14 +261,12 @@ int lm80_detect(struct i2c_adapter *adapter, int address,
 	/* OK. For now, we presume we have a valid client. We now create the
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access lm80_{read,write}_value. */
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct lm80_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct lm80_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct lm80_data *) (new_client + 1);
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -390,12 +329,12 @@ int lm80_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int lm80_detach_client(struct i2c_client *client)
+static int lm80_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -408,44 +347,23 @@ int lm80_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
 
-/* No commands defined yet */
-int lm80_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-void lm80_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-void lm80_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
-
-int lm80_read_value(struct i2c_client *client, u8 reg)
+static int lm80_read_value(struct i2c_client *client, u8 reg)
 {
 	return i2c_smbus_read_byte_data(client, reg);
 }
 
-int lm80_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int lm80_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	return i2c_smbus_write_byte_data(client, reg, value);
 }
 
-/* Called when we have found a new LM80. It should set limits, etc. */
-void lm80_init_client(struct i2c_client *client)
+/* Called when we have found a new LM80. */
+static void lm80_init_client(struct i2c_client *client)
 {
 	/* Reset all except Watchdog values and last conversion values
 	   This sets fan-divs to 2, among others. This makes most other
@@ -454,52 +372,11 @@ void lm80_init_client(struct i2c_client *client)
 	/* Set 11-bit temperature resolution */
 	lm80_write_value(client, LM80_REG_RES, 0x08);
 
-	lm80_write_value(client, LM80_REG_IN_MIN(0),
-			 IN_TO_REG(LM80_INIT_IN_MIN_0, 0));
-	lm80_write_value(client, LM80_REG_IN_MAX(0),
-			 IN_TO_REG(LM80_INIT_IN_MAX_0, 0));
-	lm80_write_value(client, LM80_REG_IN_MIN(1),
-			 IN_TO_REG(LM80_INIT_IN_MIN_1, 1));
-	lm80_write_value(client, LM80_REG_IN_MAX(1),
-			 IN_TO_REG(LM80_INIT_IN_MAX_1, 1));
-	lm80_write_value(client, LM80_REG_IN_MIN(2),
-			 IN_TO_REG(LM80_INIT_IN_MIN_2, 2));
-	lm80_write_value(client, LM80_REG_IN_MAX(2),
-			 IN_TO_REG(LM80_INIT_IN_MAX_2, 2));
-	lm80_write_value(client, LM80_REG_IN_MIN(3),
-			 IN_TO_REG(LM80_INIT_IN_MIN_3, 3));
-	lm80_write_value(client, LM80_REG_IN_MAX(3),
-			 IN_TO_REG(LM80_INIT_IN_MAX_3, 3));
-	lm80_write_value(client, LM80_REG_IN_MIN(4),
-			 IN_TO_REG(LM80_INIT_IN_MIN_4, 4));
-	lm80_write_value(client, LM80_REG_IN_MAX(4),
-			 IN_TO_REG(LM80_INIT_IN_MAX_4, 4));
-	lm80_write_value(client, LM80_REG_IN_MIN(5),
-			 IN_TO_REG(LM80_INIT_IN_MIN_5, 5));
-	lm80_write_value(client, LM80_REG_IN_MAX(5),
-			 IN_TO_REG(LM80_INIT_IN_MAX_5, 5));
-	lm80_write_value(client, LM80_REG_IN_MIN(6),
-			 IN_TO_REG(LM80_INIT_IN_MIN_6, 6));
-	lm80_write_value(client, LM80_REG_IN_MAX(6),
-			 IN_TO_REG(LM80_INIT_IN_MAX_6, 6));
-	lm80_write_value(client, LM80_REG_FAN1_MIN,
-			 FAN_TO_REG(LM80_INIT_FAN_MIN_1, 2));
-	lm80_write_value(client, LM80_REG_FAN2_MIN,
-			 FAN_TO_REG(LM80_INIT_FAN_MIN_2, 2));
-	lm80_write_value(client, LM80_REG_TEMP_HOT_MAX,
-			 TEMP_LIMIT_TO_REG(LM80_INIT_TEMP_OS_MAX));
-	lm80_write_value(client, LM80_REG_TEMP_HOT_HYST,
-			 TEMP_LIMIT_TO_REG(LM80_INIT_TEMP_OS_HYST));
-	lm80_write_value(client, LM80_REG_TEMP_OS_MAX,
-			 TEMP_LIMIT_TO_REG(LM80_INIT_TEMP_OS_MAX));
-	lm80_write_value(client, LM80_REG_TEMP_OS_HYST,
-			 TEMP_LIMIT_TO_REG(LM80_INIT_TEMP_OS_HYST));
-
 	/* Start monitoring */
 	lm80_write_value(client, LM80_REG_CONFIG, 0x01);
 }
 
-void lm80_update_client(struct i2c_client *client)
+static void lm80_update_client(struct i2c_client *client)
 {
 	struct lm80_data *data = client->data;
 	int i;
@@ -575,18 +452,18 @@ void lm80_in(struct i2c_client *client, int operation, int ctl_name,
 		*nrels_mag = 2;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		lm80_update_client(client);
-		results[0] = IN_FROM_REG(data->in_min[nr], nr);
-		results[1] = IN_FROM_REG(data->in_max[nr], nr);
-		results[2] = IN_FROM_REG(data->in[nr], nr);
+		results[0] = IN_FROM_REG(data->in_min[nr]);
+		results[1] = IN_FROM_REG(data->in_max[nr]);
+		results[2] = IN_FROM_REG(data->in[nr]);
 		*nrels_mag = 3;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		if (*nrels_mag >= 1) {
-			data->in_min[nr] = IN_TO_REG(results[0], nr);
+			data->in_min[nr] = IN_TO_REG(results[0]);
 			lm80_write_value(client, LM80_REG_IN_MIN(nr),
 					 data->in_min[nr]);
 		}
 		if (*nrels_mag >= 2) {
-			data->in_max[nr] = IN_TO_REG(results[1], nr);
+			data->in_max[nr] = IN_TO_REG(results[1]);
 			lm80_write_value(client, LM80_REG_IN_MAX(nr),
 					 data->in_max[nr]);
 		}
@@ -707,54 +584,22 @@ void lm80_fan_div(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_lm80_init(void)
+static int __init sm_lm80_init(void)
 {
-	int res;
-
-	printk("lm80.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	lm80_initialized = 0;
-
-	if ((res = i2c_add_driver(&lm80_driver))) {
-		printk
-		    ("lm80.o: Driver registration failed, module not inserted.\n");
-		lm80_cleanup();
-		return res;
-	}
-	lm80_initialized++;
-	return 0;
+ 	printk("lm80.o version %s (%s)\n", LM_VERSION, LM_DATE);
+	return i2c_add_driver(&lm80_driver);
 }
 
-int __init lm80_cleanup(void)
+static void __exit sm_lm80_exit(void)
 {
-	int res;
-
-	if (lm80_initialized >= 1) {
-		if ((res = i2c_del_driver(&lm80_driver))) {
-			printk
-			    ("lm80.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		lm80_initialized--;
-	}
-	return 0;
+	i2c_del_driver(&lm80_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR
     ("Frodo Looijaard <frodol@dds.nl> and Philip Edelbrock <phil@netroedge.com>");
 MODULE_DESCRIPTION("LM80 driver");
 
-int init_module(void)
-{
-	return sensors_lm80_init();
-}
-
-int cleanup_module(void)
-{
-	return lm80_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_lm80_init);
+module_exit(sm_lm80_exit);

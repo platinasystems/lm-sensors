@@ -3,7 +3,7 @@
  *
  * A daemon that periodically logs sensor information to syslog.
  *
- * Copyright (c) 1999-2001 Merlin Hughes <merlin@merlin.org>
+ * Copyright (c) 1999-2002 Merlin Hughes <merlin@merlin.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@
 #include "lib/error.h"
 
 static const char *sensorsCfgPaths[] = {
-  "/etc", "/usr/lib/sensors", "/usr/local/lib/sensors", "/usr/lib", "/usr/local/lib", NULL
+  "/etc", "/usr/local/etc", "/usr/lib/sensors", "/usr/local/lib/sensors", "/usr/lib", "/usr/local/lib", NULL
 };
 
 #define CFG_PATH_LEN 4096
@@ -79,8 +79,8 @@ loadConfig
   if (!strcmp (cfgPath, "-")) {
     if (!reload) {
       if ((ret = sensors_init (stdin))) {
-        if (ret == SENSORS_ERR_PROC)
-          sensorLog (LOG_ERR, "Error reading /proc; modules probably not loaded");
+        if (ret == -SENSORS_ERR_PROC)
+          sensorLog (LOG_ERR, "Error reading /proc or /sys; modules probably not loaded");
         else
           sensorLog (LOG_ERR, "Error %d loading sensors configuration file: <stdin>", ret);
         ret = 12;
@@ -96,8 +96,8 @@ loadConfig
       sensorLog (LOG_ERR, "Error opening sensors configuration file: %s", cfgPath);
       ret = 11;
     } else if ((ret = sensors_init (cfg))) {
-      if (ret == SENSORS_ERR_PROC)
-        sensorLog (LOG_ERR, "Error reading /proc; modules probably not loaded");
+      if (ret == -SENSORS_ERR_PROC)
+        sensorLog (LOG_ERR, "Error reading /proc or /sys; modules probably not loaded");
       else
         sensorLog (LOG_ERR, "Error %d loading sensors configuration file: %s", ret, cfgPath);
       ret = 11;

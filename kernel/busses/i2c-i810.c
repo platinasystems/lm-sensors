@@ -35,35 +35,21 @@
 */
 
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/pci.h>
-#include <asm/io.h>
 #include <linux/i2c.h>
 #include <linux/i2c-algo-bit.h>
-#include "version.h"
 #include <linux/init.h>
+#include <asm/io.h>
+#include <asm/param.h>	/* for HZ */
+#include "version.h"
+#include "sensors_compat.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
 
-/* PCI defines */
-#ifndef PCI_DEVICE_ID_INTEL_82810_IG1
-#define PCI_DEVICE_ID_INTEL_82810_IG1 0x7121
-#endif
-#ifndef PCI_DEVICE_ID_INTEL_82810_IG3
-#define PCI_DEVICE_ID_INTEL_82810_IG3 0x7123
-#endif
 #ifndef PCI_DEVICE_ID_INTEL_82815_2
 #define PCI_DEVICE_ID_INTEL_82815_2   0x1132
 #endif
-
-static int i810_supported[] = {PCI_DEVICE_ID_INTEL_82810_IG1,
-                               PCI_DEVICE_ID_INTEL_82810_IG3,
-                               0x7125,
-                               PCI_DEVICE_ID_INTEL_82815_2,
-                               0 };
 
 /* GPIO register locations */
 #define I810_IOCONTROL_OFFSET 0x5000
@@ -90,136 +76,82 @@ static int i810_supported[] = {PCI_DEVICE_ID_INTEL_82810_IG1,
 
 /* delays */
 #define CYCLE_DELAY		10
-#define TIMEOUT			50
+#define TIMEOUT			(HZ / 2)
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init i2c_i810_init(void);
-static int __init i810i2c_cleanup(void);
-static int i810i2c_setup(void);
+
 static void config_i810(struct pci_dev *dev);
-static void i810_inc(struct i2c_adapter *adapter);
-static void i810_dec(struct i2c_adapter *adapter);
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
 
-static int __initdata i810i2c_initialized;
-static unsigned char *mem;
-
-static inline void outlong(unsigned int dat, int off)
-{
-	*((unsigned int *) (mem + off)) = dat;
-}
-
-static inline unsigned int readlong(int off)
-{
-	return *((unsigned int *) (mem + off));
-}
+static unsigned long ioaddr;
 
 /* The i810 GPIO registers have individual masks for each bit
    so we never have to read before writing. Nice. */
 
 static void bit_i810i2c_setscl(void *data, int val)
 {
-	outlong((val ? SCL_VAL_OUT : 0) | SCL_DIR | SCL_DIR_MASK | SCL_VAL_MASK,
-	     I810_GPIOB);
+	writel((val ? SCL_VAL_OUT : 0) | SCL_DIR | SCL_DIR_MASK | SCL_VAL_MASK,
+	     ioaddr + I810_GPIOB);
+	readl(ioaddr + I810_GPIOB);	/* flush posted write */
 }
 
 static void bit_i810i2c_setsda(void *data, int val)
 {
- 	outlong((val ? SDA_VAL_OUT : 0) | SDA_DIR | SDA_DIR_MASK | SDA_VAL_MASK,
-	     I810_GPIOB);
+ 	writel((val ? SDA_VAL_OUT : 0) | SDA_DIR | SDA_DIR_MASK | SDA_VAL_MASK,
+	     ioaddr + I810_GPIOB);
+	readl(ioaddr + I810_GPIOB);	/* flush posted write */
 }
 
-/* The GPIO pins are open drain, so the pins always remain outputs.
+/* The GPIO pins are open drain, so the pins could always remain outputs.
+   However, some chip versions don't latch the inputs unless they
+   are set as inputs.
    We rely on the i2c-algo-bit routines to set the pins high before
    reading the input from other chips. Following guidance in the 815
    prog. ref. guide, we do a "dummy write" of 0 to the register before
    reading which forces the input value to be latched. We presume this
-   applies to the 810 as well. This is necessary to get
+   applies to the 810 as well; shouldn't hurt anyway. This is necessary to get
    i2c_algo_bit bit_test=1 to pass. */
 
 static int bit_i810i2c_getscl(void *data)
 {
-	outlong(0, I810_GPIOB);
-	return (0 != (readlong(I810_GPIOB) & SCL_VAL_IN));
+	writel(SCL_DIR_MASK, ioaddr + I810_GPIOB);
+	writel(0, ioaddr + I810_GPIOB);
+	return (0 != (readl(ioaddr + I810_GPIOB) & SCL_VAL_IN));
 }
 
 static int bit_i810i2c_getsda(void *data)
 {
-	outlong(0, I810_GPIOB);
-	return (0 != (readlong(I810_GPIOB) & SDA_VAL_IN));
+	writel(SDA_DIR_MASK, ioaddr + I810_GPIOB);
+	writel(0, ioaddr + I810_GPIOB);
+	return (0 != (readl(ioaddr + I810_GPIOB) & SDA_VAL_IN));
 }
 
 static void bit_i810ddc_setscl(void *data, int val)
 {
-	outlong((val ? SCL_VAL_OUT : 0) | SCL_DIR | SCL_DIR_MASK | SCL_VAL_MASK,
-	     I810_GPIOA);
+	writel((val ? SCL_VAL_OUT : 0) | SCL_DIR | SCL_DIR_MASK | SCL_VAL_MASK,
+	     ioaddr + I810_GPIOA);
+	readl(ioaddr + I810_GPIOA);	/* flush posted write */
 }
 
 static void bit_i810ddc_setsda(void *data, int val)
 {
- 	outlong((val ? SDA_VAL_OUT : 0) | SDA_DIR | SDA_DIR_MASK | SDA_VAL_MASK,
-	     I810_GPIOA);
+ 	writel((val ? SDA_VAL_OUT : 0) | SDA_DIR | SDA_DIR_MASK | SDA_VAL_MASK,
+	     ioaddr + I810_GPIOA);
+	readl(ioaddr + I810_GPIOA);	/* flush posted write */
 }
 
 static int bit_i810ddc_getscl(void *data)
 {
-	outlong(0, I810_GPIOA);
-	return (0 != (readlong(I810_GPIOA) & SCL_VAL_IN));
+	writel(SCL_DIR_MASK, ioaddr + I810_GPIOA);
+	writel(0, ioaddr + I810_GPIOA);
+	return (0 != (readl(ioaddr + I810_GPIOA) & SCL_VAL_IN));
 }
 
 static int bit_i810ddc_getsda(void *data)
 {
-	outlong(0, I810_GPIOA);
-	return (0 != (readlong(I810_GPIOA) & SDA_VAL_IN));
+	writel(SDA_DIR_MASK, ioaddr + I810_GPIOA);
+	writel(0, ioaddr + I810_GPIOA);
+	return (0 != (readl(ioaddr + I810_GPIOA) & SDA_VAL_IN));
 }
-
-static struct i2c_algo_bit_data i810_i2c_bit_data = {
-	NULL,
-	bit_i810i2c_setsda,
-	bit_i810i2c_setscl,
-	bit_i810i2c_getsda,
-	bit_i810i2c_getscl,
-	CYCLE_DELAY, CYCLE_DELAY, TIMEOUT
-};
-
-static struct i2c_adapter i810_i2c_adapter = {
-	"I810/I815 I2C Adapter",
-	I2C_HW_B_I810,
-	NULL,
-	&i810_i2c_bit_data,
-	i810_inc,
-	i810_dec,
-	NULL,
-	NULL,
-};
-
-static struct i2c_algo_bit_data i810_ddc_bit_data = {
-	NULL,
-	bit_i810ddc_setsda,
-	bit_i810ddc_setscl,
-	bit_i810ddc_getsda,
-	bit_i810ddc_getscl,
-	CYCLE_DELAY, CYCLE_DELAY, TIMEOUT
-};
-
-static struct i2c_adapter i810_ddc_adapter = {
-	"I810/I815 DDC Adapter",
-	I2C_HW_B_I810,
-	NULL,
-	&i810_ddc_bit_data,
-	i810_inc,
-	i810_dec,
-	NULL,
-	NULL,
-};
 
 
 /* Configures the chip */
@@ -228,122 +160,166 @@ void config_i810(struct pci_dev *dev)
 	unsigned long cadr;
 
 	/* map I810 memory */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,3,13)
 	cadr = dev->resource[1].start;
-#else
-	cadr = dev->base_address[1];
-#endif
 	cadr += I810_IOCONTROL_OFFSET;
 	cadr &= PCI_BASE_ADDRESS_MEM_MASK;
-	mem = ioremap_nocache(cadr, 0x1000);
-	bit_i810i2c_setscl(NULL, 1);
-	bit_i810i2c_setsda(NULL, 1);
-	bit_i810ddc_setscl(NULL, 1);
-	bit_i810ddc_setsda(NULL, 1);
+	ioaddr = (unsigned long)ioremap_nocache(cadr, 0x1000);
+	if(ioaddr) {
+		bit_i810i2c_setscl(NULL, 1);
+		bit_i810i2c_setsda(NULL, 1);
+		bit_i810ddc_setscl(NULL, 1);
+		bit_i810ddc_setsda(NULL, 1);
+	}
 }
 
-/* Detect whether a supported device can be found,
-   and initialize it */
-static int i810i2c_setup(void)
+static void i810_inc(struct i2c_adapter *adapter)
 {
-	struct pci_dev *dev = NULL;
-	int *num = i810_supported;
+#ifdef MODULE
+	MOD_INC_USE_COUNT;
+#endif
+}
 
-	do {
-		if ((dev = pci_find_device(PCI_VENDOR_ID_INTEL,
-					   *num++, dev))) {
-			config_i810(dev);
-			printk("i2c-i810.o: i810/i815 found.\n");
-			return 0;
-		}
-	} while (*num != 0);
+static void i810_dec(struct i2c_adapter *adapter)
+{
+#ifdef MODULE
+	MOD_DEC_USE_COUNT;
+#endif
+}
 
+static struct i2c_algo_bit_data i810_i2c_bit_data = {
+	.setsda		= bit_i810i2c_setsda,
+	.setscl		= bit_i810i2c_setscl,
+	.getsda		= bit_i810i2c_getsda,
+	.getscl		= bit_i810i2c_getscl,
+	.udelay		= CYCLE_DELAY,
+	.mdelay		= CYCLE_DELAY,
+	.timeout	= TIMEOUT,
+};
+
+static struct i2c_adapter i810_i2c_adapter = {
+	.name		= "I810/I815 I2C Adapter",
+	.id		= I2C_HW_B_I810,
+	.algo_data	= &i810_i2c_bit_data,
+	.inc_use	= i810_inc,
+	.dec_use	= i810_dec,
+};
+
+static struct i2c_algo_bit_data i810_ddc_bit_data = {
+	.setsda		= bit_i810ddc_setsda,
+	.setscl		= bit_i810ddc_setscl,
+	.getsda		= bit_i810ddc_getsda,
+	.getscl		= bit_i810ddc_getscl,
+	.udelay		= CYCLE_DELAY,
+	.mdelay		= CYCLE_DELAY,
+	.timeout	= TIMEOUT,
+};
+
+static struct i2c_adapter i810_ddc_adapter = {
+	.name		= "I810/I815 DDC Adapter",
+	.id		= I2C_HW_B_I810,
+	.algo_data	= &i810_ddc_bit_data,
+	.inc_use	= i810_inc,
+	.dec_use	= i810_dec,
+};
+
+
+static struct pci_device_id i810_ids[] __devinitdata = {
+	{
+		.vendor =	PCI_VENDOR_ID_INTEL,
+		.device =	PCI_DEVICE_ID_INTEL_82810_IG1,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_INTEL,
+		.device =	PCI_DEVICE_ID_INTEL_82810_IG3,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_INTEL,
+		.device =	0x7125,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_INTEL,
+		.device =	PCI_DEVICE_ID_INTEL_82815_2,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_INTEL,
+		.device =	0x2562,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{ 0, }
+};
+
+static int __devinit i810_probe(struct pci_dev *dev, const struct pci_device_id *id)
+{
+	int retval;
+
+	config_i810(dev);
+	printk("i2c-i810.o: i810/i815 found.\n");
+
+	retval = i2c_bit_add_bus(&i810_i2c_adapter);
+	if(retval)
+		return retval;
+	retval = i2c_bit_add_bus(&i810_ddc_adapter);
+	if(retval)
+		i2c_bit_del_bus(&i810_i2c_adapter);
+	return retval;
+}
+
+static void __devexit i810_remove(struct pci_dev *dev)
+{
+	i2c_bit_del_bus(&i810_ddc_adapter);
+	i2c_bit_del_bus(&i810_i2c_adapter);
+}
+
+
+/* Don't register driver to avoid driver conflicts */
+/*
+static struct pci_driver i810_driver = {
+	.name		= "i810 smbus",
+	.id_table	= i810_ids,
+	.probe		= i810_probe,
+	.remove		= __devexit_p(i810_remove),
+};
+*/
+
+static int __init i2c_i810_init(void)
+{
+	struct pci_dev *dev;
+	const struct pci_device_id *id;
+
+	printk("i2c-i810.o version %s (%s)\n", LM_VERSION, LM_DATE);
+/*
+	return pci_module_init(&i810_driver);
+*/
+	pci_for_each_dev(dev) {
+		id = pci_match_device(i810_ids, dev);
+		if(id)
+			if(i810_probe(dev, id) >= 0)
+				return 0;
+	}
 	return -ENODEV;
 }
 
-
-void i810_inc(struct i2c_adapter *adapter)
+static void __exit i2c_i810_exit(void)
 {
-	MOD_INC_USE_COUNT;
+/*
+	pci_unregister_driver(&i810_driver);
+*/
+	i810_remove(NULL);
+	iounmap((void *)ioaddr);
 }
-
-void i810_dec(struct i2c_adapter *adapter)
-{
-	MOD_DEC_USE_COUNT;
-}
-
-int __init i2c_i810_init(void)
-{
-	int res;
-	printk("i2c-i810.o version %s (%s)\n", LM_VERSION, LM_DATE);
-
-	i810i2c_initialized = 0;
-	if ((res = i810i2c_setup())) {
-		printk
-		    ("i2c-i810.o: i810/i815 not detected, module not inserted.\n");
-		i810i2c_cleanup();
-		return res;
-	}
-	if ((res = i2c_bit_add_bus(&i810_i2c_adapter))) {
-		printk("i2c-i810.o: I2C adapter registration failed\n");
-	} else {
-		printk("i2c-i810.o: I810/I815 I2C bus initialized\n");
-		i810i2c_initialized |= INIT2;
-	}
-	if ((res = i2c_bit_add_bus(&i810_ddc_adapter))) {
-		printk("i2c-i810.o: DDC adapter registration failed\n");
-	} else {
-		printk("i2c-i810.o: I810/I815 DDC bus initialized\n");
-		i810i2c_initialized |= INIT3;
-	}
-	if(!(i810i2c_initialized & (INIT2 | INIT3))) {
-		printk("i2c-i810.o: Both registrations failed, module not inserted\n");
-		i810i2c_cleanup();
-		return res;
-	}
-	return 0;
-}
-
-int __init i810i2c_cleanup(void)
-{
-	int res;
-
-	iounmap(mem);
-	if (i810i2c_initialized & INIT3) {
-		if ((res = i2c_bit_del_bus(&i810_ddc_adapter))) {
-			printk
-			    ("i2c-i810.o: i2c_del_adapter failed, module not removed\n");
-			return res;
-		}
-	}
-	if (i810i2c_initialized & INIT2) {
-		if ((res = i2c_bit_del_bus(&i810_i2c_adapter))) {
-			printk
-			    ("i2c-i810.o: i2c_del_adapter failed, module not removed\n");
-			return res;
-		}
-	}
-	i810i2c_initialized = 0;
-	return 0;
-}
-
-EXPORT_NO_SYMBOLS;
-
-#ifdef MODULE
 
 MODULE_AUTHOR
     ("Frodo Looijaard <frodol@dds.nl>, Philip Edelbrock <phil@netroedge.com>, Ralph Metzler <rjkm@thp.uni-koeln.de>, and Mark D. Studebaker <mdsxyz123@yahoo.com>");
 MODULE_DESCRIPTION("I810/I815 I2C/DDC driver");
 
-
-int init_module(void)
-{
-	return i2c_i810_init();
-}
-
-int cleanup_module(void)
-{
-	return i810i2c_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(i2c_i810_init);
+module_exit(i2c_i810_exit);

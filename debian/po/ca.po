@@ -1,0 +1,145 @@
+# lm-sensors (debconf) translation to Catalan.
+# Copyright (C) 2004 Free Software Foundation, Inc.
+# Aleix Badia i Bosch <a.badia@callusdigital.org>, 2004
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: lm-sensors_2.8.6-7\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2004-08-31 01:14+0200\n"
+"PO-Revision-Date: 2004-05-05 19:46GMT\n"
+"Last-Translator: Aleix Badia i Bosch <a.badia@callusdigital.org>\n"
+"Language-Team: Catalan <debian-l10n-catalan@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:3
+msgid ""
+"It appears that your kernel is not compiled with sensors support and that "
+"you don't have sensors modules installed. As a result, libsensors3 will not "
+"be functional on your system."
+msgstr ""
+"Aparentment el vostre nucli no està compilat amb el suport pel sensors i no "
+"teniu el mòdul instal·lat. El libsensors3 no funcionarà al sistema."
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:3
+msgid ""
+"If you want to enable it, you can:\n"
+" - Install the i2c-2.4-xx-x-xxx and lm-sensors-2.4-xx-x-xxx packages\n"
+"   corresponding to your kernel if you are using a prebuilt kernel;\n"
+" - Patch your kernel using the packages kernel-patch-2.4-i2c and\n"
+"   kernel-patch-2.4-lm-sensors;\n"
+" - Build the modules yourself using i2c-source and lm-sensors-source."
+msgstr ""
+"Si ho voleu habilitar podeu:\n"
+" - Si utilitzeu un nucli preconstruït, instal·lar els paquets i2c-2.4-xx-x-"
+"xxx\n"
+"   i lm-sensors-2.4-xx-x-xxx corresponent a la vostra versió del nucli;\n"
+" - Aplicar un pedaç al vostre nucli utilitzant els paquets kernel-patch-2.4-"
+"i2c i\n"
+"   kenel-patch-2.4-lm-sensors;\n"
+" - Construir els mòduls manualment utilitzant els paquets i2c-source i lm-"
+"sensors-source."
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:17
+msgid "libsensors3 not functional"
+msgstr "el libsensors3 no funciona"
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:17
+msgid ""
+"It appears that your kernel is not compiled with sensors support. As a "
+"result, libsensors3 will not be functional on your system."
+msgstr ""
+"Aparentment el vostre nucli no està compilat amb el suport pel sensors. El "
+"libsensors3 no funcionarà al sistema."
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:17
+msgid ""
+"If you want to enable it, have a look at \"I2C Hardware Sensors Chip support"
+"\" in your kernel configuration."
+msgstr ""
+"Si ho voleu habilitar vegeu l'opció \"I2C Hardware Sensors Chip support\" de "
+"la configuració del nucli."
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:26
+msgid "libsensors3 needs kernel >= 2.6.5"
+msgstr "el libsensors3 necessita una versió del nucli >= 2.6.5"
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:26
+msgid ""
+"The /sys interface changed in kernel version 2.6.5 and libsensors version "
+"2.8.6. This version of libsensors3 doesn't support kernels older than "
+"version 2.6.5 anymore."
+msgstr ""
+"La interfície /sys ha canviat en les version 2.6.5 del nucli i 2.8.6 del "
+"libsensors. Aquesta versió del libsensors3 no suporta nuclis anteriors a la "
+"versió 2.6.5."
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:26
+msgid ""
+"It appears that your are running a kernel older than version 2.6.5. As a "
+"result libsensors3 will not be functional on your system."
+msgstr ""
+"Aparentment esteu executant una versió del nucli anterior a la 2.6.5. El "
+"libsensors3 no funcionarà al vostre sistema."
+
+#. Type: note
+#. Description
+#: ../libsensors3.templates:26
+msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
+msgstr "(Recordeu que el libsensors3 encara és compatible amb els nuclis 2.4)."
+
+#. Type: note
+#. Description
+#: ../lm-sensors.templates:3
+msgid "Comparison of negatives have changed"
+msgstr "S'ha modificat la comparació de negatius"
+
+#. Type: note
+#. Description
+#: ../lm-sensors.templates:3
+msgid ""
+"Starting with version 2.6.3, the comparison of negative voltages have "
+"changed to be mathematicaly correct."
+msgstr ""
+"Des de la versió 2.6.3, la comparació de tensions negatives s'ha modificat "
+"per ser matemàticament correcta."
+
+#. Type: note
+#. Description
+#: ../lm-sensors.templates:3
+msgid ""
+"For example the following lines in /etc/sensors.conf\n"
+"\tset in5_max -12 * 1.05\n"
+"set in5_min -12 * 0.95 should be changed into\n"
+"\tset in5_min -12 * 1.05\n"
+"\tset in5_max -12 * 0.95"
+msgstr ""
+"Per exemple, les línies del fitxer /etc/sensors.conf\n"
+"\tset in5_max -12 * 1.05\n"
+"definides in5_min -12 * 0.95 haurien de ser\n"
+"\tset in5_min -12 * 1.05\n"
+"\tset in5_max -12 * 0.95"
+
+#. Type: note
+#. Description
+#: ../lm-sensors.templates:3
+msgid "Please update your sensors.conf if need."
+msgstr "Si és necessari actualitzeu el fitxer sensors.conf."

@@ -23,6 +23,10 @@
 #include "error.h"
 #include "data.h"
 #include "sensors.h"
+#include "../version.h"
+
+const char *libsensors_version = LM_VERSION;
+const char *libsensors_date = LM_DATE;
 
 sensors_chip *sensors_config_chips = NULL;
 int sensors_config_chips_count = 0;
@@ -67,6 +71,9 @@ int sensors_parse_chip_name(const char *orig_name, sensors_chip_name *res)
   char *name = strdup(orig_name);
   int i;
 
+  /* Play it safe */
+  res->busname = NULL;
+  
   if (! name)
     sensors_fatal_error("sensors_parse_chip_name","Allocating new name");
   /* First split name in upto four pieces. */
@@ -113,7 +120,7 @@ int sensors_parse_chip_name(const char *orig_name, sensors_chip_name *res)
         goto ERROR;
       }
     }
-DONE:
+DONE:;
   }
 
   /* OK. So let's look at part3. It must either be the number of the
@@ -147,12 +154,16 @@ DONE:
         goto ERROR;
       }
     }
-DONE2:
+DONE2:;
   } else if (res->addr == SENSORS_CHIP_NAME_ADDR_ANY) {
     res->bus = SENSORS_CHIP_NAME_BUS_ANY;
     if (part2)
       *(part2-1) = '-';
     *(part3-1) = '-';
+  } else if(part3 && part4) {
+    res->bus = SENSORS_CHIP_NAME_BUS_DUMMY;
+    if (! (res->busname = strdup(part3)))
+      sensors_fatal_error("sensors_parse_chip_name","Allocating new busname");
   } else
     goto ERROR;
     
@@ -179,8 +190,10 @@ int sensors_parse_i2cbus_name(const char *name, int *res)
     *res = SENSORS_CHIP_NAME_BUS_ISA;
     return 0;
   }
-  if (strncmp(name,"i2c-",4)) 
-    return -1;
+  if (strncmp(name,"i2c-",4)) {
+    *res = SENSORS_CHIP_NAME_BUS_DUMMY;
+    return 0;
+  }
   name += 4;
   if ((strlen(name) > 3) || (strlen(name) == 0))
     return -SENSORS_ERR_BUS_NAME;
@@ -239,6 +252,7 @@ int sensors_substitute_busses(void)
     chips = &sensors_config_chips[i].chips;
     for(j = 0; j < chips->fits_count; j++)
       if ((chips->fits[j].bus != SENSORS_CHIP_NAME_BUS_ISA) &&
+          (chips->fits[j].bus != SENSORS_CHIP_NAME_BUS_DUMMY) &&
           (chips->fits[j].bus != SENSORS_CHIP_NAME_BUS_ANY) &&
           (chips->fits[j].bus != SENSORS_CHIP_NAME_BUS_ANY_I2C))
         if ((err = sensors_substitute_chip(chips->fits+j, lineno)))

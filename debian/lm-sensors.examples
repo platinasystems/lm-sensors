@@ -1,8 +1,8 @@
 prog/config
 prog/daemon
 prog/eeprom
-prog/xeon
 prog/matorb
 prog/hotplug
 prog/maxilife
 prog/tellerstats
+prog/xeon

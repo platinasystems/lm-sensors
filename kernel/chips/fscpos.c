@@ -25,34 +25,12 @@
     and Philip Edelbrock <phil@netroedge.com>
 */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
-
-/* temp. because wasn't in kernel 2.4.13 patch */
-#ifndef I2C_DRIVERID_FSCPOS
-#define I2C_DRIVERID_FSCPOS 1028
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
-
+#include "version.h"
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { 0x73, SENSORS_I2C_END };
@@ -129,16 +107,12 @@ SENSORS_INSMOD_1(fscpos);
 
 /* Initial limits */
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
 /* For each registered FSCPOS, we need to keep some data in memory. That
    data is pointed to by fscpos_list[NR]->data. The structure itself is
    dynamically allocated, at the same time when a new fscpos client is
    allocated. */
 struct fscpos_data {
+	struct i2c_client client;
 	int sysctl_id;
 
 	struct semaphore update_lock;
@@ -159,22 +133,10 @@ struct fscpos_data {
 };
 
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_fscpos_init(void);
-static int __init fscpos_cleanup(void);
-
 static int fscpos_attach_adapter(struct i2c_adapter *adapter);
 static int fscpos_detect(struct i2c_adapter *adapter, int address,
 		       unsigned short flags, int kind);
 static int fscpos_detach_client(struct i2c_client *client);
-static int fscpos_command(struct i2c_client *client, unsigned int cmd,
-			void *arg);
-static void fscpos_inc_use(struct i2c_client *client);
-static void fscpos_dec_use(struct i2c_client *client);
 
 static int fscpos_read_value(struct i2c_client *client, u8 register);
 static int fscpos_write_value(struct i2c_client *client, u8 register,
@@ -200,20 +162,29 @@ static void fscpos_wdog(struct i2c_client *client, int operation,
 static int fscpos_id = 0;
 
 static struct i2c_driver fscpos_driver = {
-	/* name */ "FSCPOS sensor driver",
-	/* id */ I2C_DRIVERID_FSCPOS,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &fscpos_attach_adapter,
-	/* detach_client */ &fscpos_detach_client,
-	/* command */ &fscpos_command,
-	/* inc_use */ &fscpos_inc_use,
-	/* dec_use */ &fscpos_dec_use
+	.name		= "FSCPOS sensor driver",
+	.id		= I2C_DRIVERID_FSCPOS,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= fscpos_attach_adapter,
+	.detach_client	= fscpos_detach_client,
 };
 
-/* Used by fscpos_init/cleanup */
-static int __initdata fscpos_initialized = 0;
+/* -- SENSORS SYSCTL START -- */
+#define FSCPOS_SYSCTL_VOLT0    1000       /* 12 volt supply */
+#define FSCPOS_SYSCTL_VOLT1    1001       /* 5 volt supply */
+#define FSCPOS_SYSCTL_VOLT2    1002       /* batterie voltage*/
+#define FSCPOS_SYSCTL_FAN0     1101       /* state, min, ripple, actual value fan 0 */
+#define FSCPOS_SYSCTL_FAN1     1102       /* state, min, ripple, actual value fan 1 */
+#define FSCPOS_SYSCTL_FAN2     1103       /* state, min, ripple, actual value fan 2 */
+#define FSCPOS_SYSCTL_TEMP0    1201       /* state and value of sensor 0, cpu die */
+#define FSCPOS_SYSCTL_TEMP1    1202       /* state and value of sensor 1, motherboard */
+#define FSCPOS_SYSCTL_TEMP2    1203       /* state and value of sensor 2, chassis */
+#define FSCPOS_SYSCTL_REV     2000        /* Revision */
+#define FSCPOS_SYSCTL_EVENT   2001        /* global event status */
+#define FSCPOS_SYSCTL_CONTROL 2002        /* global control byte */
+#define FSCPOS_SYSCTL_WDOG     2003       /* state, min, ripple, actual value fan 2 */
+/* -- SENSORS SYSCTL END -- */
 
-/* The /proc/sys entries */
 /* These files are created for each detected FSCPOS. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -249,7 +220,7 @@ static ctl_table fscpos_dir_table_template[] = {
 	{0}
 };
 
-int fscpos_attach_adapter(struct i2c_adapter *adapter)
+static int fscpos_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, fscpos_detect);
 }
@@ -279,14 +250,12 @@ int fscpos_detect(struct i2c_adapter *adapter, int address,
 	/* OK. For now, we presume we have a valid client. We now create the
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access fscpos_{read,write}_value. */
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct fscpos_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct fscpos_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct fscpos_data *) (new_client + 1);
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -337,12 +306,12 @@ int fscpos_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int fscpos_detach_client(struct i2c_client *client)
+static int fscpos_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -355,33 +324,12 @@ int fscpos_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
 
-/* No commands defined yet */
-int fscpos_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-void fscpos_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-void fscpos_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
-
-int fscpos_read_value(struct i2c_client *client, u8 reg)
+static int fscpos_read_value(struct i2c_client *client, u8 reg)
 {
 #ifdef DEBUG
 	printk("fscpos: read reg 0x%02x\n",reg);
@@ -389,7 +337,7 @@ int fscpos_read_value(struct i2c_client *client, u8 reg)
 	return i2c_smbus_read_byte_data(client, reg);
 }
 
-int fscpos_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int fscpos_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 #ifdef DEBUG
 	printk("fscpos: write reg 0x%02x, val 0x%02x\n",reg, value);
@@ -398,7 +346,7 @@ int fscpos_write_value(struct i2c_client *client, u8 reg, u8 value)
 }
 
 /* Called when we have found a new FSCPOS. It should set limits, etc. */
-void fscpos_init_client(struct i2c_client *client)
+static void fscpos_init_client(struct i2c_client *client)
 {
 	struct fscpos_data *data = client->data;
 
@@ -408,7 +356,7 @@ void fscpos_init_client(struct i2c_client *client)
 	data->fan_min[2] = 0xff;
 }
 
-void fscpos_update_client(struct i2c_client *client)
+static void fscpos_update_client(struct i2c_client *client)
 {
 	struct fscpos_data *data = client->data;
 
@@ -719,58 +667,23 @@ void fscpos_wdog(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_fscpos_init(void)
+static int __init sm_fscpos_init(void)
 {
-	int res;
-
 	printk("fscpos.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	fscpos_initialized = 0;
-
-	if ((res = i2c_add_driver(&fscpos_driver))) {
-		printk
-		    ("fscpos.o: Driver registration failed, module not inserted.\n");
-		fscpos_cleanup();
-		return res;
-	}
-	fscpos_initialized++;
-	return 0;
+	return i2c_add_driver(&fscpos_driver);
 }
 
-int __init fscpos_cleanup(void)
+static void __exit sm_fscpos_exit(void)
 {
-	int res;
-
-	if (fscpos_initialized >= 1) {
-		if ((res = i2c_del_driver(&fscpos_driver))) {
-			printk
-			    ("fscpos.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		fscpos_initialized--;
-	}
-	return 0;
+	i2c_del_driver(&fscpos_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR
     ("Hermann Jung <hej@odn.de> based on work from Frodo Looijaard <frodol@dds.nl> and Philip Edelbrock <phil@netroedge.com>");
 MODULE_DESCRIPTION("fujitsu siemens poseidon chip driver");
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
 
-
-int init_module(void)
-{
-	return sensors_fscpos_init();
-}
-
-int cleanup_module(void)
-{
-	return fscpos_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_fscpos_init);
+module_exit(sm_fscpos_exit);

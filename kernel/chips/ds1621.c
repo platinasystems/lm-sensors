@@ -21,26 +21,14 @@
 
 /* Supports DS1621. See doc/chips/ds1621 for details */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include "sensors.h"
-#include "version.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include "version.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -90,12 +78,9 @@ SENSORS_INSMOD_1(ds1621);
 #define ITEMP_FROM_REG(val) ((((val & 0x7fff) >> 8)) | \
                             ((val & 0x8000)?-256:0))
 
-/* Initial values */
-#define DS1621_INIT_TEMP_OVER 600
-#define DS1621_INIT_TEMP_HYST 0 /* 500 would cause an alarm at room temp. */
-
 /* Each client has this additional data */
 struct ds1621_data {
+	struct i2c_client client;
 	int sysctl_id;
 
 	struct semaphore update_lock;
@@ -109,28 +94,12 @@ struct ds1621_data {
 	u8 temp_int, temp_counter, temp_slope;	/* Register values, byte */
 };
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_ds1621_init(void);
-static int __init ds1621_cleanup(void);
 static int ds1621_attach_adapter(struct i2c_adapter *adapter);
 static int ds1621_detect(struct i2c_adapter *adapter, int address,
 			 unsigned short flags, int kind);
 static void ds1621_init_client(struct i2c_client *client);
 static int ds1621_detach_client(struct i2c_client *client);
-static int ds1621_command(struct i2c_client *client, unsigned int cmd,
-			  void *arg);
-static void ds1621_inc_use(struct i2c_client *client);
-static void ds1621_dec_use(struct i2c_client *client);
-static u16 swap_bytes(u16 val);
+
 static int ds1621_read_value(struct i2c_client *client, u8 reg);
 static int ds1621_write_value(struct i2c_client *client, u8 reg, u16 value);
 static void ds1621_temp(struct i2c_client *client, int operation,
@@ -148,15 +117,23 @@ static void ds1621_update_client(struct i2c_client *client);
 
 /* This is the driver that will be inserted */
 static struct i2c_driver ds1621_driver = {
-	/* name */ "DS1621 sensor driver",
-	/* id */ I2C_DRIVERID_DS1621,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &ds1621_attach_adapter,
-	/* detach_client */ &ds1621_detach_client,
-	/* command */ &ds1621_command,
-	/* inc_use */ &ds1621_inc_use,
-	/* dec_use */ &ds1621_dec_use
+	.name		= "DS1621 sensor driver",
+	.id		= I2C_DRIVERID_DS1621,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= ds1621_attach_adapter,
+	.detach_client	= ds1621_detach_client,
 };
+
+/* -- SENSORS SYSCTL START -- */
+#define DS1621_SYSCTL_TEMP 1200	/* Degrees Celcius * 10 */
+#define DS1621_SYSCTL_ALARMS 2001	/* bitvector */
+#define DS1621_ALARM_TEMP_HIGH 0x40
+#define DS1621_ALARM_TEMP_LOW 0x20
+#define DS1621_SYSCTL_ENABLE 2002
+#define DS1621_SYSCTL_CONTINUOUS 2003
+#define DS1621_SYSCTL_POLARITY 2004
+
+/* -- SENSORS SYSCTL END -- */
 
 /* These files are created for each detected DS1621. This is just a template;
    though at first sight, you might think we could use a statically
@@ -177,12 +154,9 @@ static ctl_table ds1621_dir_table_template[] = {
 	{0}
 };
 
-/* Used by init/cleanup */
-static int __initdata ds1621_initialized = 0;
-
 static int ds1621_id = 0;
 
-int ds1621_attach_adapter(struct i2c_adapter *adapter)
+static int ds1621_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, ds1621_detect);
 }
@@ -208,20 +182,19 @@ int ds1621_detect(struct i2c_adapter *adapter, int address,
 #endif
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA |
-				     I2C_FUNC_SMBUS_WORD_DATA))
+				     I2C_FUNC_SMBUS_WORD_DATA |
+				     I2C_FUNC_SMBUS_WRITE_BYTE))
 		    goto ERROR0;
 
 	/* OK. For now, we presume we have a valid client. We now create the
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access ds1621_{read,write}_value. */
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct ds1621_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct ds1621_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct ds1621_data *) (new_client + 1);
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -282,20 +255,14 @@ int ds1621_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int ds1621_detach_client(struct i2c_client *client)
+static int ds1621_detach_client(struct i2c_client *client)
 {
 	int err;
-
-#ifdef MODULE
-	if (MOD_IN_USE)
-		return -EBUSY;
-#endif
-
 
 	i2c_deregister_entry(((struct ds1621_data *) (client->data))->
 				 sysctl_id);
@@ -306,78 +273,50 @@ int ds1621_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
 
-
-/* No commands defined yet */
-int ds1621_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-/* Nothing here yet */
-void ds1621_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-/* Nothing here yet */
-void ds1621_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
-u16 swap_bytes(u16 val)
-{
-	return (val >> 8) | (val << 8);
-}
 
 /* All registers are word-sized, except for the configuration register.
    DS1621 uses a high-byte first convention, which is exactly opposite to
    the usual practice. */
-int ds1621_read_value(struct i2c_client *client, u8 reg)
+static int ds1621_read_value(struct i2c_client *client, u8 reg)
 {
 	if ((reg == DS1621_REG_CONF) || (reg == DS1621_REG_TEMP_COUNTER)
 	    || (reg == DS1621_REG_TEMP_SLOPE))
 		return i2c_smbus_read_byte_data(client, reg);
 	else
-		return swap_bytes(i2c_smbus_read_word_data(client, reg));
+		return swab16(i2c_smbus_read_word_data(client, reg));
 }
 
 /* All registers are word-sized, except for the configuration register.
    DS1621 uses a high-byte first convention, which is exactly opposite to
    the usual practice. */
-int ds1621_write_value(struct i2c_client *client, u8 reg, u16 value)
+static int ds1621_write_value(struct i2c_client *client, u8 reg, u16 value)
 {
+	if ( (reg == DS1621_COM_START) || (reg == DS1621_COM_STOP) )
+		return i2c_smbus_write_byte(client, reg);
+	else
 	if ((reg == DS1621_REG_CONF) || (reg == DS1621_REG_TEMP_COUNTER)
 	    || (reg == DS1621_REG_TEMP_SLOPE))
 		return i2c_smbus_write_byte_data(client, reg, value);
 	else
-		return i2c_smbus_write_word_data(client, reg,
-						 swap_bytes(value));
+		return i2c_smbus_write_word_data(client, reg, swab16(value));
 }
 
-void ds1621_init_client(struct i2c_client *client)
+static void ds1621_init_client(struct i2c_client *client)
 {
-	/* Initialize the DS1621 chip */
-	ds1621_write_value(client, DS1621_REG_TEMP_OVER,
-			 TEMP_TO_REG(DS1621_INIT_TEMP_OVER));
-	ds1621_write_value(client, DS1621_REG_TEMP_HYST,
-			 TEMP_TO_REG(DS1621_INIT_TEMP_HYST));
-	ds1621_write_value(client, DS1621_REG_CONF, 0);
+	int reg;
 
-	/* perhaps we should start the continous conversion? For now */
-	/* you got to do that yourself using the "enable" in proc */
+	reg = ds1621_read_value(client, DS1621_REG_CONF);
+	/* start the continous conversion */
+	if(reg & 0x01)
+		ds1621_write_value(client, DS1621_REG_CONF, reg & 0xfe);
 }
 
-void ds1621_update_client(struct i2c_client *client)
+static void ds1621_update_client(struct i2c_client *client)
 {
 	struct ds1621_data *data = client->data;
 	u8 new_conf;
@@ -410,7 +349,7 @@ void ds1621_update_client(struct i2c_client *client)
 			data->temp_int = ITEMP_FROM_REG(data->temp);
 			/* restart the conversion */
 			if (data->enable)
-				ds1621_read_value(client, DS1621_COM_START);
+				ds1621_write_value(client, DS1621_COM_START, 0);
 		}
 
 		/* reset alarms if neccessary */
@@ -504,14 +443,14 @@ void ds1621_enable(struct i2c_client *client, int operation, int ctl_name,
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		if (*nrels_mag >= 1) {
 			if (results[0]) {
-				ds1621_read_value(client, DS1621_COM_START);
+				ds1621_write_value(client, DS1621_COM_START, 0);
 				data->enable=1;
 			} else {
-				ds1621_read_value(client, DS1621_COM_STOP);
+				ds1621_write_value(client, DS1621_COM_STOP, 0);
 				data->enable=0;
 			}
 		} else {
-			ds1621_read_value(client, DS1621_COM_START);
+			ds1621_write_value(client, DS1621_COM_START, 0);
 			data->enable=1;
 		}
 	}
@@ -568,53 +507,21 @@ void ds1621_polarity(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_ds1621_init(void)
+static int __init sm_ds1621_init(void)
 {
-	int res;
-
 	printk("ds1621.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	ds1621_initialized = 0;
-	if ((res = i2c_add_driver(&ds1621_driver))) {
-		printk
-	    ("ds1621.o: Driver registration failed, module not inserted.\n");
-		ds1621_cleanup();
-		return res;
-	}
-	ds1621_initialized++;
-	return 0;
+	return i2c_add_driver(&ds1621_driver);
 }
 
-int __init ds1621_cleanup(void)
+static void __exit sm_ds1621_exit(void)
 {
-	int res;
-
-	if (ds1621_initialized >= 1) {
-		if ((res = i2c_del_driver(&ds1621_driver))) {
-			printk
-			    ("ds1621.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		ds1621_initialized--;
-	}
-
-	return 0;
+	i2c_del_driver(&ds1621_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR("Christian W. Zuckschwerdt <zany@triq.net>");
 MODULE_DESCRIPTION("DS1621 driver");
 
-int init_module(void)
-{
-	return sensors_ds1621_init();
-}
-
-int cleanup_module(void)
-{
-	return ds1621_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_ds1621_init);
+module_exit(sm_ds1621_exit);

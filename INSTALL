@@ -1,20 +1,33 @@
 =============================================================================
 
-INSTALLATION INSTRUCTIONS
+DETAILED INSTALLATION INSTRUCTIONS
+See QUICKSTART for the simple version.
 
-REQUIRES kernel 2.4.13 or later, or i2c-2.6.1 or later!!!
+The driver modules in this package are ONLY for 2.4 kernels 2.4.10 or later!
+
+This package REQUIRES i2c-2.9.0 or later! The i2c subsystem found in the
+Linux 2.4 kernel trees, even the latest ones, is outdated and won't work.
+
+FOR 2.5/2.6 KERNELS, do not attempt to compile the modules in this package.
+    Use the drivers already in the 2.5/2.6 kernel tree.
+    If you are running a 2.5/2.6 kernel, the ONLY thing you need to
+    do is 'make user' and 'make user_install'. Do NOT follow the rest
+    of these instructions.
+
 
 =============================================================================
 These are the installation instruction for the lm_sensors package.
 
-There are two ways in which you can compile and install this package. Each
-has its own strong points. They are:
+There are two ways in which you can compile and install this package.
+Option 1 is much easier and is recommended.
 
  1. Complete separate from kernel compilation
+    (only for 2.4 kernels 2.4.10 or later)
     This will generate a set of modules which can be inserted and removed
     as needed; nothing will be written into the kernel tree;
 
  2. Patching of the kernel
+    (only for 2.4 kernels 2.4.13 or later)
     This will patch your kernel source tree. You must recompile your kernel
     to take advantage of this. But it makes it possible to compile drivers
     into the kernel itself, instead of having to add them as modules.
@@ -40,13 +53,12 @@ NOTE: PLEASE READ THE DOCUMENTATION IN THE DOC SUBDIRECTORY IF YOU GET STUCK!
 Installing the i2c package
 ==========================
 
-Note: as of kernel 2.3.34, the new i2c code is integrated into the
-mainstream kernels. You MAY be able to skip this whole step if you use kernel
-2.3.34 or later, but it is likely that you will have compilation problems.
-We strongly recommend that you download and install the i2c package with
-the same version number as the lm_sensors package.
+This lm_sensors release REQUIRES i2c-2.9.0 or later, which is not in
+any 2.4 kernel (and will never be).
+Therefore, you must download and install the i2c package with
+the same version number or higher as this lm_sensors package.
 
-As of version 2.4.0 of lm_sensors, all i2c components are distributed in
+All i2c components are distributed in
 a separate package. There are install instructions in that package. If
 you want to use compilation option 2 (patching the kernel) for lm_sensors,
 you will have to use compilation option 3 (patching the kernel) for i2c
@@ -57,6 +69,7 @@ table below.
 
                                           LM_SENSORS
 I2C                      | option 1 (modules)      option 2 (patch kernel)
+-------------------------+------------------------------------------------
 option 1 (modules)       |      YES                      NO
 option 2 (modules)       |      YES                      YES
 option 3 (patch kernel)  |      YES                      YES
@@ -71,8 +84,8 @@ options 2 and 3). Especially if you have in the past placed the header
 files in /usr/local/include, this will probably go wrong. See below on
 how to fix this.
 
-NOTE: option 3 only works with 2.2 and 2.4 (2.4.0 and later) kernels;
-      option 1 and 2 also work with 2.3 kernels.
+NOTE: option 3 only works with 2.4 kernels 2.4.13 or later;
+      options 1 and 2 only work with 2.4 kernels 2.4.10 or later.
 
 
 Mixing old and new, and using beta drivers (compilation option 1)
@@ -152,12 +165,13 @@ At the top of the Makefile are a couple of configuration variables that
 you may want to change. As far as possible, the Makefile tries to figure
 out by itself their settings, but it is possible to overrule them. A list
 is found below. Most important are the variables that determine where
-your kernel is located (LINUX=/usr/src/linux), where the i2c header files
+your kernel is located (LINUX=/lib/modules/KERNELVERSION/build, usually
+links to /usr/src/linux or something similar), where the i2c header files
 are (I2C_HEADERS=/usr/local/include) and where you want to install 
-your modules (MODDIR=/lib/modules/KERNELVERSION/misc) and
-header files (LINUX_INCLUDE_DIR=/usr/local/include/linux). You can see
-that the installation locations are choosen in such a way that they
-are separate from the true kernel.
+your modules (MODDIR=/lib/modules/KERNELVERSION) and header files
+(LINUX_INCLUDE_DIR=/usr/local/include/linux). You can see that the
+installation locations are choosen in such a way that they are separate
+from the true kernel.
 
 Compilation is done by `make all'; `make install' installs the package.
 You will get a lot of warnings about files which are not found, all 
@@ -174,7 +188,9 @@ SHELL (default: /bin/sh)
   You may have to specify the full path to Bash here, if /bin/sh is some
   other shell. There have been conflicting reports on whether this is 
   needed.
-LINUX default: /usr/src/linux
+KERNELVERSION
+  The version of the currently running kernel.
+LINUX (default: /lib/modules/$(KERNELVERSION)/build)
   The location of your kernel tree.
 COMPILE_KERNEL
   Determine whether you want to consider the kernel modules for compilation
@@ -186,7 +202,7 @@ COMPILE_KERNEL
   You may want to set this to 0 if you have just patched and compiled
   your kernel using the same version of this package, and just want to
   compile the user-space tools.
-I2C_HEADERS default: /usr/local/include
+I2C_HEADERS (default: /usr/local/include)
   This lists where the i2c headers are found. If you used compilation
   option 1 for the i2c package, the default will be right. If you used
   compilation options 2 or 3, it will not, and may actually cause
@@ -197,41 +213,41 @@ SMP
   This must be set to 1 for a SMP kernel. The magic invocation should
   determine this automatically, so you should not have to bother with 
   this.
-WARN default: 0
-  Generate additional compilation warnings; mainly interesting for
-  developers.
 MODVER
   This must be set to 1 if CONFIG_MODVERSIONS is defined. The magic
   invocation should determine this automatically, so you should not
   have to bother with this.
-DEBUG default: 0
+WARN (default: 0)
+  Generate additional compilation warnings; mainly interesting for
+  developers.
+DEBUG (default: 0)
   Some drivers will issue more debug information if you set this to
   1. Don't do it, unless you are a developer or are instructed to do
   so by the lm_sensors team.
-PREFIX default: /usr/local
-  Prefix for almost all installation directories
-MODDIR default: /lib/modules/KERNELVERSION/misc)
-  The location where the kernel modules will be installed. 
-ETCDIR default: /etc
-  Installation location of the sensors.conf configuration file
-LIBDIR default: $(PREFIX)/lib
+PREFIX (default: /usr/local)
+  Prefix for almost all installation directories.
+MODPREF (default: /lib/modules/$(KERNELVERSION))
+  The location where the kernel modules will be installed.
+ETCDIR (default: /etc)
+  Installation location of the sensors.conf configuration file.
+LIBDIR (default: $(PREFIX)/lib)
   Installation location of all static and shared libraries.
-BINDIR default: $(PREFIX)/bin
-  Installation directory of programs useful for users
-SBINDIR default: $(PREFIX)/sbin
-  Installation directory of system administrator-only programs
-INCLUDEDIR default: $(PREFIX)/include
-  Base installation directory for include files (see next two vars)
-SYSINCLUDEDIR default: $(INCLUDEDIR)/linux
-  Installation directory for system include files
-LIBINCLUDEDIR default: $(INCLUDEDIR)/sensors
+BINDIR (default: $(PREFIX)/bin)
+  Installation directory of programs useful for users.
+SBINDIR (default: $(PREFIX)/sbin)
+  Installation directory of system administrator-only programs.
+INCLUDEDIR (default: $(PREFIX)/include)
+  Base installation directory for include files (see next two vars).
+SYSINCLUDEDIR (default: $(INCLUDEDIR)/linux)
+  Installation directory for system include files.
+LIBINCLUDEDIR (default: $(INCLUDEDIR)/sensors)
   Installation directory for libsensors include files.
-MANDIR default: $(PREFIX)/man
-  Base installation directory for manual pages
-MANOWN default: root
-  Owner of manual pages
-MANGRP default: root
-  Group of manual pages
+MANDIR (default: $(PREFIX)/man)
+  Base installation directory for manual pages.
+MANOWN (default: root)
+  Owner of manual pages.
+MANGRP (default: root)
+  Group of manual pages.
 
 
 

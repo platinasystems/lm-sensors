@@ -18,32 +18,16 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
 #include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include <asm/io.h>
+#include "version.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -85,14 +69,14 @@ SENSORS_INSMOD_3(lm78, lm78j, lm79);
 #define LM78_REG_I2C_ADDR 0x48
 
 
-/* Conversions. Rounding and limit checking is only done on the TO_REG 
+/* Conversions. Limit checking is only done on the TO_REG 
    variants. Note that you should be a bit careful with which arguments
    these macros are called: arguments may be evaluated more than once.
    Fixing this is just not worth it. */
 #define IN_TO_REG(val)  (SENSORS_LIMIT((((val) * 10 + 8)/16),0,255))
-#define IN_FROM_REG(val) (((val) *  16) / 10)
+#define IN_FROM_REG(val) (((val) *  16 + 5) / 10)
 
-extern inline u8 FAN_TO_REG(long rpm, int div)
+static inline u8 FAN_TO_REG(long rpm, int div)
 {
 	if (rpm == 0)
 		return 255;
@@ -114,59 +98,6 @@ extern inline u8 FAN_TO_REG(long rpm, int div)
 #define DIV_TO_REG(val) ((val)==8?3:(val)==4?2:(val)==1?0:1)
 #define DIV_FROM_REG(val) (1 << (val))
 
-/* Initial limits. To keep them sane, we use the 'standard' translation as
-   specified in the LM78 sheet. Use the config file to set better limits. */
-#define LM78_INIT_IN_0 (vid==350?280:vid)
-#define LM78_INIT_IN_1 (vid==350?280:vid)
-#define LM78_INIT_IN_2 330
-#define LM78_INIT_IN_3 (((500)   * 100)/168)
-#define LM78_INIT_IN_4 (((1200)  * 10)/38)
-#define LM78_INIT_IN_5 (((-1200) * -604)/2100)
-#define LM78_INIT_IN_6 (((-500)  * -604)/909)
-
-#define LM78_INIT_IN_PERCENTAGE 10
-
-#define LM78_INIT_IN_MIN_0 \
-        (LM78_INIT_IN_0 - LM78_INIT_IN_0 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MAX_0 \
-        (LM78_INIT_IN_0 + LM78_INIT_IN_0 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MIN_1 \
-        (LM78_INIT_IN_1 - LM78_INIT_IN_1 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MAX_1 \
-        (LM78_INIT_IN_1 + LM78_INIT_IN_1 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MIN_2 \
-        (LM78_INIT_IN_2 - LM78_INIT_IN_2 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MAX_2 \
-        (LM78_INIT_IN_2 + LM78_INIT_IN_2 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MIN_3 \
-        (LM78_INIT_IN_3 - LM78_INIT_IN_3 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MAX_3 \
-        (LM78_INIT_IN_3 + LM78_INIT_IN_3 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MIN_4 \
-        (LM78_INIT_IN_4 - LM78_INIT_IN_4 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MAX_4 \
-        (LM78_INIT_IN_4 + LM78_INIT_IN_4 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MIN_5 \
-        (LM78_INIT_IN_5 - LM78_INIT_IN_5 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MAX_5 \
-        (LM78_INIT_IN_5 + LM78_INIT_IN_5 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MIN_6 \
-        (LM78_INIT_IN_6 - LM78_INIT_IN_6 * LM78_INIT_IN_PERCENTAGE / 100)
-#define LM78_INIT_IN_MAX_6 \
-        (LM78_INIT_IN_6 + LM78_INIT_IN_6 * LM78_INIT_IN_PERCENTAGE / 100)
-
-#define LM78_INIT_FAN_MIN_1 3000
-#define LM78_INIT_FAN_MIN_2 3000
-#define LM78_INIT_FAN_MIN_3 3000
-
-#define LM78_INIT_TEMP_OVER 600
-#define LM78_INIT_TEMP_HYST 500
-
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
 /* There are some complications in a module like this. First off, LM78 chips
    may be both present on the SMBus and the ISA bus, and we have to handle
    those cases separately at some places. Second, there might be several
@@ -187,6 +118,7 @@ extern int cleanup_module(void);
    dynamically allocated, at the same time when a new lm78 client is
    allocated. */
 struct lm78_data {
+	struct i2c_client client;
 	struct semaphore lock;
 	int sysctl_id;
 	enum chips type;
@@ -209,22 +141,10 @@ struct lm78_data {
 };
 
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_lm78_init(void);
-static int __init lm78_cleanup(void);
-
 static int lm78_attach_adapter(struct i2c_adapter *adapter);
 static int lm78_detect(struct i2c_adapter *adapter, int address,
 		       unsigned short flags, int kind);
 static int lm78_detach_client(struct i2c_client *client);
-static int lm78_command(struct i2c_client *client, unsigned int cmd,
-			void *arg);
-static void lm78_inc_use(struct i2c_client *client);
-static void lm78_dec_use(struct i2c_client *client);
 
 static int lm78_read_value(struct i2c_client *client, u8 register);
 static int lm78_write_value(struct i2c_client *client, u8 register,
@@ -247,22 +167,51 @@ static void lm78_fan_div(struct i2c_client *client, int operation,
 			 int ctl_name, int *nrels_mag, long *results);
 
 static struct i2c_driver lm78_driver = {
-	/* name */ "LM78(-J) and LM79 sensor driver",
-	/* id */ I2C_DRIVERID_LM78,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &lm78_attach_adapter,
-	/* detach_client */ &lm78_detach_client,
-	/* command */ &lm78_command,
-	/* inc_use */ &lm78_inc_use,
-	/* dec_use */ &lm78_dec_use
+	.name		= "LM78(-J) and LM79 sensor driver",
+	.id		= I2C_DRIVERID_LM78,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= lm78_attach_adapter,
+	.detach_client	= lm78_detach_client,
 };
-
-/* Used by lm78_init/cleanup */
-static int __initdata lm78_initialized = 0;
 
 static int lm78_id = 0;
 
 /* The /proc/sys entries */
+
+/* -- SENSORS SYSCTL START -- */
+#define LM78_SYSCTL_IN0 1000	/* Volts * 100 */
+#define LM78_SYSCTL_IN1 1001
+#define LM78_SYSCTL_IN2 1002
+#define LM78_SYSCTL_IN3 1003
+#define LM78_SYSCTL_IN4 1004
+#define LM78_SYSCTL_IN5 1005
+#define LM78_SYSCTL_IN6 1006
+#define LM78_SYSCTL_FAN1 1101	/* Rotations/min */
+#define LM78_SYSCTL_FAN2 1102
+#define LM78_SYSCTL_FAN3 1103
+#define LM78_SYSCTL_TEMP 1200	/* Degrees Celcius * 10 */
+#define LM78_SYSCTL_VID 1300	/* Volts * 100 */
+#define LM78_SYSCTL_FAN_DIV 2000	/* 1, 2, 4 or 8 */
+#define LM78_SYSCTL_ALARMS 2001	/* bitvector */
+
+#define LM78_ALARM_IN0 0x0001
+#define LM78_ALARM_IN1 0x0002
+#define LM78_ALARM_IN2 0x0004
+#define LM78_ALARM_IN3 0x0008
+#define LM78_ALARM_IN4 0x0100
+#define LM78_ALARM_IN5 0x0200
+#define LM78_ALARM_IN6 0x0400
+#define LM78_ALARM_FAN1 0x0040
+#define LM78_ALARM_FAN2 0x0080
+#define LM78_ALARM_FAN3 0x0800
+#define LM78_ALARM_TEMP 0x0010
+#define LM78_ALARM_BTI 0x0020
+#define LM78_ALARM_CHAS 0x1000
+#define LM78_ALARM_FIFO 0x2000
+#define LM78_ALARM_SMI_IN 0x4000
+
+/* -- SENSORS SYSCTL END -- */
+
 /* These files are created for each detected LM78. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -305,7 +254,7 @@ static ctl_table lm78_dir_table_template[] = {
      * lm78_driver is inserted (when this module is loaded), for each
        available adapter
      * when a new adapter is inserted (and lm78_driver is still present) */
-int lm78_attach_adapter(struct i2c_adapter *adapter)
+static int lm78_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, lm78_detect);
 }
@@ -363,14 +312,12 @@ int lm78_detect(struct i2c_adapter *adapter, int address,
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access lm78_{read,write}_value. */
 
-	if (!(new_client = kmalloc((sizeof(struct i2c_client)) +
-				   sizeof(struct lm78_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct lm78_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct lm78_data *) (new_client + 1);
+	new_client = &data->client;
 	if (is_isa)
 		init_MUTEX(&data->lock);
 	new_client->addr = address;
@@ -464,12 +411,12 @@ int lm78_detect(struct i2c_adapter *adapter, int address,
 	if (is_isa)
 		release_region(address, LM78_EXTENT);
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int lm78_detach_client(struct i2c_client *client)
+static int lm78_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -484,33 +431,10 @@ int lm78_detach_client(struct i2c_client *client)
 
 	if(i2c_is_isa_client(client))
 		release_region(client->addr, LM78_EXTENT);
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
-
-/* No commands defined yet */
-int lm78_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-/* Nothing here yet */
-void lm78_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-/* Nothing here yet */
-void lm78_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
 
 /* The SMBus locks itself, but ISA access must be locked explicitely! 
    We don't want to lock the whole ISA bus, so we lock each client
@@ -519,7 +443,7 @@ void lm78_dec_use(struct i2c_client *client)
    would slow down the LM78 access and should not be necessary. 
    There are some ugly typecasts here, but the good new is - they should
    nowhere else be necessary! */
-int lm78_read_value(struct i2c_client *client, u8 reg)
+static int lm78_read_value(struct i2c_client *client, u8 reg)
 {
 	int res;
 	if (i2c_is_isa_client(client)) {
@@ -539,7 +463,7 @@ int lm78_read_value(struct i2c_client *client, u8 reg)
    would slow down the LM78 access and should not be necessary. 
    There are some ugly typecasts here, but the good new is - they should
    nowhere else be necessary! */
-int lm78_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int lm78_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	if (i2c_is_isa_client(client)) {
 		down(&(((struct lm78_data *) (client->data))->lock));
@@ -551,70 +475,18 @@ int lm78_write_value(struct i2c_client *client, u8 reg, u8 value)
 		return i2c_smbus_write_byte_data(client, reg, value);
 }
 
-/* Called when we have found a new LM78. It should set limits, etc. */
-void lm78_init_client(struct i2c_client *client)
+/* Called when we have found a new LM78. */
+static void lm78_init_client(struct i2c_client *client)
 {
-	int vid;
-
-	/* Reset all except Watchdog values and last conversion values
-	   This sets fan-divs to 2, among others */
-	lm78_write_value(client, LM78_REG_CONFIG, 0x80);
-
-	vid = lm78_read_value(client, LM78_REG_VID_FANDIV) & 0x0f;
-	if (((struct lm78_data *) (client->data))->type == lm79)
-		vid |=
-		    (lm78_read_value(client, LM78_REG_CHIPID) & 0x01) << 4;
-	else
-		vid |= 0x10;
-	vid = VID_FROM_REG(vid);
-
-	lm78_write_value(client, LM78_REG_IN_MIN(0),
-			 IN_TO_REG(LM78_INIT_IN_MIN_0));
-	lm78_write_value(client, LM78_REG_IN_MAX(0),
-			 IN_TO_REG(LM78_INIT_IN_MAX_0));
-	lm78_write_value(client, LM78_REG_IN_MIN(1),
-			 IN_TO_REG(LM78_INIT_IN_MIN_1));
-	lm78_write_value(client, LM78_REG_IN_MAX(1),
-			 IN_TO_REG(LM78_INIT_IN_MAX_1));
-	lm78_write_value(client, LM78_REG_IN_MIN(2),
-			 IN_TO_REG(LM78_INIT_IN_MIN_2));
-	lm78_write_value(client, LM78_REG_IN_MAX(2),
-			 IN_TO_REG(LM78_INIT_IN_MAX_2));
-	lm78_write_value(client, LM78_REG_IN_MIN(3),
-			 IN_TO_REG(LM78_INIT_IN_MIN_3));
-	lm78_write_value(client, LM78_REG_IN_MAX(3),
-			 IN_TO_REG(LM78_INIT_IN_MAX_3));
-	lm78_write_value(client, LM78_REG_IN_MIN(4),
-			 IN_TO_REG(LM78_INIT_IN_MIN_4));
-	lm78_write_value(client, LM78_REG_IN_MAX(4),
-			 IN_TO_REG(LM78_INIT_IN_MAX_4));
-	lm78_write_value(client, LM78_REG_IN_MIN(5),
-			 IN_TO_REG(LM78_INIT_IN_MIN_5));
-	lm78_write_value(client, LM78_REG_IN_MAX(5),
-			 IN_TO_REG(LM78_INIT_IN_MAX_5));
-	lm78_write_value(client, LM78_REG_IN_MIN(6),
-			 IN_TO_REG(LM78_INIT_IN_MIN_6));
-	lm78_write_value(client, LM78_REG_IN_MAX(6),
-			 IN_TO_REG(LM78_INIT_IN_MAX_6));
-	lm78_write_value(client, LM78_REG_FAN_MIN(1),
-			 FAN_TO_REG(LM78_INIT_FAN_MIN_1, 2));
-	lm78_write_value(client, LM78_REG_FAN_MIN(2),
-			 FAN_TO_REG(LM78_INIT_FAN_MIN_2, 2));
-	lm78_write_value(client, LM78_REG_FAN_MIN(3),
-			 FAN_TO_REG(LM78_INIT_FAN_MIN_3, 2));
-	lm78_write_value(client, LM78_REG_TEMP_OVER,
-			 TEMP_TO_REG(LM78_INIT_TEMP_OVER));
-	lm78_write_value(client, LM78_REG_TEMP_HYST,
-			 TEMP_TO_REG(LM78_INIT_TEMP_HYST));
+	u8 config = lm78_read_value(client, LM78_REG_CONFIG);
 
 	/* Start monitoring */
-	lm78_write_value(client, LM78_REG_CONFIG,
-			 (lm78_read_value(client, LM78_REG_CONFIG) & 0xf7)
-			 | 0x01);
-
+	if (!(config & 0x01))
+		lm78_write_value(client, LM78_REG_CONFIG,
+				 (config & 0xf7) | 0x01);
 }
 
-void lm78_update_client(struct i2c_client *client)
+static void lm78_update_client(struct i2c_client *client)
 {
 	struct lm78_data *data = client->data;
 	int i;
@@ -792,11 +664,15 @@ void lm78_alarms(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
+/* Note: we save and restore the fan minimum here, because its value is
+   determined in part by the fan divisor.  This follows the principle of
+   least surprise: the user doesn't expect the fan minimum to change just
+   because the divisor changed. */
 void lm78_fan_div(struct i2c_client *client, int operation, int ctl_name,
 		  int *nrels_mag, long *results)
 {
 	struct lm78_data *data = client->data;
-	int old;
+	int old, min;
 
 	if (operation == SENSORS_PROC_REAL_INFO)
 		*nrels_mag = 0;
@@ -809,64 +685,44 @@ void lm78_fan_div(struct i2c_client *client, int operation, int ctl_name,
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		old = lm78_read_value(client, LM78_REG_VID_FANDIV);
 		if (*nrels_mag >= 2) {
+			min = FAN_FROM_REG(data->fan_min[1], 
+					DIV_FROM_REG(data->fan_div[1]));
 			data->fan_div[1] = DIV_TO_REG(results[1]);
 			old = (old & 0x3f) | (data->fan_div[1] << 6);
+			data->fan_min[1] = FAN_TO_REG(min,
+					DIV_FROM_REG(data->fan_div[1]));
+			lm78_write_value(client, LM78_REG_FAN_MIN(2),
+					data->fan_min[1]);
 		}
 		if (*nrels_mag >= 1) {
+			min = FAN_FROM_REG(data->fan_min[0],
+					DIV_FROM_REG(data->fan_div[0]));
 			data->fan_div[0] = DIV_TO_REG(results[0]);
 			old = (old & 0xcf) | (data->fan_div[0] << 4);
+			data->fan_min[0] = FAN_TO_REG(min,
+					DIV_FROM_REG(data->fan_div[0]));
+			lm78_write_value(client, LM78_REG_FAN_MIN(1),
+					data->fan_min[0]);
 			lm78_write_value(client, LM78_REG_VID_FANDIV, old);
 		}
 	}
 }
 
-int __init sensors_lm78_init(void)
+static int __init sm_lm78_init(void)
 {
-	int res;
-
 	printk("lm78.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	lm78_initialized = 0;
-
-	if ((res = i2c_add_driver(&lm78_driver))) {
-		printk
-		    ("lm78.o: Driver registration failed, module not inserted.\n");
-		lm78_cleanup();
-		return res;
-	}
-	lm78_initialized++;
-	return 0;
+	return i2c_add_driver(&lm78_driver);
 }
 
-int __init lm78_cleanup(void)
+static void __exit sm_lm78_exit(void)
 {
-	int res;
-
-	if (lm78_initialized >= 1) {
-		if ((res = i2c_del_driver(&lm78_driver))) {
-			printk
-			    ("lm78.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		lm78_initialized--;
-	}
-	return 0;
+	i2c_del_driver(&lm78_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR("Frodo Looijaard <frodol@dds.nl>");
 MODULE_DESCRIPTION("LM78, LM78-J and LM79 driver");
 
-int init_module(void)
-{
-	return sensors_lm78_init();
-}
-
-int cleanup_module(void)
-{
-	return lm78_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_lm78_init);
+module_exit(sm_lm78_exit);

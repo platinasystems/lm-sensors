@@ -40,8 +40,14 @@
 	5598		0008		5597/5598
 	 630		0008		0630
 	 645		0008		0645
+	 646		0008		0646
+	 648		0008		0648
+	 650		0008		0650
+	 651		0008		0651
 	 730		0008		0730
 	 735		0008		0735
+	 745		0008		0745
+	 746		0008		0746
 */
 
 /* TO DO: 
@@ -49,37 +55,19 @@
  * Add adapter resets
  */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/pci.h>
-#include <asm/io.h>
 #include <linux/kernel.h>
 #include <linux/stddef.h>
 #include <linux/sched.h>
 #include <linux/ioport.h>
 #include <linux/i2c.h>
-#include "version.h"
 #include <linux/init.h>
+#include <asm/io.h>
+#include "version.h"
+#include "sensors_compat.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#ifndef PCI_DEVICE_ID_SI_540
-#define PCI_DEVICE_ID_SI_540		0x0540
-#endif
-#ifndef PCI_DEVICE_ID_SI_550
-#define PCI_DEVICE_ID_SI_550		0x0550
-#endif
-#ifndef PCI_DEVICE_ID_SI_630
-#define PCI_DEVICE_ID_SI_630		0x0630
-#endif
-#ifndef PCI_DEVICE_ID_SI_730
-#define PCI_DEVICE_ID_SI_730		0x0730
-#endif
-#ifndef PCI_DEVICE_ID_SI_5598
-#define PCI_DEVICE_ID_SI_5598		0x5598
-#endif
 
 static int blacklist[] = {
 			PCI_DEVICE_ID_SI_540,
@@ -92,8 +80,14 @@ static int blacklist[] = {
 			PCI_DEVICE_ID_SI_5597,
 			PCI_DEVICE_ID_SI_5598,
 			0x645,
+			0x646,
+			0x648,
+			0x650,
+			0x651,
 			0x735,
-                          0 };
+			0x745,
+			0x746,
+			0 };
 
 /* Length of ISA address segment */
 #define SIS5595_EXTENT 8
@@ -138,52 +132,8 @@ MODULE_PARM(force_addr, "i");
 MODULE_PARM_DESC(force_addr,
 		 "Initialize the base address of the i2c controller");
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init i2c_sis5595_init(void);
-static int __init sis5595_cleanup(void);
-static int sis5595_setup(void);
-static s32 sis5595_access(struct i2c_adapter *adap, u16 addr,
-			  unsigned short flags, char read_write,
-			  u8 command, int size,
-			  union i2c_smbus_data *data);
-static void sis5595_do_pause(unsigned int amount);
 static int sis5595_transaction(void);
-static void sis5595_inc(struct i2c_adapter *adapter);
-static void sis5595_dec(struct i2c_adapter *adapter);
-static u32 sis5595_func(struct i2c_adapter *adapter);
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-static struct i2c_algorithm smbus_algorithm = {
-	/* name */ "Non-I2C SMBus adapter",
-	/* id */ I2C_ALGO_SMBUS,
-	/* master_xfer */ NULL,
-	/* smbus_access */ sis5595_access,
-	/* slave_send */ NULL,
-	/* slave_rcv */ NULL,
-	/* algo_control */ NULL,
-	/* functionality */ sis5595_func,
-};
-
-static struct i2c_adapter sis5595_adapter = {
-	"unset",
-	I2C_ALGO_SMBUS | I2C_HW_SMBUS_SIS5595,
-	&smbus_algorithm,
-	NULL,
-	sis5595_inc,
-	sis5595_dec,
-	NULL,
-	NULL,
-};
-
-static int __initdata sis5595_initialized;
 static unsigned short sis5595_base = 0;
 
 static u8 sis5595_read(u8 reg)
@@ -203,27 +153,11 @@ static void sis5595_write(u8 reg, u8 data)
    Note the differences between kernels with the old PCI BIOS interface and
    newer kernels with the real PCI interface. In compat.h some things are
    defined to make the transition easier. */
-int sis5595_setup(void)
+int sis5595_setup(struct pci_dev *SIS5595_dev)
 {
 	u16 a;
 	u8 val;
-	struct pci_dev *SIS5595_dev;
 	int *i;
-
-	/* First check whether we can access PCI at all */
-	if (pci_present() == 0) {
-		printk("i2c-sis5595.o: Error: No PCI-bus found!\n");
-		return -ENODEV;
-	}
-
-	/* Look for the SIS5595 */
-	SIS5595_dev = NULL;
-	if (!(SIS5595_dev = pci_find_device(PCI_VENDOR_ID_SI,
-					    PCI_DEVICE_ID_SI_503,
-					    SIS5595_dev))) {
-		printk("i2c-sis5595.o: Error: Can't detect SIS5595!\n");
-		return -ENODEV;
-	}
 
 	/* Look for imposters */
 	for(i = blacklist; *i != 0; i++) {
@@ -294,13 +228,6 @@ int sis5595_setup(void)
 }
 
 
-/* Internally used pause function */
-void sis5595_do_pause(unsigned int amount)
-{
-	current->state = TASK_INTERRUPTIBLE;
-	schedule_timeout(amount);
-}
-
 /* Another internally used function */
 int sis5595_transaction(void)
 {
@@ -339,7 +266,7 @@ int sis5595_transaction(void)
 
 	/* We will always wait for a fraction of a second! */
 	do {
-		sis5595_do_pause(1);
+		i2c_delay(1);
 		temp = sis5595_read(SMB_STS_LO);
 	} while (!(temp & 0x40) && (timeout++ < MAX_TIMEOUT));
 
@@ -388,7 +315,7 @@ int sis5595_transaction(void)
 	return result;
 }
 
-/* Return -1 on error. See smbus.h for more information */
+/* Return -1 on error. */
 s32 sis5595_access(struct i2c_adapter * adap, u16 addr,
 		   unsigned short flags, char read_write,
 		   u8 command, int size, union i2c_smbus_data * data)
@@ -429,10 +356,16 @@ s32 sis5595_access(struct i2c_adapter * adap, u16 addr,
 		     I2C_SMBUS_PROC_CALL) ? SIS5595_PROC_CALL :
 		    SIS5595_WORD_DATA;
 		break;
+/*
 	case I2C_SMBUS_BLOCK_DATA:
 		printk("sis5595.o: Block data not yet implemented!\n");
 		return -1;
 		break;
+*/
+	default:
+		printk
+		    (KERN_WARNING "sis5595.o: Unsupported transaction %d\n", size);
+		return -1;
 	}
 
 	sis5595_write(SMB_CTL_LO, ((size & 0x0E)));
@@ -462,15 +395,18 @@ s32 sis5595_access(struct i2c_adapter * adap, u16 addr,
 	return 0;
 }
 
-void sis5595_inc(struct i2c_adapter *adapter)
+static void sis5595_inc(struct i2c_adapter *adapter)
 {
+#ifdef MODULE
 	MOD_INC_USE_COUNT;
+#endif
 }
 
-void sis5595_dec(struct i2c_adapter *adapter)
+static void sis5595_dec(struct i2c_adapter *adapter)
 {
-
+#ifdef MODULE
 	MOD_DEC_USE_COUNT;
+#endif
 }
 
 u32 sis5595_func(struct i2c_adapter *adapter)
@@ -480,72 +416,80 @@ u32 sis5595_func(struct i2c_adapter *adapter)
 	    I2C_FUNC_SMBUS_PROC_CALL;
 }
 
-int __init i2c_sis5595_init(void)
+
+static struct i2c_algorithm smbus_algorithm = {
+	.name		= "Non-I2C SMBus adapter",
+	.id		= I2C_ALGO_SMBUS,
+	.smbus_xfer	= sis5595_access,
+	.functionality	= sis5595_func,
+};
+
+static struct i2c_adapter sis5595_adapter = {
+	.name		= "unset",
+	.id		= I2C_ALGO_SMBUS | I2C_HW_SMBUS_SIS5595,
+	.algo		= &smbus_algorithm,
+	.inc_use	= sis5595_inc,
+	.dec_use	= sis5595_dec,
+};
+
+
+static struct pci_device_id sis5595_ids[] __devinitdata = {
+	{
+		.vendor =	PCI_VENDOR_ID_SI,
+		.device =	PCI_DEVICE_ID_SI_503,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{ 0, }
+};
+
+static int __devinit sis5595_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
-	int res;
-	printk("i2c-sis5595.o version %s (%s)\n", LM_VERSION, LM_DATE);
-#ifdef DEBUG
-/* PE- It might be good to make this a permanent part of the code! */
-	if (sis5595_initialized) {
-		printk
-		    ("i2c-sis5595.o: Oops, sis5595_init called a second time!\n");
-		return -EBUSY;
-	}
-#endif
-	sis5595_initialized = 0;
-	if ((res = sis5595_setup())) {
+
+	if (sis5595_setup(dev)) {
 		printk
 		    ("i2c-sis5595.o: SIS5595 not detected, module not inserted.\n");
-		sis5595_cleanup();
-		return res;
+
+		return -ENODEV;
 	}
-	sis5595_initialized++;
+
 	sprintf(sis5595_adapter.name, "SMBus SIS5595 adapter at %04x",
 		sis5595_base + SMB_INDEX);
-	if ((res = i2c_add_adapter(&sis5595_adapter))) {
-		printk
-		    ("i2c-sis5595.o: Adapter registration failed, module not inserted.\n");
-		sis5595_cleanup();
-		return res;
-	}
-	sis5595_initialized++;
-	printk("i2c-sis5595.o: SIS5595 bus detected and initialized\n");
+	i2c_add_adapter(&sis5595_adapter);
+
 	return 0;
 }
 
-int __init sis5595_cleanup(void)
+static void __devexit sis5595_remove(struct pci_dev *dev)
 {
-	int res;
-	if (sis5595_initialized >= 2) {
-		if ((res = i2c_del_adapter(&sis5595_adapter))) {
-			printk
-			    ("i2c-sis5595.o: i2c_del_adapter failed, module not removed\n");
-			return res;
-		} else
-			sis5595_initialized--;
-	}
-	if (sis5595_initialized >= 1) {
-		release_region(sis5595_base + SMB_INDEX, 2);
-		sis5595_initialized--;
-	}
-	return 0;
+	i2c_del_adapter(&sis5595_adapter);
+	release_region(sis5595_base + SMB_INDEX, 2);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
+static struct pci_driver sis5595_driver = {
+	.name		= "sis5595 smbus",
+	.id_table	= sis5595_ids,
+	.probe		= sis5595_probe,
+	.remove		= __devexit_p(sis5595_remove),
+};
+
+static int __init i2c_sis5595_init(void)
+{
+	printk("i2c-sis5595.o version %s (%s)\n", LM_VERSION, LM_DATE);
+	return pci_module_init(&sis5595_driver);
+}
+
+
+static void __exit i2c_sis5595_exit(void)
+{
+	pci_unregister_driver(&sis5595_driver);
+}
+
+
 
 MODULE_AUTHOR("Frodo Looijaard <frodol@dds.nl>");
 MODULE_DESCRIPTION("SIS5595 SMBus driver");
 
-int init_module(void)
-{
-	return i2c_sis5595_init();
-}
-
-int cleanup_module(void)
-{
-	return sis5595_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(i2c_sis5595_init);
+module_exit(i2c_sis5595_exit);

@@ -1,0 +1,34 @@
+Template: libsensors3/nosensors_2.4
+Type: note
+_Description: libsensors3 not functional
+ It appears that your kernel is not compiled with sensors support and that
+ you don't have sensors modules installed. As a result, libsensors3 will
+ not be functional on your system.
+ .
+ If you want to enable it, you can:
+  - Install the i2c-2.4-xx-x-xxx and lm-sensors-2.4-xx-x-xxx packages
+    corresponding to your kernel if you are using a prebuilt kernel;
+  - Patch your kernel using the packages kernel-patch-2.4-i2c and
+    kernel-patch-2.4-lm-sensors;
+  - Build the modules yourself using i2c-source and lm-sensors-source.
+
+Template: libsensors3/nosensors_2.6
+Type: note
+_Description: libsensors3 not functional
+ It appears that your kernel is not compiled with sensors support. As a
+ result, libsensors3 will not be functional on your system.
+ .
+ If you want to enable it, have a look at "I2C Hardware Sensors Chip
+ support" in your kernel configuration.
+
+Template: libsensors3/old2.6kernel
+Type: note
+_Description: libsensors3 needs kernel >= 2.6.5
+ The /sys interface changed in kernel version 2.6.5 and libsensors version
+ 2.8.6. This version of libsensors3 doesn't support kernels older than version
+ 2.6.5 anymore.
+ .
+ It appears that your are running a kernel older than version 2.6.5. As a result
+ libsensors3 will not be functional on your system.
+ .
+ (Note that libsensors3 is still compatible with 2.4 kernels).

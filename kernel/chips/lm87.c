@@ -22,19 +22,14 @@
 */
 
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include <linux/delay.h>
+#include "version.h"
+#include "sensors_vid.h"
 
 /* Chip configuration settings.  These should be set to reflect the
 HARDWARE configuration of your chip.  By default (read: when all of
@@ -70,14 +65,6 @@ Set to '1' the appropriate defines, as nessesary:
    them insmod params, but it would be too much work. ;') */
 
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -167,10 +154,7 @@ SENSORS_INSMOD_1(lm87);
    these macros are called: arguments may be evaluated more than once.
    Fixing this is just not worth it. */
 
-#define IN_TO_REG(val,nr) (SENSORS_LIMIT(((val) & 0xff),0,255))
-#define IN_FROM_REG(val,nr) (val)
-
-extern inline u8 FAN_TO_REG(long rpm, int div)
+static inline u8 FAN_TO_REG(long rpm, int div)
 {
 	if (rpm == 0)
 		return 255;
@@ -182,48 +166,19 @@ extern inline u8 FAN_TO_REG(long rpm, int div)
 #define FAN_FROM_REG(val,div) ((val)==0?-1:\
                                (val)==255?0:1350000/((div)*(val)))
 
-#define TEMP_FROM_REG(temp)  (temp * 10)
+#define TEMP_FROM_REG(val) ((val)*10)
 
-#define TEMP_LIMIT_FROM_REG(val) (((val)>0x80?(val)-0x100:(val))*10)
-
-#define TEMP_LIMIT_TO_REG(val) SENSORS_LIMIT(((val)<0?(((val)-5)/10):\
-                                                      ((val)+5)/10),0,255)
-#if 0
-#define TEMP_FROM_REG(temp) \
-   ((temp)<256?((((temp)&0x1fe) >> 1) * 10)      + ((temp) & 1) * 5:  \
-               ((((temp)&0x1fe) >> 1) -255) * 10 - ((temp) & 1) * 5)  \
-
-#define TEMP_LIMIT_FROM_REG(val) (val)
-
-#define TEMP_LIMIT_TO_REG(val) SENSORS_LIMIT((val),0,255)
-#endif
-
-
-#define ALARMS_FROM_REG(val) (val)
+#define TEMP_LIMIT_TO_REG(val) SENSORS_LIMIT(((val)<0?(val)-5:\
+                                              (val)+5)/10,-128,127)
 
 #define DIV_FROM_REG(val) (1 << (val))
 #define DIV_TO_REG(val) ((val)==1?0:((val)==8?3:((val)==4?2:1)))
 
-#define VID_FROM_REG(val) ((val)==0x1f?0:(val)>=0x10?510-(val)*10:\
-                           205-(val)*5)
-                           
-#define LM87_INIT_FAN_MIN 3000
-
-#define LM87_INIT_EXT_TEMP_MAX 600
-#define LM87_INIT_EXT_TEMP_MIN 100
-#define LM87_INIT_INT_TEMP_MAX 600
-#define LM87_INIT_INT_TEMP_MIN 100
-
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-/* For each registered LM87, we need to keep some data in memory. That
-   data is pointed to by LM87_list[NR]->data. The structure itself is
-   dynamically allocated, at the same time when a new LM87 client is
-   allocated. */
+/* For each registered LM87, we need to keep some data in memory. The
+   structure is dynamically allocated whenever a new LM87 client is
+   found. */
 struct lm87_data {
+	struct i2c_client client;
 	int sysctl_id;
 	enum chips type;
 
@@ -246,9 +201,9 @@ struct lm87_data {
 	u8  fan2;		/* Register value */
 	u8  fan2_min;		/* Register value */
 	u8  fan2_div;		/* Register encoding, shifted right */
-	int ext2_temp;		/* Temp, shifted right */
-	int ext_temp;           /* Temp, shifted right */
-	int int_temp;		/* Temp, shifted right */
+	s8  ext2_temp;		/* Register value */
+	s8  ext_temp;		/* Register value */
+	s8  int_temp;		/* Register value */
 	u8  ext_temp_max;       /* Register value */
 	u8  ext_temp_min;       /* Register value */
 	u8  ext2_temp_max; 	/* Register value */
@@ -258,24 +213,13 @@ struct lm87_data {
 	u16 alarms;		/* Register encoding, combined */
 	u8  analog_out;		/* Register value */
 	u8  vid;		/* Register value combined */
+	u8  vrm;		/* VRM version * 10 */
 };
-
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_lm87_init(void);
-static int __init lm87_cleanup(void);
 
 static int lm87_attach_adapter(struct i2c_adapter *adapter);
 static int lm87_detect(struct i2c_adapter *adapter, int address,
 			  unsigned short flags, int kind);
 static int lm87_detach_client(struct i2c_client *client);
-static int lm87_command(struct i2c_client *client, unsigned int cmd,
-			   void *arg);
-static void lm87_inc_use(struct i2c_client *client);
-static void lm87_dec_use(struct i2c_client *client);
 
 static int lm87_read_value(struct i2c_client *client, u8 register);
 static int lm87_write_value(struct i2c_client *client, u8 register,
@@ -303,25 +247,58 @@ static void lm87_analog_out(struct i2c_client *client, int operation,
 			       long *results);
 static void lm87_vid(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results);
+static void lm87_vrm(struct i2c_client *client, int operation,
+			int ctl_name, int *nrels_mag, long *results);
 
-/* I choose here for semi-static LM87 allocation. Complete dynamic
-   allocation could also be used; the code needed for this would probably
-   take more memory than the datastructure takes now. */
 static int lm87_id = 0;
 
 static struct i2c_driver LM87_driver = {
-	/* name */          "LM87 sensor driver",
-	/* id */             I2C_DRIVERID_LM87,
-	/* flags */          I2C_DF_NOTIFY,
-	/* attach_adapter */ &lm87_attach_adapter,
-	/* detach_client */  &lm87_detach_client,
-	/* command */        &lm87_command,
-	/* inc_use */        &lm87_inc_use,
-	/* dec_use */        &lm87_dec_use
+	.name		= "LM87 sensor driver",
+	.id		= I2C_DRIVERID_LM87,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= lm87_attach_adapter,
+	.detach_client	= lm87_detach_client,
 };
 
-/* Used by LM87_init/cleanup */
-static int __initdata lm87_initialized = 0;
+/* -- SENSORS SYSCTL START -- */
+#define LM87_SYSCTL_IN0        1000 /* Volts * 100 */
+#define LM87_SYSCTL_IN1        1001
+#define LM87_SYSCTL_IN2        1002
+#define LM87_SYSCTL_IN3        1003
+#define LM87_SYSCTL_IN4        1004
+#define LM87_SYSCTL_IN5        1005
+#define LM87_SYSCTL_AIN1       1006
+#define LM87_SYSCTL_AIN2       1007
+#define LM87_SYSCTL_FAN1       1102
+#define LM87_SYSCTL_FAN2       1103
+#define LM87_SYSCTL_TEMP1      1250 /* Degrees Celcius * 10 */
+#define LM87_SYSCTL_TEMP2      1251 /* Degrees Celcius * 10 */
+#define LM87_SYSCTL_TEMP3      1252 /* Degrees Celcius * 10 */
+#define LM87_SYSCTL_FAN_DIV    2000 /* 1, 2, 4 or 8 */
+#define LM87_SYSCTL_ALARMS     2001 /* bitvector */
+#define LM87_SYSCTL_ANALOG_OUT 2002
+#define LM87_SYSCTL_VID        2003
+#define LM87_SYSCTL_VRM        2004
+
+#define LM87_ALARM_IN0          0x0001
+#define LM87_ALARM_IN1          0x0002
+#define LM87_ALARM_IN2          0x0004
+#define LM87_ALARM_IN3          0x0008
+#define LM87_ALARM_TEMP1        0x0010
+#define LM87_ALARM_TEMP2        0x0020
+#define LM87_ALARM_TEMP3        0x0020 /* same?? */
+#define LM87_ALARM_FAN1         0x0040
+#define LM87_ALARM_FAN2         0x0080
+#define LM87_ALARM_IN4          0x0100
+#define LM87_ALARM_IN5          0x0200
+#define LM87_ALARM_RESERVED1    0x0400
+#define LM87_ALARM_RESERVED2    0x0800
+#define LM87_ALARM_CHAS         0x1000
+#define LM87_ALARM_THERM_SIG    0x2000
+#define LM87_ALARM_TEMP2_FAULT  0x4000
+#define LM87_ALARM_TEMP3_FAULT 0x08000
+
+/* -- SENSORS SYSCTL END -- */
 
 /* The /proc/sys entries */
 /* These files are created for each detected LM87. This is just a template;
@@ -382,10 +359,12 @@ static ctl_table LM87_dir_table_template[] = {
 	  &i2c_sysctl_real, NULL, &lm87_analog_out},
 	{LM87_SYSCTL_VID, "vid", NULL, 0, 0444, NULL, &i2c_proc_real,
 	  &i2c_sysctl_real, NULL, &lm87_vid},
+	{LM87_SYSCTL_VRM, "vrm", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &lm87_vrm},
 	{0}
 };
 
-int lm87_attach_adapter(struct i2c_adapter *adapter)
+static int lm87_attach_adapter(struct i2c_adapter *adapter)
 {
 	int error;
 	struct i2c_client_address_data  lm87_client_data;
@@ -421,14 +400,12 @@ static int lm87_detect(struct i2c_adapter *adapter, int address,
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access LM87_{read,write}_value. */
 
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct lm87_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct lm87_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct lm87_data *) (new_client + 1);
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -479,12 +456,12 @@ static int lm87_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int lm87_detach_client(struct i2c_client *client)
+static int lm87_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -492,57 +469,47 @@ int lm87_detach_client(struct i2c_client *client)
 				 sysctl_id);
 
 	if ((err = i2c_detach_client(client))) {
-		printk
-		    ("lm87.o: Client deregistration failed, client not detached.\n");
+		printk(KERN_ERR "lm87.o: Client deregistration failed, "
+		       "client not detached\n");
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
-
 }
 
-/* No commands defined yet */
-int lm87_command(struct i2c_client *client, unsigned int cmd, void *arg)
+#define MAX_RETRIES 5
+
+static int lm87_read_value(struct i2c_client *client, u8 reg)
 {
+	int value, i;
+
+	/* Retry in case of read errors */
+	for (i = 1; i <= MAX_RETRIES; i++) {
+		if ((value = i2c_smbus_read_byte_data(client, reg)) >= 0)
+			return value;
+
+		printk(KERN_WARNING "lm87.o: Read byte data failed, "
+		       "address 0x%02x\n", reg);
+		mdelay(i + 3);
+	}
+
+	/* <TODO> what to return in case of error? */
+	printk(KERN_ERR "lm87.o: All read byte retries failed!!\n");
 	return 0;
 }
 
-void lm87_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-void lm87_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
-int lm87_read_value(struct i2c_client *client, u8 reg)
-{
-	return 0xFF & i2c_smbus_read_byte_data(client, reg);
-}
-
-int lm87_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int lm87_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	return i2c_smbus_write_byte_data(client, reg, value);
 }
 
-/* Called when we have found a new LM87. It should set limits, etc. */
-void lm87_init_client(struct i2c_client *client)
+/* Called when we have found a new LM87. */
+static void lm87_init_client(struct i2c_client *client)
 {
-	int vid;
-	u8 v;
-
-	/* Reset all except Watchdog values and last conversion values
-	   This sets fan-divs to 2, among others. This makes most other
-	   initializations unnecessary */
-	lm87_write_value(client, LM87_REG_CONFIG, 0x80);
+	struct lm87_data *data = client->data;
+	u8 reg;
 
         /* Setup Channel Mode register for configuration of monitoring 
 	 * Default is 00000000b
@@ -556,8 +523,10 @@ void lm87_init_client(struct i2c_client *client)
 	 * 	bit 7 - Configures VID/IRQ input as interrupts if = 1
 	 */
 
+	/* Preserve 4 MSB */
+	reg = lm87_read_value(client, LM87_REG_CHANNEL_MODE);
 /* I know, not clean, but it works. :'p */
-	lm87_write_value(client, LM87_REG_CHANNEL_MODE,
+	lm87_write_value(client, LM87_REG_CHANNEL_MODE, (reg & 0xf0) |
 #ifdef LM87_AIN1
  0x01
 #else
@@ -583,58 +552,18 @@ void lm87_init_client(struct i2c_client *client)
 #endif
 	);
 
-	/* Set IN (voltage) initial limits to sane values  +/- 5% */
-	lm87_write_value(client, LM87_REG_IN_MIN(0),182);
-	lm87_write_value(client, LM87_REG_IN_MAX(0),202);
-	lm87_write_value(client, LM87_REG_IN_MIN(2),182);
-	lm87_write_value(client, LM87_REG_IN_MAX(2),202);
-	lm87_write_value(client, LM87_REG_IN_MIN(3),182);
-	lm87_write_value(client, LM87_REG_IN_MAX(3),202);
-	lm87_write_value(client, LM87_REG_IN_MIN(4),182);
-	lm87_write_value(client, LM87_REG_IN_MAX(4),202);
-
-	/* Set CPU core voltage limits relative to vid readings +/- 5% */
-	v = (lm87_read_value(client, LM87_REG_VID_FAN_DIV) & 0x0f)
-		    | ((lm87_read_value(client, LM87_REG_VID4) & 0x01)
-                    << 4 );
-	vid = VID_FROM_REG(v);
-	v = vid * 95 * 192 / 27000;
-	lm87_write_value(client, LM87_REG_IN_MIN(1), v);
-	lm87_write_value(client, LM87_REG_IN_MIN(5), v);
-	v = vid * 105 * 192 / 27000;
-	lm87_write_value(client, LM87_REG_IN_MAX(1), v);
-	lm87_write_value(client, LM87_REG_IN_MAX(5), v);
-
-	/* Set Temp initial limits to sane values */
-	lm87_write_value(client, LM87_REG_EXT_TEMP_1_HIGH,
-			    TEMP_LIMIT_TO_REG(LM87_INIT_EXT_TEMP_MAX));
-	lm87_write_value(client, LM87_REG_EXT_TEMP_1_LOW,
-			    TEMP_LIMIT_TO_REG(LM87_INIT_EXT_TEMP_MIN));
-#ifdef LM87_EXT2
-	lm87_write_value(client, LM87_REG_2_5V_EXT_TEMP_2_HIGH,
-			    TEMP_LIMIT_TO_REG(LM87_INIT_EXT_TEMP_MAX));
-	lm87_write_value(client, LM87_REG_2_5V_EXT_TEMP_2_LOW,
-			    TEMP_LIMIT_TO_REG(LM87_INIT_EXT_TEMP_MIN));
-#endif
-	lm87_write_value(client, LM87_REG_INT_TEMP_HIGH,
-			    TEMP_LIMIT_TO_REG(LM87_INIT_INT_TEMP_MAX));
-	lm87_write_value(client, LM87_REG_INT_TEMP_LOW,
-			    TEMP_LIMIT_TO_REG(LM87_INIT_INT_TEMP_MIN));
-
-#ifndef LM87_AIN1
-	lm87_write_value(client, LM87_REG_FAN1_AIN1_LIMIT,
-			    FAN_TO_REG(LM87_INIT_FAN_MIN, 2));
-#endif
-#ifndef LM87_AIN2
-	lm87_write_value(client, LM87_REG_FAN2_AIN2_LIMIT,
-			    FAN_TO_REG(LM87_INIT_FAN_MIN, 2));
-#endif
+	data->vrm = DEFAULT_VRM;
 
 	/* Start monitoring */
-	lm87_write_value(client, LM87_REG_CONFIG, 0x01);
+	reg = lm87_read_value(client, LM87_REG_CONFIG);
+	if (!(reg & 0x01)) {
+		printk(KERN_INFO "lm87.o: Monitoring starts\n");
+		lm87_write_value(client, LM87_REG_CONFIG,
+				 (reg & 0x7e) | 0x01);
+	}
 }
 
-void lm87_update_client(struct i2c_client *client)
+static void lm87_update_client(struct i2c_client *client)
 {
 	struct lm87_data *data = client->data;
 	int i;
@@ -746,23 +675,20 @@ void lm87_in(struct i2c_client *client, int operation, int ctl_name,
 		*nrels_mag = 2;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		lm87_update_client(client);
-		results[0] =
-		    ((long)data->in_min[nr] * scales[nr]) / 192;
-		results[1] =
-		    ((long)data->in_max[nr] * scales[nr]) / 192;
-		results[2] =
-		    ((long)data->in[nr] * scales[nr]) / 192;
+		results[0] = (data->in_min[nr] * scales[nr] + 96) / 192;
+		results[1] = (data->in_max[nr] * scales[nr] + 96) / 192;
+		results[2] = (data->in[nr] * scales[nr] + 96) / 192;
 		*nrels_mag = 3;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		if (*nrels_mag >= 1) {
-			data->in_min[nr] =
-			    (results[0] * 192) / scales[nr];
+			data->in_min[nr] = (results[0] * 192 + scales[nr] / 2)
+					 / scales[nr];
 			lm87_write_value(client, LM87_REG_IN_MIN(nr),
 					    data->in_min[nr]);
 		}
 		if (*nrels_mag >= 2) {
-			data->in_max[nr] =
-			    (results[1] * 192) / scales[nr];
+			data->in_max[nr] = (results[1] * 192 + scales[nr] / 2)
+					 / scales[nr];
 			lm87_write_value(client, LM87_REG_IN_MAX(nr),
 					    data->in_max[nr]);
 		}
@@ -871,20 +797,20 @@ void lm87_temp(struct i2c_client *client, int operation, int ctl_name,
 	   /* find out which temp. is being requested */
 	   if (ctl_name == LM87_SYSCTL_TEMP3) 
 	   {
-		results[0] = TEMP_LIMIT_FROM_REG(data->ext2_temp_max);
-		results[1] = TEMP_LIMIT_FROM_REG(data->ext2_temp_min);
+		results[0] = TEMP_FROM_REG(data->ext2_temp_max);
+		results[1] = TEMP_FROM_REG(data->ext2_temp_min);
 		results[2] = TEMP_FROM_REG(data->ext2_temp);
 	   }
 	   else if(ctl_name == LM87_SYSCTL_TEMP2)
 	   {
-		results[0] = TEMP_LIMIT_FROM_REG(data->ext_temp_max);
-		results[1] = TEMP_LIMIT_FROM_REG(data->ext_temp_min);
+		results[0] = TEMP_FROM_REG(data->ext_temp_max);
+		results[1] = TEMP_FROM_REG(data->ext_temp_min);
 		results[2] = TEMP_FROM_REG(data->ext_temp);
 	   }
 	   else if(ctl_name == LM87_SYSCTL_TEMP1)
 	   {
-		results[0] = TEMP_LIMIT_FROM_REG(data->int_temp_max);
-		results[1] = TEMP_LIMIT_FROM_REG(data->int_temp_min);
+		results[0] = TEMP_FROM_REG(data->int_temp_max);
+		results[1] = TEMP_FROM_REG(data->int_temp_min);
 		results[2] = TEMP_FROM_REG(data->int_temp);
 	   }
 	   *nrels_mag = 3;
@@ -934,7 +860,7 @@ void lm87_alarms(struct i2c_client *client, int operation, int ctl_name,
 		*nrels_mag = 0;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		lm87_update_client(client);
-		results[0] = ALARMS_FROM_REG(data->alarms);
+		results[0] = data->alarms;
 		*nrels_mag = 1;
 	}
 }
@@ -1012,69 +938,49 @@ void lm87_vid(struct i2c_client *client, int operation, int ctl_name,
 	struct lm87_data *data = client->data;
 
 	if (operation == SENSORS_PROC_REAL_INFO)
-		*nrels_mag = 2;
+		*nrels_mag = 3;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		lm87_update_client(client);
-		results[0] = VID_FROM_REG(data->vid);
-        *nrels_mag = 1;
+		results[0] = vid_from_reg(data->vid, data->vrm);
+		*nrels_mag = 1;
 	}
 }
 
-int __init sensors_lm87_init(void)
+void lm87_vrm(struct i2c_client *client, int operation, int ctl_name,
+		 int *nrels_mag, long *results)
 {
-	int res;
-
-	printk("lm87.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	lm87_initialized = 0;
-
-	if ((res = i2c_add_driver(&LM87_driver))) {
-		printk
-		    ("lm87.o: Driver registration failed, module not inserted.\n");
-		lm87_cleanup();
-		return res;
+	struct lm87_data *data = client->data;
+	if (operation == SENSORS_PROC_REAL_INFO)
+		*nrels_mag = 1;
+	else if (operation == SENSORS_PROC_REAL_READ) {
+		results[0] = data->vrm;
+		*nrels_mag = 1;
+	} else if (operation == SENSORS_PROC_REAL_WRITE) {
+		if (*nrels_mag >= 1)
+			data->vrm = results[0];
 	}
-	lm87_initialized++;
-	return 0;
 }
 
-int __init lm87_cleanup(void)
+static int __init sm_lm87_init(void)
 {
-	int res;
-
-	if (lm87_initialized >= 1) {
-		if ((res = i2c_del_driver(&LM87_driver))) {
-			printk
-			    ("lm87.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		lm87_initialized--;
-	}
-	return 0;
+	printk(KERN_INFO "lm87.o version %s (%s)\n", LM_VERSION, LM_DATE);
+	return i2c_add_driver(&LM87_driver);
 }
 
-EXPORT_NO_SYMBOLS;
+static void __exit sm_lm87_exit(void)
+{
+	i2c_del_driver(&LM87_driver);
+}
 
-#ifdef MODULE
-#ifdef MODULE_LICENSE
+
+
 MODULE_LICENSE("GPL");
-#endif
 
 MODULE_AUTHOR
-    ("Frodo Looijaard <frodol@dds.nl>,
-      Philip Edelbrock <phil@netroedge.com>, 
-      Mark Studebaker <mdsxyz123@yahoo.com>,
-      and Stephen Rousset <stephen.rousset@rocketlogix.com>");
+    ("Frodo Looijaard <frodol@dds.nl>, Philip Edelbrock <phil@netroedge.com>, "
+     "Mark Studebaker <mdsxyz123@yahoo.com>, and Stephen Rousset <stephen.rousset@rocketlogix.com>");
 
 MODULE_DESCRIPTION("LM87 driver");
 
-int init_module(void)
-{
-	return sensors_lm87_init();
-}
-
-int cleanup_module(void)
-{
-	return lm87_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_lm87_init);
+module_exit(sm_lm87_exit);

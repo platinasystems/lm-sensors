@@ -1,72 +1,76 @@
 README.Debian for lm-sensors-source
-David Z. Maze <dmaze@debian.org>
-$Id: lm-sensors-source.README.Debian,v 1.6 2001/12/15 16:40:32 dmaze Exp $
+David Z. Maze <dmaze@debian.org> and Aurelien Jarno <aurel32@debian.org>
+$Id: lm-sensors-source.README.Debian,v 2.1 2004/08/18 18:28:42 aurel32 Exp $
+
+1. i2c and lm-sensors
+=====================
+
+You will need an installed version of i2c-source in order to build 
+lm-sensors-source. However it is not necessary to unpack to sources from
+/usr/src/i2c.tar.gz
+
+In order to install the modules built by lm-sensors-source, you will also
+need to install the i2c-source package and build modules from that.
 
 
-1. Building lm-sensors kernel modules
+2. Building lm-sensors kernel modules
 =====================================
 
-This package is a source package that can be used to build modules that work
-with your custom built linux kernel.  The source files are located in
-/usr/src/lm-sensors.tar.gz; unpacking that file in /usr/src will produce a
-build tree in /usr/src/modules/lm-sensors/.  (The tar file can also be
-unpacked elsewhere; see the paragraph about $MODULE_LOC below.)
+This package is a source package that can be used to build modules that 
+work with your custom built linux kernel. The source files are located 
+in /usr/src/lm-sensors.tar.gz; unpacking that file in /usr/src will 
+produce a build tree in /usr/src/modules/lm-sensors/. (The tar file can 
+also be unpacked elsewhere)
 
-Building these kernel modules requires also having headers for the
-separate i2c kernel modules.  This support is included in the Linux
-kernel as of version 2.4.13; you must have "I2C /proc support" enabled
-in your kernel configuration.  You may also use a stand-alone i2c
-source tree, such as that provided in the i2c-source package.  In this
-case, you must have unpacked /usr/src/i2c.tar.gz before proceeding,
-and should not have selected any I2C options in your kernel build.
+- The Debian way (with module-assistant): install the "module-assistant"
+  package and the kernel-headers-* package corresponding to the kernel 
+  version you want to use, then run the following commands:
 
-You probably want to use kernel-package for building these modules. Install
-it and read /usr/share/kernel-package/README.modules.  Having built a
-kernel with kernel-package, it should suffice to be in the top directory
-of your kernel source tree and run:
+  # module-assistant prepare               # May not be needed
+  # module-assistant get lm-sensors-source
+  # module-assistant build lm-sensors-source
 
-	fakeroot make-kpkg modules-image
+  You should now have an lm-sensors-<version>.deb file in /usr/src, 
+  which you can install with dpkg -i to get the modules installed.
 
-If you don't want to use kernel-package, do the following:
+- The "by hand" way: if you prefer handling your kernel by hand, then
+  you're supposed to know what to do with lm-sensors-source and I won't 
+  bother you any longer.
 
-Enter /usr/src/modules/lm-sensors/ directory, and as root execute:
-
-        debian/rules binary-modules KVERS=<kernel version> \
-		KSRC=<kernel source directory>
-
-This will generate a lm-sensors-<kernel version> .deb file in the parent
-directory of the kernel source tree. Default location of the kernel source
-tree is /usr/src/linux, but you can change that by supplying the KSRC
-variable as a command line option.
-
-For example, if your kernel version is 2.2.16, you should run:
-	debian/rules binary-modules KVERS=2.2.16
-
-If the kernel 2.4.0 source is located in /usr/local/src/kernel-2.4.0, the
-proper command would be:
-	debian/rules binary-modules KVERS=2.4.0 KSRC=/usr/local/src/kernel-2.4.0
-
-If you are unpacking your kernel modules in a non-standard place (e.g.
-not /usr/src/modules), you need to set the MODULE_LOC variable when
-building modules.  In particular, for lm-sensors, if your kernel does
-not contain i2c support, then $(MODULE_LOC)/i2c must contain the
-i2c modules.
-	debian/rules binary-modules KVERS=2.4.4 MODULE_LOC=$HOME/modules
+There also used to be a third way, using kernel-package.  It's been
+removed (module-assistant becoming the standard way to build modules
+in Debian).  For reference, here's the text that used to be above
+(will probably be removed in some future version):
+,----
+| You probably want to use kernel-package for building these modules.
+| Install it and read /usr/share/kernel-package/README.modules. Having
+| built a kernel with kernel-package, it should suffice to be in the top
+| directory of your kernel source tree and run:
+|
+|	make-kpkg modules-image
+|
+| If you are using a prebuilt Debian kernel, the process is almost the 
+| same. Enter in the directory containing the kernel headers 
+| corresponding to your kernel and run make-kpkg:
+|
+|       cd /usr/src/kernel-headers-2.4.26-1-686
+|       make-kpkg modules-image
+`----
 
 
-2. Common problems
+3. Common problems
 ==================
 
-make[1]: *** No rule to make target `linux/i2c-proc.h', needed by
-         `kernel/chips/via686a.d'.  Stop.
+make: *** No rule to make target 'rrd.h', needed by
+      `prog/sensord/rrd.rd'.  Stop.
 
-  The build process tries to automatically determine dependencies of
-  source files; if this fails, the generated *.d files have wrong
-  information that keeps the package from building.  Try running
-  'make-kpkg modules_clean' from the kernel source directory, or
-  'make clean' from the top level of the lm-sensors build tree.
-  This should remove the troublesome file, which will be regenerated
-  on the next build.
+  Some parts of the user-space lm-sensors package depend on the
+  "round-robin database" library, librrd. You'll get this error message
+  if you've installed lm-sensors-source and tried to build it by just
+  running 'make'. Either using 'make-kpkg modules-image' or
+  'debian/rules modules-nokpkg', as described above, will only build the
+  parts of the lm-sensors tree that actually contain kernel modules, and
+  don't have this dependence. If this is a problem, you can also
+  install librrd0-dev, which provides the demanded rrd.h header file.
 
-
--- David Z. Maze <dmaze@debian.org>
+-- Aurelien Jarno <aurel32@debian.org>

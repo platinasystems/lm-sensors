@@ -1,0 +1,4 @@
+For full documentation on setting up lm-sensors on your system, install the
+lm-sensors package and see /usr/share/doc/lm-sensors.
+
+-- David Z. Maze <dmaze@debian.org>

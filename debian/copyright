@@ -1,12 +1,32 @@
 This package was debianized by Stephen Crowley crow@debian.org and is now
-maintained by David Z. Maze <dmaze@debian.org>.
+maintained by Aurelien Jarno <aurel32@debian.org>.
 
-It was downloaded from http://www2.lm-sensors.nu/~lm78/
+It was downloaded from http://www.lm-sensors.nu/
 
-This package is copyright under the GNU General Public License by
-Alexander Larsson, Philip Edelbrock, Frodo Looijaard, William Morgan,
-Kyösti Mälkki, Mark D. Studebaker, Bob Dougherty, Geert Uytterhoeven, Fons
-Rademakers, Merlin Hughes, Simon Vogl, Gerd Knorr, and others. See
-CONTRIBUTORS for more detail.
+Copyright
 
-See /usr/share/common-licenses/GPL for the full text of the GPL.
+  This package is copyright Alexander Larsson, Philip Edelbrock, Frodo 
+  Looijaard, William Morgan, Kyösti Mälkki, Mark D. Studebaker, 
+  Bob Dougherty, Geert Uytterhoeven, Fons Rademakers, Merlin Hughes, 
+  Simon Vogl, Gerd Knorr, and others. See CONTRIBUTORS for more detail.
+
+License:
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in file /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+
+On Debian systems, the complete text of the GNU General Public
+License, version 2, can be found in /usr/share/common-licenses/GPL-2.
+

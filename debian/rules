@@ -3,178 +3,283 @@
 # source package, or to build a kernel module package.
 
 #export DH_VERBOSE=1
-export DH_COMPAT=3
 
-# Strip epoch, which is at the _end_ of KDREV
-baseepoch=$(shell expr $(KDREV) : '\([0-9]*\):.*' 2>/dev/null )
-ifneq ($(baseepoch),)
-EPOCH=$(baseepoch):
-endif
-REV=$(shell expr $(KDREV) : '[0-9]*:\(.*\)' 2>/dev/null)
-ifeq ($(REV),)
-REV=$(KDREV)
-endif
-VERSION=$(shell dpkg-parsechangelog | grep ^Version: | cut -d ' ' -f 2)
-KSRC:=/usr/src/linux
-ARCH=$(shell dpkg --print-architecture)
-MODULE_LOC?=/usr/src/modules
-PKG_VERSION=$(EPOCH)$(VERSION)+$(REV)
-CHFILE=$(KSRC)/../lm-sensors-$(KVERS)_$(PKG_VERSION)_$(ARCH).changes
-I2CORIGIN=$(shell debian/i2ccheck.pl $(KSRC) $(MODULE_LOC)/i2c 2.6.0)
-I2CFLAGS=$(if $(filter i2c,$(I2CORIGIN)),I2C_HEADERS=$(MODULE_LOC)/i2c)
+# Kernel versions to automatically build
+MODULES_KERNEL_VERSIONS=2.4.27-2
+PATCH_KERNEL_VERSIONS=2.4.27
+KPATCHESFILE=$(CURDIR)/debian/kernel-patch-2.4-lm-sensors.kpatches
 
-# Man pages to be generated from DocBook source
-DOCBOOK_8_PAGES=i2cdump i2cset isadump
+# prefix of the target package name
+PACKAGE=lm-sensors
+# modifieable for experiments or debugging m-a
+MA_DIR ?= /usr/share/modass
+# load generic variable handling
+-include $(MA_DIR)/include/generic.make
+# load default rules
+-include $(MA_DIR)/include/common-rules.make
+# location of i2c-headers
+I2C_DIR ?= /usr/src
 
-sanity-check:
-	@if [ -z "$(KSRC)" ]; then \
-		echo "KSRC is unset; please set it at the command line" >&2; \
-		exit 1; \
-	elif [ ! -d "$(KSRC)/include" ]; then \
-		echo "KSRC is $(KSRC), but" >&2; \
-		echo "doesn't appear to include an include directory." >&2; \
-		echo "Please set KSRC to point to a Linux kernel source" >&2; \
-		echo "tree at the command line." >&2; \
-		exit 1; \
-	elif [ -z "$(KVERS)" ]; then \
-		echo "KVERS is unset; please set it at the command line" >&2; \
-		exit 1; \
-	elif [ "$(I2CORIGIN)" = error ]; then \
-		echo "You don't appear to have i2c header files" >&2; \
-		echo "available on your system.  You must have either" >&2; \
-		echo "kernel 2.4.13 or newer, or have i2c header files" >&2; \
-		echo "installed under $(MODULE_LOC)/i2c." >&2; \
-		exit 1; \
-	fi
+# Some magic
+LMSENSORSVERSION=$(shell dpkg-parsechangelog | grep ^Version: | cut -f 2 -d ' ' | cut -f 1 -d - | cut -f 2 -d ':' )
+KERNEL_BUILD_DIRS=$(foreach ver,$(MODULES_KERNEL_VERSIONS),$(wildcard /usr/src/kernel-build-$(ver)/*))
+MODULES_KERNEL_SLASH_FLAVORS=$(KERNEL_BUILD_DIRS:/usr/src/kernel-build-%=%)
+MODULES_KERNEL_FLAVORS=$(subst /,-,$(MODULES_KERNEL_SLASH_FLAVORS))
 
-# Build everything except kernel modules.
-build:
-	dh_testdir
-	tar xzf /usr/src/i2c.tar.gz -C debian
-	$(MAKE) all-lib all-prog-sensors all-prog-sensord all-prog-dump \
-		COMPILE_KERNEL=0 I2C_HEADERS=`pwd`/debian/modules/i2c
-	for i in $(DOCBOOK_8_PAGES); do \
-		docbook-to-man debian/$$i.sgml > debian/$$i.8; \
-	done
+control:
+	cp debian/control.base debian/control
+	for flavor in $(MODULES_KERNEL_FLAVORS); do \
+	sed -e "s/_KVERS_/$$flavor/g" \
+		debian/control.per-mod >> debian/control; \
+        done
 
-# Build kernel modules.
-build-modules: sanity-check
-	dh_testdir
-	$(MAKE) all-kernel all-kernel-busses all-kernel-chips \
-		LINUX=$(KSRC) $(I2CFLAGS)
 
 clean:
 	dh_testdir
 	dh_testroot
-	$(MAKE) clean
-	-mv -f debian/control.save debian/control
-	rm -rf debian/modules
-	rm -f $(DOCBOOK_8_PAGES:%=debian/%.8)
-	dh_clean debian/lm-sensors-$(KVERS).*
+	
+	$(MAKE) clean PROG_EXTRA=sensord
+	
+	rm -rf $(CURDIR)/debian/build
+	rm -f $(KPATCHESFILE)
+	
+	rm -f *-stamp
+	dh_clean 
 
-# Build the kernel module .deb.
-binary-modules: build-modules
-	dh_clean -k
+
+build-indep: build-indep-stamp
+build-indep-stamp:
 	dh_testdir
-	dh_testroot
 
-	rm -f debian/control.save
-	cp debian/control debian/control.save
-	rm -f debian/control
-	sed -e 's/#KVERS#/$(KVERS)/g' -e 's/#KDREV#/$(KDREV)/' \
-		debian/control.modules > debian/control
-	# And set up files so debhelper can find them.
-	ln -sf lm-sensors-mod.README.Debian debian/lm-sensors-$(KVERS).README.Debian
+	# lm-sensors-source package
+	# Copy most of the source tree into the temp directory and clean it
+	find . -path ./debian/\* -type d -prune -o -print \
+		| egrep -v 'RPM|CVS|debian'  \
+		| cpio -admp debian/build/lm-sensors-source/usr/src/modules/lm-sensors
+	mkdir debian/build/lm-sensors-source/usr/src/modules/lm-sensors/debian
+	cp -f debian/*.modules.in debian/build/lm-sensors-source/usr/src/modules/lm-sensors/debian
+	cp -f debian/changelog debian/build/lm-sensors-source/usr/src/modules/lm-sensors/debian
+	cp -f debian/compat debian/build/lm-sensors-source/usr/src/modules/lm-sensors/debian
+	cp -f debian/copyright debian/build/lm-sensors-source/usr/src/modules/lm-sensors/debian
+	cp -f debian/rules debian/build/lm-sensors-source/usr/src/modules/lm-sensors/debian
 
-	dh_installdirs lib/modules/$(KVERS)/misc
-	find -name \*.o | grep /kernel/ | egrep -v 'RPM|CVS' | \
-		xargs -i install -m 0644 {} debian/lm-sensors-$(KVERS)/lib/modules/$(KVERS)/misc
-	dh_installdocs
-	dh_installexamples
-	dh_installchangelogs CHANGES
-	dh_installmodules
-	dh_compress
-	dh_fixperms
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol -- -v$(PKG_VERSION)
-	dh_makeshlibs
-	dh_md5sums
-	dh_builddeb --destdir=$(KSRC)/..
+	cd debian/build/lm-sensors-source/usr/src/modules/lm-sensors \
+		&& $(MAKE) clean
 
-# Build architecture-independent files here.
-binary-indep:
-	# Nothing to do.
+	# kernel-patch-2.4-lm-sensors
+	mkdir -p debian/build/kernel-patch-2.4-lm-sensors
+	echo "Patch-name: lm-sensors drivers" > $(KPATCHESFILE)
+	echo "Patch-id: lm-sensors" >> $(KPATCHESFILE)
+	echo "Architecture: all" >> $(KPATCHESFILE)
+	echo "Path-strip-level: 1" >> $(KPATCHESFILE)
+	echo >> $(KPATCHESFILE)
+	
+	for kvers in $(PATCH_KERNEL_VERSIONS) ; do \
+		echo "Creating patches for kernel $$kvers" ; \
+		tar xfj /usr/src/kernel-source-$$kvers.tar.bz2 -C $(CURDIR)/debian/build/ ; \
+		zcat /usr/src/kernel-patches/diffs/i2c/kernel-$$kvers-i2c-*.patch.gz | patch -s -p1 -d $(CURDIR)/debian/build/kernel-source-$$kvers ; \
+		$(CURDIR)/mkpatch/mkpatch.pl $(CURDIR) $(CURDIR)/debian/build/kernel-source-$$kvers > $(CURDIR)/debian/build/kernel-patch-2.4-lm-sensors/kernel-$$kvers-lm-sensors-$(LMSENSORSVERSION).patch ; \
+		echo "Patch-file: debian/build/kernel-patch-2.4-lm-sensors/kernel-$$kvers-lm-sensors-$(LMSENSORSVERSION).patch" >> $(KPATCHESFILE) ; \
+		echo "Kernel-version: $$kvers" >> $(KPATCHESFILE) ; \
+		echo "Depends: i2c" >> $(KPATCHESFILE) ; \
+		echo >> $(KPATCHESFILE) ; \
+		echo "Testing patch for kernel $$kvers" ; \
+		patch -i $(CURDIR)/debian/build/kernel-patch-2.4-lm-sensors/kernel-$$kvers-lm-sensors-$(LMSENSORSVERSION).patch -p1 -s -t -d $(CURDIR)/debian/build/kernel-source-$$kvers ; \
+	done
+		
+	touch build-indep-stamp
 
-# Build architecture-dependant files that arn't kernel modules here.
-binary-arch: build
-	dh_clean -k
+
+# Build everything that goes into the Debian package.  Use recursive make
+# invocations to build all of the interesting components.
+build-arch: build-arch-stamp
+build-arch-stamp:
 	dh_testdir
+
+	# binary programs and librairies
+	$(MAKE) user \
+		PREFIX=/usr \
+		PROG_EXTRA=sensord \
+		EXLDFLAGS=""
+
+	# binary modules
+ifeq ($(DEB_HOST_ARCH),i386)
+	mkdir -p debian/build
+	tar xzf /usr/src/i2c.tar.gz -C debian/build
+	ln -s kernel $(CURDIR)/debian/build/modules/i2c/linux
+	for flavor in $(MODULES_KERNEL_FLAVORS); do \
+		mkdir -p debian/build/lm-sensors-$$flavor ; \
+		find . -path ./debian -prune -o -print | cpio -admp debian/build/lm-sensors-$$flavor ; \
+		$(MAKE) -C debian/build/lm-sensors-$$flavor all-kernel-chips all-kernel-busses \
+			LINUX=/usr/src/kernel-headers-$$flavor \
+			I2C_HEADERS=$(CURDIR)/debian/build/modules/i2c \
+			MODPREF=/lib/modules/$$flavor ; \
+		$(MAKE) -C debian/build/lm-sensors-$$flavor/prog/hotplug -f Makefile.p4b \
+			LINUX=/usr/src/kernel-headers-$$flavor ; \
+		cp debian/lm-sensors-_KVERS_.README.Debian.modules.in debian/lm-sensors-$$flavor.README.Debian ; \
+	done
+endif
+	
+	touch build-arch-stamp
+
+
+install-indep: install-indep-stamp
+install-indep-stamp: build-indep
+	dh_testdir 
 	dh_testroot
-	dh_installdirs
+	dh_clean -i -k
+	dh_installdirs -i
 
-	$(MAKE) install DESTDIR=`pwd`/debian/tmp PREFIX=/usr COMPILE_KERNEL=0 \
-		I2C_HEADERS=`pwd`/debian/modules/i2c
-	install -m 0755 prog/detect/sensors-detect debian/tmp/usr/sbin
-	install -m 0755 prog/sensord/sensord debian/tmp/usr/sbin
-	install -m 0755 prog/dump/i2cdump debian/tmp/usr/sbin
-	install -m 0755 prog/dump/i2cset debian/tmp/usr/sbin
-	install -m 0755 prog/dump/isadump debian/tmp/usr/sbin
+	# Pack the sources into a tarball
+	mkdir -p debian/lm-sensors-source/usr/src/
+	chown -R root.src debian/build/lm-sensors-source/usr/src/modules
+	cd debian/build/lm-sensors-source/usr/src \
+		&& tar cf - modules | gzip -9 > $(CURDIR)/debian/lm-sensors-source/usr/src/lm-sensors.tar.gz
+	
+	# Install the patch
+	dh_installkpatches -i
+	
+	touch install-indep-stamp
 
-	# Copy this whole source tree into the temp directory and clean it.
-	find . -path ./debian/tmp -prune -o -print | \
-		cpio -admp debian/tmp/usr/src/modules/lm-sensors
-	find debian/tmp/usr/src -name CVS -type d | \
-		xargs rm -rf
-	cd debian/tmp/usr/src/modules/lm-sensors; \
-		$(MAKE) -f debian/rules clean
 
-	# Tar up stuff under /usr/src/modules into a tarball.
-	cd debian/tmp/usr/src; \
-		tar czf lm-sensors.tar.gz modules; \
-		rm -rf modules
+install-arch: install-arch-stamp
+install-arch-stamp: build-arch-stamp
+	dh_testdir 
+	dh_testroot 
+	dh_clean -s -k 
+	dh_installdirs -s
+
+	$(MAKE) user_install DESTDIR=$(CURDIR)/debian/tmp PREFIX=/usr MANDIR=/usr/share/man \
+		PROG_EXTRA=sensord EXLDFLAGS=""
 
 	# Install extra files as needed
 	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.server/sensord
 	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.workstation/sensord
+	install -m 0644 etc/sensors.conf.eg debian/lm-sensors/usr/share/lm-sensors/sensors.conf.eg
 
-	dh_movefiles
-	dh_link
+	# Install isadump only if it has been built (on i386 archs only)
+	if [ -x prog/dump/isadump ] ; then \
+	        cp -f prog/dump/isadump debian/lm-sensors/usr/sbin ; \
+		mkdir -p debian/lm-sensors/usr/share/man/man8 ; \
+	        cp -f prog/dump/isadump.8 debian/lm-sensors/usr/share/man/man8 ; \
+	fi
+	# Install isaset only if it has been built (on i386 archs only)
+	if [ -x prog/dump/isaset ] ; then \
+	        cp -f prog/dump/isaset debian/lm-sensors/usr/sbin ; \
+		mkdir -p debian/lm-sensors/usr/share/man/man8 ; \
+	        cp -f prog/dump/isaset.8 debian/lm-sensors/usr/share/man/man8 ; \
+	fi
+
+	# Blacklist i2c-viapro module
+	echo -e "# i2c-viapro conflicts with via686a, and thus should not be load automatically\ni2c-viapro" \
+		> debian/lm-sensors/etc/hotplug/blacklist.d/lm-sensors
+
+	dh_install -s --sourcedir=debian/tmp
+
+	# binary modules
+ifeq ($(DEB_HOST_ARCH),i386)
+	for flavor in $(MODULES_KERNEL_FLAVORS); do \
+		$(MAKE) -C debian/build/lm-sensors-$$flavor install-kernel-chips install-kernel-busses \
+			DESTDIR=$(CURDIR)/debian/lm-sensors-$$flavor \
+			LINUX=/usr/src/kernel-headers-$$flavor \
+			I2C_HEADERS=$(CURDIR)/debian/build/modules/i2c \
+			MODPREF=/lib/modules/$$flavor ; \
+		install -m 0644 debian/build/lm-sensors-$$flavor/prog/hotplug/p4b_smbus.o debian/lm-sensors-$$flavor/lib/modules/$$flavor/kernel/drivers/i2c/busses/ ; \
+	done
+endif
+
+	touch install-arch-stamp
+
+
+# Build architecture-independent files here.
+binary-indep: build-indep install-indep
+	dh_testdir 
+	dh_testroot 
+	dh_installdocs -i
+	dh_installchangelogs -i CHANGES
+	dh_strip -i
+	dh_link -i
+	dh_compress -i
+	dh_fixperms -i
+	dh_installdeb -i
+	dh_shlibdeps -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+# Build architecture-dependant files that arn't kernel modules here.
+binary-arch: build-arch install-arch
+	dh_testdir 
+	dh_testroot
+	dh_installchangelogs -s CHANGES
+	dh_installdocs -s -XCVS
+	dh_installexamples -s -XCVS -XModule.mk
+	dh_installmodules -s --name=i2c
+	dh_installdebconf -s
+	dh_installinit -psensord
+	dh_installinit -plm-sensors --no-start -- start 36 S .  # Should start after modutils (20) and mountall (35)
+	dh_installman -s
+	dh_link -s
+	dh_strip -s
+	dh_compress -s -X.pl
+	dh_fixperms -s
+	dh_perl -s
+	dh_makeshlibs -s -V
+	dh_installdeb -s
+	dh_shlibdeps -s
+	dh_gencontrol -s
+	dh_md5sums -s
+	dh_builddeb -s
+
+binary: binary-arch binary-indep
+.PHONY: clean build build-indep build-arch install-indep install-arch binary-indep binary-arch binary
+
+KMAJ=$(shell echo $(KVERS) | cut -b1-3)
+
+.PHONY: kdist_config
+kdist_config: prep-deb-files
+
+.PHONY: binary_modules binary-modules
+binary-modules: binary_modules
+binary_modules: kdist_config
+ifeq ($(KMAJ), 2.4)
+	# Build modules
+	tar xzf $(I2C_DIR)/i2c.tar.gz -C debian
+	ln -s kernel $(CURDIR)/debian/modules/i2c/linux
+	$(MAKE) all-kernel-busses all-kernel-chips \
+		LINUX=$(KSRC) \
+		I2C_HEADERS=$(CURDIR)/debian/modules/i2c \
+		MODPREF=/lib/modules/$(KVERS)
+	$(MAKE) -C prog/hotplug -f Makefile.p4b \
+		LINUX=$(KSRC)		
+	$(MAKE) install-kernel-chips install-kernel-busses \
+		DESTDIR=$(CURDIR)/debian/lm-sensors-$(KVERS) \
+		LINUX=$(KSRC) \
+		I2C_HEADERS=$(CURDIR)/debian/modules/i2c \
+		MODPREF=/lib/modules/$(KVERS)
+	install -m 0644 prog/hotplug/p4b_smbus.o debian/lm-sensors-$(KVERS)/lib/modules/$(KVERS)/lm-sensors
+	rm -rf debian/modules
+	
+	dh_testdir
+	dh_testroot
 	dh_installdocs
-	dh_installexamples
-	dh_installdebconf
-	dh_installmenu
-	dh_installcron
-	# Should start after modutils (20)
-	dh_installinit -psensord -- defaults 21
 	dh_installmodules
-	dh_installman
-	dh_installchangelogs CHANGES
+	dh_installchangelogs
+	dh_link
 	dh_strip
 	dh_compress
 	dh_fixperms
-
-	dh_makeshlibs
 	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
+	dh_gencontrol -- -v$(VERSION)
 	dh_md5sums
-	dh_builddeb
+	dh_builddeb --destdir=$(DEB_DESTDIR)
+else
+	@echo "This package is only useful for 2.4 kernels. For 2.6 kernels, \
+		use the modules that are already in the kernel tree."	
+endif
 
-# This is used when kernel-package is building the package.
-kdist_image: binary-modules clean
-	# The dependancies take care of building the module package.
-kdist: clean binary-modules
-	# Build a .changes file.
-	dpkg-genchanges -b -e"$(KMAINT) <$(KEMAIL)>" -u"$(KSRC)/.." > $(CHFILE)
-	debsign -e"$(KMAINT) <$(KEMAIL)>" $(CHFILE)
-	debian/rules clean
-kdist_configure:
-	# Nothing to do when configured.
-kdist_clean: clean
 
-source diff:                                                                  
-	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
-
-binary: binary-arch binary-indep
-.PHONY: build clean binary-indep binary-arch binary kdist kdist_image kdist_configure
+.PHONY: kdist_clean
+kdist_clean:
+	$(MAKE) clean
+	-dh_clean

@@ -21,25 +21,18 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/ioport.h>
 #include <linux/module.h>
 #include <linux/pci.h>
-#include <asm/io.h>
 #include <linux/types.h>
 #include <linux/i2c.h>
 #include <linux/i2c-algo-bit.h>
-#include "version.h"
 #include <linux/init.h>
-
-#ifdef MODULE_LICENSE
-MODULE_LICENSE("GPL");
-#endif
-
-/* PCI device */
-#define VENDOR		PCI_VENDOR_ID_VIA
-#define DEVICE		PCI_DEVICE_ID_VIA_82C586_3
+#include <asm/io.h>
+#include <asm/param.h>	/* for HZ */
+#include "version.h"
+#include "sensors_compat.h"
 
 /* Power management registers */
 
@@ -57,21 +50,14 @@ MODULE_LICENSE("GPL");
 #define IOSPACE		0x06
 #define IOTEXT		"via-i2c"
 
-/* ----- global defines -----------------------------------------------	*/
-#define DEB(x) x		/* silicon revision, io addresses       */
-#define DEB2(x) x		/* line status                          */
-#define DEBE(x)			/*                                      */
-
-/* ----- local functions ----------------------------------------------	*/
-
-static u16 pm_io_base;
+static u16 pm_io_base = 0;
 
 /*
    It does not appear from the datasheet that the GPIO pins are
    open drain. So a we set a low value by setting the direction to
    output and a high value by setting the direction to input and
    relying on the required I2C pullup. The data value is initialized
-   to 0 in i2c_via_init() and never changed.
+   to 0 in via_init() and never changed.
 */
 
 static void bit_via_setscl(void *data, int state)
@@ -98,57 +84,54 @@ static int bit_via_getsda(void *data)
 
 static void bit_via_inc(struct i2c_adapter *adapter)
 {
+#ifdef MODULE
 	MOD_INC_USE_COUNT;
+#endif
 }
 
 static void bit_via_dec(struct i2c_adapter *adapter)
 {
+#ifdef MODULE
 	MOD_DEC_USE_COUNT;
+#endif
 }
 
-/* ------------------------------------------------------------------------ */
-
 static struct i2c_algo_bit_data bit_data = {
-	NULL,
-	bit_via_setsda,
-	bit_via_setscl,
-	bit_via_getsda,
-	bit_via_getscl,
-	5, 5, 100,		/*waits, timeout */
+	.setsda		= bit_via_setsda,
+	.setscl		= bit_via_setscl,
+	.getsda		= bit_via_getsda,
+	.getscl		= bit_via_getscl,
+	.udelay		= 5,
+	.mdelay		= 5,
+	.timeout	= HZ
 };
 
-static struct i2c_adapter bit_via_ops = {
-	"VIA i2c",
-	I2C_HW_B_VIA,
-	NULL,
-	&bit_data,
-	bit_via_inc,
-	bit_via_dec,
-	NULL,
-	NULL,
+static struct i2c_adapter vt586b_adapter = {
+	.name		= "VIA i2c",
+	.id		= I2C_HW_B_VIA,
+	.algo_data	= &bit_data,
+	.inc_use	= bit_via_inc,
+	.dec_use	= bit_via_dec,
 };
 
 
-/* When exactly was the new pci interface introduced? */
-static int find_via(void)
+static struct pci_device_id vt586b_ids[] __devinitdata = {
+	{ PCI_VENDOR_ID_VIA, PCI_DEVICE_ID_VIA_82C586_3, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 },
+	{ 0, }
+};
+
+static int __devinit vt586b_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
-	struct pci_dev *s_bridge;
 	u16 base;
 	u8 rev;
+	int res;
 
-	if (!pci_present())
-		return -ENODEV;
-
-	s_bridge = pci_find_device(VENDOR, DEVICE, NULL);
-
-	if (!s_bridge) {
-		printk("i2c-via.o: vt82c586b not found\n");
-		return -ENODEV;
+	if (pm_io_base) {
+		printk(KERN_ERR "i2c-via.o: Will only support one host\n");
+		return -EBUSY;
 	}
 
-	if (PCIBIOS_SUCCESSFUL !=
-	    pci_read_config_byte(s_bridge, PM_CFG_REVID, &rev))
-		return -ENODEV;
+	pci_read_config_byte(dev, PM_CFG_REVID, &rev);
 
 	switch (rev) {
 	case 0x00:
@@ -164,62 +147,75 @@ static int find_via(void)
 		/* later revision */
 	}
 
-	if (PCIBIOS_SUCCESSFUL !=
-	    pci_read_config_word(s_bridge, base, &pm_io_base))
-		    return -ENODEV;
-
+	pci_read_config_word(dev, base, &pm_io_base);
 	pm_io_base &= (0xff << 8);
+
+	if (! request_region(I2C_DIR, IOSPACE, IOTEXT)) {
+	    printk("i2c-via.o: IO 0x%x-0x%x already in use\n",
+		   I2C_DIR, I2C_DIR + IOSPACE);
+	    return -EBUSY;
+	}
+	outb(inb(I2C_DIR) & ~(I2C_SDA | I2C_SCL), I2C_DIR);
+	outb(inb(I2C_OUT) & ~(I2C_SDA | I2C_SCL), I2C_OUT);
+	
+	res = i2c_bit_add_bus(&vt586b_adapter);
+	if ( res < 0 ) {
+		release_region(I2C_DIR, IOSPACE);
+		pm_io_base = 0;
+		return res;
+	}
 	return 0;
 }
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init i2c_via_init(void)
+static void __devexit vt586b_remove(struct pci_dev *dev)
 {
-	printk("i2c-via.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	if (find_via() < 0) {
-		printk("i2c-via.o: Error while reading PCI configuration\n");
-		return -ENODEV;
-	}
-
-	if (check_region(I2C_DIR, IOSPACE) < 0) {
-		printk("i2c-via.o: IO 0x%x-0x%x already in use\n",
-		       I2C_DIR, I2C_DIR + IOSPACE);
-		return -EBUSY;
-	} else {
-		request_region(I2C_DIR, IOSPACE, IOTEXT);
-		outb(inb(I2C_DIR) & ~(I2C_SDA | I2C_SCL), I2C_DIR);
-		outb(inb(I2C_OUT) & ~(I2C_SDA | I2C_SCL), I2C_OUT);
-	}
-
-	if (i2c_bit_add_bus(&bit_via_ops) == 0) {
-		printk("i2c-via.o: Module succesfully loaded\n");
-		return 0;
-	} else {
-		release_region(I2C_DIR, IOSPACE);
-		printk
-		    ("i2c-via.o: Algo-bit error, couldn't register bus\n");
-		return -ENODEV;
-	}
+	i2c_bit_del_bus(&vt586b_adapter);
+	release_region(I2C_DIR, IOSPACE);
+	pm_io_base = 0;
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
+/* Don't register driver to avoid driver conflicts */
+/*
+static struct pci_driver vt586b_driver = {
+	.name		= "vt586b smbus",
+	.id_table	= vt586b_ids,
+	.probe		= vt586b_probe,
+	.remove		= __devexit_p(vt586b_remove),
+};
+*/
+
+static int __init i2c_vt586b_init(void)
+{
+	struct pci_dev *dev;
+	const struct pci_device_id *id;
+
+	printk("i2c-via.o version %s (%s)\n", LM_VERSION, LM_DATE);
+/*
+	return pci_module_init(&vt586b_driver);
+*/
+	pci_for_each_dev(dev) {
+		id = pci_match_device(vt586b_ids, dev);
+		if(id)
+			if(vt586b_probe(dev, id) >= 0)
+				return 0;
+	}
+	return -ENODEV;
+}
+
+
+static void __exit i2c_vt586b_exit(void)
+{
+/*
+	pci_unregister_driver(&vt586b_driver);
+*/
+	vt586b_remove(NULL);
+}
+
+
 MODULE_AUTHOR("Kyösti Mälkki <kmalkki@cc.hut.fi>");
 MODULE_DESCRIPTION("i2c for Via vt82c586b southbridge");
+MODULE_LICENSE("GPL");
 
-int init_module(void)
-{
-	return i2c_via_init();
-}
-
-void cleanup_module(void)
-{
-	i2c_bit_del_bus(&bit_via_ops);
-	release_region(I2C_DIR, IOSPACE);
-}
-#endif
+module_init(i2c_vt586b_init);
+module_exit(i2c_vt586b_exit);

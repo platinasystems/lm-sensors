@@ -13,19 +13,20 @@ if [ -n "$ALARM_INTERVAL" ]; then ALARM_INTERVAL="-i $ALARM_INTERVAL"; fi
 if [ -n "$LOG_INTERVAL" ]; then LOG_INTERVAL="-l $LOG_INTERVAL"; fi
 if [ -n "$SYSLOG_FACILITY" ]; then SYSLOG_FACILITY="-f $SYSLOG_FACILITY"; fi
 if [ -n "$CONFIG_FILE" ]; then CONFIG_FILE="-c $CONFIG_FILE"; fi
+if [ -n "$RRD_FILE" ]; then RRD_FILE="-r $RRD_FILE"; fi
+if [ -n "$RRD_INTERVAL" ]; then RRD_INTERVAL="-t $RRD_INTERVAL"; fi
+if [ -n "$RRD_LOADAVG" ]; then RRD_LOADAVG="-a"; fi
 
 case "$1" in
   start)
 	echo -n "Starting sensor daemon:"
-	echo -n " sensors"
-	/usr/bin/sensors -s
 	echo -n " sensord"
         if start-stop-daemon --quiet --stop --signal 0 --exec $DAEMON --name sensord
 	then
 		echo " already running."
 		exit
 	fi
-	/sbin/start-stop-daemon --start --quiet --exec $DAEMON -- $ALARM_INTERVAL $LOG_INTERVAL $SYSLOG_FACILITY $CONFIG_FILE $SCAN_CHIPS
+	/sbin/start-stop-daemon --start --quiet --exec $DAEMON -- $ALARM_INTERVAL $LOG_INTERVAL $SYSLOG_FACILITY $RRD_INTERVAL $RRD_FILE $RRD_LOADAVG $CONFIG_FILE $SCAN_CHIPS
 	echo "."
 	;;
   stop)

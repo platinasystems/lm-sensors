@@ -20,25 +20,36 @@
 # verbatim in the rules, until it is redefined. 
 MODULE_DIR := kernel/include
 KERNELINCLUDEDIR := $(MODULE_DIR)
+KERNELCHIPSDIR := kernel/chips
 
-KERNELINCLUDEFILES := 
-ifneq ($(shell if grep -q '^CONFIG_SENSORS=y' $(LINUX)/.config; then echo 1; fi),1)
-KERNELINCLUDEFILES += $(MODULE_DIR)/sensors.h
-endif
-# No longer used, part of <linux/i2c.h>
-#ifneq ($(shell if grep -q '^CONFIG_I2C_ISA=y' $(LINUX)/.config; then echo 1; fi),1)
-#KERNELINCLUDEFILES += $(MODULE_DIR)/i2c-isa.h
-#endif
+KERNELINCLUDEFILES := $(MODULE_DIR)/i2c-dev.h $(MODULE_DIR)/sensors.h
+
+$(KERNELINCLUDEDIR)/sensors.h: $(KERNELINCLUDEDIR)/sensors.h.template
+	cat $@.template > $@
+	$(AWK) '/SENSORS SYSCTL START/,/SENSORS SYSCTL END/' $(KERNELCHIPSDIR)/*.c >> $@
+	echo '#endif' >> $@
+
+$(KERNELINCLUDEDIR)/sensors.hd:
+	( $(GREP) 'SENSORS SYSCTL START' /dev/null $(KERNELCHIPSDIR)/*.c | \
+	  $(SED) -e 's/:.*//' -e 's#^#$(KERNELINCLUDEDIR)/sensors.h: #' ) > $@
+
+# Get dependencies of sensors.h
+INCLUDEFILES += $(MODULE_DIR)/sensors.hd
+
+REMOVEKERNELINC := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(SYSINCLUDEDIR)/%,$(KERNELINCLUDEFILES))
 
 install-all-kernel-include:
 	if [ -n "$(KERNELINCLUDEFILES)" ] ; then \
 	  $(MKDIR) $(DESTDIR)$(SYSINCLUDEDIR) ; \
-	  $(INSTALL) -o root -g root -m 644 $(KERNELINCLUDEFILES) $(DESTDIR)$(SYSINCLUDEDIR) ; \
+	  $(INSTALL) -m 644 $(KERNELINCLUDEFILES) $(DESTDIR)$(SYSINCLUDEDIR) ; \
 	fi
 
-install :: install-all-kernel-include
+user_install :: install-all-kernel-include
+
+user_uninstall::
+	$(RM) $(REMOVEKERNELINC)
 
 clean-all-kernel-include:
-	$(RM) $(KERNELINCLUDEDIR)/*.h.install
+	$(RM) $(KERNELINCLUDEDIR)/*.h.install $(KERNELINCLUDEDIR)/sensors.h $(KERNELINCLUDEDIR)/sensors.hd
 
 clean :: clean-all-kernel-include

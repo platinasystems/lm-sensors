@@ -45,7 +45,6 @@
 
 #include <linux/module.h>
 #include <linux/config.h>
-#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/ioport.h>
 #include <linux/pci.h>
@@ -65,8 +64,6 @@
 
 #include "i2c-keywest.h"
 
-#undef POLLED_MODE
-
 #define DBG(x...) do {\
 	if (debug > 0) \
 		printk(KERN_DEBUG "KW:" x); \
@@ -78,33 +75,12 @@ MODULE_DESCRIPTION("I2C driver for Apple's Keywest");
 MODULE_LICENSE("GPL");
 MODULE_PARM(probe, "i");
 MODULE_PARM(debug, "i");
-EXPORT_NO_SYMBOLS;
+
 
 int probe = 0;
 int debug = 0;
 
 static struct keywest_iface *ifaces = NULL;
-
-#ifdef POLLED_MODE
-/* This isn't fast, but will go once I implement interrupt with
- * proper timeout
- */
-static u8
-wait_interrupt(struct keywest_iface* iface)
-{
-	int i;
-	u8 isr;
-	
-	for (i = 0; i < POLL_TIMEOUT; i++) {
-		isr = read_reg(reg_isr) & KW_I2C_IRQ_MASK;
-		if (isr != 0)
-			return isr;
-		current->state = TASK_UNINTERRUPTIBLE;
-		schedule_timeout(1);
-	}
-	return isr;
-}
-#endif /* POLLED_MODE */
 
 
 static void
@@ -116,16 +92,17 @@ do_stop(struct keywest_iface* iface, int result)
 }
 
 /* Main state machine for standard & standard sub mode */
-static void
+static int
 handle_interrupt(struct keywest_iface *iface, u8 isr)
 {
 	int ack;
+	int rearm_timer = 1;
 	
 	DBG("handle_interrupt(), got: %x, status: %x, state: %d\n",
 		isr, read_reg(reg_status), iface->state);
 	if (isr == 0 && iface->state != state_stop) {
 		do_stop(iface, -1);
-		return;
+		return rearm_timer;
 	}
 	if (isr & KW_I2C_IRQ_STOP && iface->state != state_stop) {
 		iface->result = -1;
@@ -196,20 +173,19 @@ handle_interrupt(struct keywest_iface *iface, u8 isr)
 		if (!(isr & KW_I2C_IRQ_STOP) && (++iface->stopretry) < 10)
 			do_stop(iface, -1);
 		else {
+			rearm_timer = 0;
 			iface->state = state_idle;
 			write_reg(reg_control, 0x00);
 			write_reg(reg_ier, 0x00);
-#ifndef POLLED_MODE
 			complete(&iface->complete);
-#endif /* POLLED_MODE */			
 		}
 		break;
 	}
 	
 	write_reg(reg_isr, isr);
-}
 
-#ifndef POLLED_MODE
+	return rearm_timer;
+}
 
 /* Interrupt handler */
 static void
@@ -219,8 +195,7 @@ keywest_irq(int irq, void *dev_id, struct pt_regs *regs)
 
 	spin_lock(&iface->lock);
 	del_timer(&iface->timeout_timer);
-	handle_interrupt(iface, read_reg(reg_isr));
-	if (iface->state != state_idle) {
+	if (handle_interrupt(iface, read_reg(reg_isr))) {
 		iface->timeout_timer.expires = jiffies + POLL_TIMEOUT;
 		add_timer(&iface->timeout_timer);
 	}
@@ -234,15 +209,12 @@ keywest_timeout(unsigned long data)
 
 	DBG("timeout !\n");
 	spin_lock_irq(&iface->lock);
-	handle_interrupt(iface, read_reg(reg_isr));
 	if (iface->state != state_idle) {
 		iface->timeout_timer.expires = jiffies + POLL_TIMEOUT;
 		add_timer(&iface->timeout_timer);
 	}
 	spin_unlock(&iface->lock);
 }
-
-#endif /* POLLED_MODE */
 
 /*
  * SMBUS-type transfer entrypoint
@@ -340,17 +312,7 @@ keywest_smbus_xfer(	struct i2c_adapter*	adap,
 	write_reg(reg_control, read_reg(reg_control) | KW_I2C_CTL_XADDR);
 	write_reg(reg_ier, KW_I2C_IRQ_MASK);
 
-#ifdef POLLED_MODE
-	DBG("using polled mode...\n");
-	/* State machine, to turn into an interrupt handler */
-	while(iface->state != state_idle) {
-		u8 isr = wait_interrupt(iface);
-		handle_interrupt(iface, isr);
-	}
-#else /* POLLED_MODE */
-	DBG("using interrupt mode...\n");
 	wait_for_completion(&iface->complete);	
-#endif /* POLLED_MODE */	
 
 	rc = iface->result;	
 	DBG("transfer done, result: %d\n", rc);
@@ -430,17 +392,7 @@ keywest_xfer(	struct i2c_adapter *adap,
 		write_reg(reg_control, read_reg(reg_control) | KW_I2C_CTL_XADDR);
 		write_reg(reg_ier, KW_I2C_IRQ_MASK);
 
-#ifdef POLLED_MODE
-		DBG("using polled mode...\n");
-		/* State machine, to turn into an interrupt handler */
-		while(iface->state != state_idle) {
-			u8 isr = wait_interrupt(iface);
-			handle_interrupt(iface, isr);
-		}
-#else /* POLLED_MODE */88
-		DBG("using interrupt mode...\n");
 		wait_for_completion(&iface->complete);	
-#endif /* POLLED_MODE */	
 
 		rc = iface->result;
 		if (rc == 0)
@@ -465,32 +417,36 @@ keywest_func(struct i2c_adapter * adapter)
 static void
 keywest_inc(struct i2c_adapter *adapter)
 {
+#ifdef MODULE
 	MOD_INC_USE_COUNT;
+#endif
 }
 
 static void
 keywest_dec(struct i2c_adapter *adapter)
 {
+#ifdef MODULE
 	MOD_DEC_USE_COUNT;
+#endif
 }
 
 /* For now, we only handle combined mode (smbus) */
 static struct i2c_algorithm keywest_algorithm = {
-	name:		"Keywest i2c",
-	id:		I2C_ALGO_SMBUS,
-	smbus_xfer:	keywest_smbus_xfer,
-	master_xfer:	keywest_xfer,
-	functionality:	keywest_func,
+	.name		= "Keywest i2c",
+	.id		= I2C_ALGO_SMBUS,
+	.smbus_xfer	= keywest_smbus_xfer,
+	.master_xfer	= keywest_xfer,
+	.functionality	= keywest_func,
 };
 
 
-static int
+static int __init
 create_iface(struct device_node* np)
 {
 	unsigned long steps, *psteps, *prate;
 	unsigned bsteps, tsize, i, nchan, addroffset;
 	struct keywest_iface* iface;
-	int rc;
+	int error;
 
 	psteps = (unsigned long *)get_property(np, "AAPL,address-step", NULL);
 	steps = psteps ? (*psteps) : 0x10;
@@ -564,16 +520,14 @@ create_iface(struct device_node* np)
 	write_reg(reg_ier, 0x00);
 	write_reg(reg_isr, KW_I2C_IRQ_MASK);
 
-#ifndef POLLED_MODE
 	/* Request chip interrupt */	
-	rc = request_irq(iface->irq, keywest_irq, 0, "keywest i2c", iface);
-	if (rc) {
+	error = request_irq(iface->irq, keywest_irq, 0, "keywest i2c", iface);
+	if (error) {
 		printk(KERN_ERR "i2c-keywest: can't get IRQ %d !\n", iface->irq);
 		iounmap((void *)iface->base);
 		kfree(iface);
 		return -ENODEV;
 	}
-#endif /* POLLED_MODE */
 
 	for (i=0; i<nchan; i++) {
 		struct keywest_chan* chan = &iface->channels[i];
@@ -591,8 +545,8 @@ create_iface(struct device_node* np)
 		chan->adapter.client_unregister = NULL;
 		chan->adapter.data = chan;
 
-		rc = i2c_add_adapter(&chan->adapter);
-		if (rc) {
+		error = i2c_add_adapter(&chan->adapter);
+		if (error) {
 			printk("i2c-keywest.c: Adapter %s registration failed\n",
 				chan->adapter.name);
 			chan->adapter.data = NULL;
@@ -616,28 +570,25 @@ create_iface(struct device_node* np)
 	return 0;
 }
 
-static void
+static void __exit
 dispose_iface(struct keywest_iface *iface)
 {
-	int i, rc;
+	int i, error;
 	
 	ifaces = iface->next;
 
 	/* Make sure we stop all activity */
 	down(&iface->sem);
-#ifndef POLLED_MODE
 	spin_lock_irq(&iface->lock);
 	while (iface->state != state_idle) {
 		spin_unlock_irq(&iface->lock);
-		schedule();
+		set_task_state(current,TASK_UNINTERRUPTIBLE);
+		schedule_timeout(HZ/10);
 		spin_lock_irq(&iface->lock);
 	}
-#endif /* POLLED_MODE */
 	iface->state = state_dead;
-#ifndef POLLED_MODE
 	spin_unlock_irq(&iface->lock);
 	free_irq(iface->irq, iface);
-#endif /* POLLED_MODE */
 	up(&iface->sem);
 
 	/* Release all channels */
@@ -645,39 +596,37 @@ dispose_iface(struct keywest_iface *iface)
 		struct keywest_chan* chan = &iface->channels[i];
 		if (!chan->adapter.data)
 			continue;
-		rc = i2c_del_adapter(&chan->adapter);
+		i2c_del_adapter(&chan->adapter);
 		chan->adapter.data = NULL;
 		/* We aren't that prepared to deal with this... */
-		if (rc)
+		if (error)
 			printk("i2c-keywest.c: i2c_del_adapter failed, that's bad !\n");
 	}
 	iounmap((void *)iface->base);
 	kfree(iface);
 }
 
-static int __init
-i2c_keywest_init(void)
+static int __init i2c_keywest_init(void)
 {
 	struct device_node *np;
-	int rc = -ENODEV;
+	int error = -ENODEV;
 	
 	np = find_compatible_devices("i2c", "keywest");
 	while (np != 0) {
 		if (np->n_addrs >= 1 && np->n_intrs >= 1)
-			rc = create_iface(np);
+			error = create_iface(np);
 		np = np->next;
 	}
 	if (ifaces)
-		rc = 0;
-	return rc;
+		error = 0;
+	return error;
 }
 
-static void __exit
-i2c_keywest_cleanup(void)
+static void __exit i2c_keywest_exit(void)
 {
 	while(ifaces)
 		dispose_iface(ifaces);
 }
 
 module_init(i2c_keywest_init);
-module_exit(i2c_keywest_cleanup);
+module_exit(i2c_keywest_exit);

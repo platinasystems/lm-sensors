@@ -23,28 +23,12 @@
 
 /* Supports the Analog Devices ADM1024. See doc/chips/adm1024 for details */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
+#include "version.h"
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -126,7 +110,7 @@ SENSORS_INSMOD_1(adm1024);
 #define IN_TO_REG(val,nr) (SENSORS_LIMIT(((val) & 0xff),0,255))
 #define IN_FROM_REG(val,nr) (val)
 
-extern inline u8 FAN_TO_REG(long rpm, int div)
+static inline u8 FAN_TO_REG(long rpm, int div)
 {
 	if (rpm == 0)
 		return 255;
@@ -159,59 +143,12 @@ extern inline u8 FAN_TO_REG(long rpm, int div)
 #define VID_FROM_REG(val) ((val)==0x1f?0:(val)>=0x10?510-(val)*10:\
                            205-(val)*5)
 
-/* Initial limits */
-#define ADM1024_INIT_IN_0 190
-#define ADM1024_INIT_IN_1 190
-#define ADM1024_INIT_IN_2 190
-#define ADM1024_INIT_IN_3 190
-#define ADM1024_INIT_IN_4 190
-#define ADM1024_INIT_IN_5 190
-
-#define ADM1024_INIT_IN_PERCENTAGE 10
-
-#define ADM1024_INIT_IN_MIN_0 \
-        (ADM1024_INIT_IN_0 - ADM1024_INIT_IN_0 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MAX_0 \
-        (ADM1024_INIT_IN_0 + ADM1024_INIT_IN_0 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MIN_1 \
-        (ADM1024_INIT_IN_1 - ADM1024_INIT_IN_1 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MAX_1 \
-        (ADM1024_INIT_IN_1 + ADM1024_INIT_IN_1 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MIN_2 \
-        (ADM1024_INIT_IN_2 - ADM1024_INIT_IN_2 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MAX_2 \
-        (ADM1024_INIT_IN_2 + ADM1024_INIT_IN_2 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MIN_3 \
-        (ADM1024_INIT_IN_3 - ADM1024_INIT_IN_3 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MAX_3 \
-        (ADM1024_INIT_IN_3 + ADM1024_INIT_IN_3 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MIN_4 \
-        (ADM1024_INIT_IN_4 - ADM1024_INIT_IN_4 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MAX_4 \
-        (ADM1024_INIT_IN_4 + ADM1024_INIT_IN_4 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MIN_5 \
-        (ADM1024_INIT_IN_5 - ADM1024_INIT_IN_5 * ADM1024_INIT_IN_PERCENTAGE / 100)
-#define ADM1024_INIT_IN_MAX_5 \
-        (ADM1024_INIT_IN_5 + ADM1024_INIT_IN_5 * ADM1024_INIT_IN_PERCENTAGE / 100)
-
-#define ADM1024_INIT_FAN_MIN_1 3000
-#define ADM1024_INIT_FAN_MIN_2 3000
-
-#define ADM1024_INIT_TEMP_OS_MAX 600
-#define ADM1024_INIT_TEMP_OS_HYST 500
-#define ADM1024_INIT_TEMP_HOT_MAX 700
-#define ADM1024_INIT_TEMP_HOT_HYST 600
-
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
 /* For each registered ADM1024, we need to keep some data in memory. That
    data is pointed to by adm1024_list[NR]->data. The structure itself is
    dynamically allocated, at the same time when a new adm1024 client is
    allocated. */
 struct adm1024_data {
+	struct i2c_client client;
 	int sysctl_id;
 	enum chips type;
 
@@ -240,22 +177,11 @@ struct adm1024_data {
 };
 
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_adm1024_init(void);
-static int __init adm1024_cleanup(void);
 
 static int adm1024_attach_adapter(struct i2c_adapter *adapter);
 static int adm1024_detect(struct i2c_adapter *adapter, int address,
 			  unsigned short flags, int kind);
 static int adm1024_detach_client(struct i2c_client *client);
-static int adm1024_command(struct i2c_client *client, unsigned int cmd,
-			   void *arg);
-static void adm1024_inc_use(struct i2c_client *client);
-static void adm1024_dec_use(struct i2c_client *client);
 
 static int adm1024_read_value(struct i2c_client *client, u8 register);
 static int adm1024_write_value(struct i2c_client *client, u8 register,
@@ -284,26 +210,50 @@ static void adm1024_analog_out(struct i2c_client *client, int operation,
 static void adm1024_vid(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results);
 
-/* I choose here for semi-static ADM1024 allocation. Complete dynamic
-   allocation could also be used; the code needed for this would probably
-   take more memory than the datastructure takes now. */
 static int adm1024_id = 0;
 
 static struct i2c_driver adm1024_driver = {
-	/* name */ "ADM1024 sensor driver",
-	/* id */ I2C_DRIVERID_ADM1024,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &adm1024_attach_adapter,
-	/* detach_client */ &adm1024_detach_client,
-	/* command */ &adm1024_command,
-	/* inc_use */ &adm1024_inc_use,
-	/* dec_use */ &adm1024_dec_use
+	.name		= "ADM1024 sensor driver",
+	.id		= I2C_DRIVERID_ADM1024,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= adm1024_attach_adapter,
+	.detach_client	= adm1024_detach_client,
 };
 
-/* Used by adm1024_init/cleanup */
-static int __initdata adm1024_initialized = 0;
-
 /* The /proc/sys entries */
+/* -- SENSORS SYSCTL START -- */
+
+#define ADM1024_SYSCTL_IN0 1000	/* Volts * 100 */
+#define ADM1024_SYSCTL_IN1 1001
+#define ADM1024_SYSCTL_IN2 1002
+#define ADM1024_SYSCTL_IN3 1003
+#define ADM1024_SYSCTL_IN4 1004
+#define ADM1024_SYSCTL_IN5 1005
+#define ADM1024_SYSCTL_FAN1 1101	/* Rotations/min */
+#define ADM1024_SYSCTL_FAN2 1102
+#define ADM1024_SYSCTL_TEMP 1250	/* Degrees Celcius * 100 */
+#define ADM1024_SYSCTL_TEMP1 1290	/* Degrees Celcius */
+#define ADM1024_SYSCTL_TEMP2 1295	/* Degrees Celcius */
+#define ADM1024_SYSCTL_FAN_DIV 2000	/* 1, 2, 4 or 8 */
+#define ADM1024_SYSCTL_ALARMS 2001	/* bitvector */
+#define ADM1024_SYSCTL_ANALOG_OUT 2002
+#define ADM1024_SYSCTL_VID 2003
+
+#define ADM1024_ALARM_IN0 0x0001
+#define ADM1024_ALARM_IN1 0x0002
+#define ADM1024_ALARM_IN2 0x0004
+#define ADM1024_ALARM_IN3 0x0008
+#define ADM1024_ALARM_IN4 0x0100
+#define ADM1024_ALARM_IN5 0x0200
+#define ADM1024_ALARM_FAN1 0x0040
+#define ADM1024_ALARM_FAN2 0x0080
+#define ADM1024_ALARM_TEMP 0x0010
+#define ADM1024_ALARM_TEMP1 0x0020
+#define ADM1024_ALARM_TEMP2 0x0001
+#define ADM1024_ALARM_CHAS 0x1000
+
+/* -- SENSORS SYSCTL END -- */
+
 /* These files are created for each detected ADM1024. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -343,7 +293,7 @@ static ctl_table adm1024_dir_table_template[] = {
 	{0}
 };
 
-int adm1024_attach_adapter(struct i2c_adapter *adapter)
+static int adm1024_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, adm1024_detect);
 }
@@ -375,14 +325,12 @@ static int adm1024_detect(struct i2c_adapter *adapter, int address,
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access adm1024_{read,write}_value. */
 
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct adm1024_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct adm1024_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct adm1024_data *) (new_client + 1);
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -455,12 +403,12 @@ static int adm1024_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int adm1024_detach_client(struct i2c_client *client)
+static int adm1024_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -473,92 +421,23 @@ int adm1024_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
-
 }
 
-/* No commands defined yet */
-int adm1024_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-void adm1024_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-void adm1024_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
-int adm1024_read_value(struct i2c_client *client, u8 reg)
+static int adm1024_read_value(struct i2c_client *client, u8 reg)
 {
 	return 0xFF & i2c_smbus_read_byte_data(client, reg);
 }
 
-int adm1024_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int adm1024_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	return i2c_smbus_write_byte_data(client, reg, value);
 }
 
-/* Called when we have found a new ADM1024. It should set limits, etc. */
-void adm1024_init_client(struct i2c_client *client)
+static void adm1024_init_client(struct i2c_client *client)
 {
-	/* Reset all except Watchdog values and last conversion values
-	   This sets fan-divs to 2, among others. This makes most other
-	   initializations unnecessary */
-	adm1024_write_value(client, ADM1024_REG_CONFIG, 0x80);
-
-	adm1024_write_value(client, ADM1024_REG_IN_MIN(0),
-			    IN_TO_REG(ADM1024_INIT_IN_MIN_0, 0));
-	adm1024_write_value(client, ADM1024_REG_IN_MAX(0),
-			    IN_TO_REG(ADM1024_INIT_IN_MAX_0, 0));
-	adm1024_write_value(client, ADM1024_REG_IN_MIN(1),
-			    IN_TO_REG(ADM1024_INIT_IN_MIN_1, 1));
-	adm1024_write_value(client, ADM1024_REG_IN_MAX(1),
-			    IN_TO_REG(ADM1024_INIT_IN_MAX_1, 1));
-	adm1024_write_value(client, ADM1024_REG_IN_MIN(2),
-			    IN_TO_REG(ADM1024_INIT_IN_MIN_2, 2));
-	adm1024_write_value(client, ADM1024_REG_IN_MAX(2),
-			    IN_TO_REG(ADM1024_INIT_IN_MAX_2, 2));
-	adm1024_write_value(client, ADM1024_REG_IN_MIN(3),
-			    IN_TO_REG(ADM1024_INIT_IN_MIN_3, 3));
-	adm1024_write_value(client, ADM1024_REG_IN_MAX(3),
-			    IN_TO_REG(ADM1024_INIT_IN_MAX_3, 3));
-	adm1024_write_value(client, ADM1024_REG_IN_MIN(4),
-			    IN_TO_REG(ADM1024_INIT_IN_MIN_4, 4));
-	adm1024_write_value(client, ADM1024_REG_IN_MAX(4),
-			    IN_TO_REG(ADM1024_INIT_IN_MAX_4, 4));
-	adm1024_write_value(client, ADM1024_REG_IN_MIN(5),
-			    IN_TO_REG(ADM1024_INIT_IN_MIN_5, 5));
-	adm1024_write_value(client, ADM1024_REG_IN_MAX(5),
-			    IN_TO_REG(ADM1024_INIT_IN_MAX_5, 5));
-	adm1024_write_value(client, ADM1024_REG_FAN1_MIN,
-			    FAN_TO_REG(ADM1024_INIT_FAN_MIN_1, 2));
-	adm1024_write_value(client, ADM1024_REG_FAN2_MIN,
-			    FAN_TO_REG(ADM1024_INIT_FAN_MIN_2, 2));
-	adm1024_write_value(client, ADM1024_REG_TOS,
-			    TEMP_LIMIT_TO_REG(ADM1024_INIT_TEMP_OS_MAX));
-	adm1024_write_value(client, ADM1024_REG_THYST,
-			    TEMP_LIMIT_TO_REG(ADM1024_INIT_TEMP_OS_HYST));
-	adm1024_write_value(client, ADM1024_REG_EXT_TEMP1_HIGH,
-			    TEMP_LIMIT_TO_REG(ADM1024_INIT_TEMP_OS_MAX));
-	adm1024_write_value(client, ADM1024_REG_EXT_TEMP1_LOW,
-			    TEMP_LIMIT_TO_REG(ADM1024_INIT_TEMP_OS_HYST));
-	adm1024_write_value(client, ADM1024_REG_2_5V_HIGH,
-			    TEMP_LIMIT_TO_REG(ADM1024_INIT_TEMP_OS_MAX));
-	adm1024_write_value(client, ADM1024_REG_2_5V_LOW,
-			    TEMP_LIMIT_TO_REG(ADM1024_INIT_TEMP_OS_HYST));
-	adm1024_write_value(client, ADM1024_REG_TEMP_CONFIG, 0x00);
-
 	/* Enable temperature channel 2 */
 	adm1024_write_value(client, ADM1024_REG_CHANNEL_MODE, adm1024_read_value(client, ADM1024_REG_CHANNEL_MODE) | 0x04);
 
@@ -566,7 +445,7 @@ void adm1024_init_client(struct i2c_client *client)
 	adm1024_write_value(client, ADM1024_REG_CONFIG, 0x07);
 }
 
-void adm1024_update_client(struct i2c_client *client)
+static void adm1024_update_client(struct i2c_client *client)
 {
 	struct adm1024_data *data = client->data;
 	u8 i;
@@ -879,58 +758,24 @@ void adm1024_vid(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_adm1024_init(void)
+static int __init sm_adm1024_init(void)
 {
-	int res;
-
 	printk("adm1024.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	adm1024_initialized = 0;
-
-	if ((res = i2c_add_driver(&adm1024_driver))) {
-		printk
-		    ("adm1024.o: Driver registration failed, module not inserted.\n");
-		adm1024_cleanup();
-		return res;
-	}
-	adm1024_initialized++;
-	return 0;
+	return i2c_add_driver(&adm1024_driver);
 }
 
-int __init adm1024_cleanup(void)
+static void __exit sm_adm1024_exit(void)
 {
-	int res;
-
-	if (adm1024_initialized >= 1) {
-		if ((res = i2c_del_driver(&adm1024_driver))) {
-			printk
-			    ("adm1024.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		adm1024_initialized--;
-	}
-	return 0;
+	i2c_del_driver(&adm1024_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR
     ("Frodo Looijaard <frodol@dds.nl> and Philip Edelbrock <phil@netroedge.com>");
 MODULE_DESCRIPTION("ADM1024 driver");
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
 
-int init_module(void)
-{
-	return sensors_adm1024_init();
-}
-
-int cleanup_module(void)
-{
-	return adm1024_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_adm1024_init);
+module_exit(sm_adm1024_exit);

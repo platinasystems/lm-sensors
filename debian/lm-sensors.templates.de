@@ -1,9 +1,0 @@
-Template: lm-sensors/create-devices
-Type: boolean
-Default: true
-Description: Create lm-sensors devices?
- The lm-sensors tools need to use special device nodes under /dev to
- access the actual sensor devices.
-Description-de: lm-sensors-Gerätedatei erstellen?
- Die lm-sensors Tools benötigen ein bestimmte Gerätdatei im Verzeichnis
- /dev, um auf die Sensordaten zuzugreifen.

@@ -1,0 +1,22 @@
+Source: lm-sensors
+Section: misc
+Priority: extra
+Build-Depends: debhelper (>= 4.0.0), bison, flex | flex-old, i2c-source (>= 1:2.9.0)
+Maintainer: Aurelien Jarno <aurel32@debian.org>
+Standards-Version: 3.6.1
+
+Package: lm-sensors-_KVERS_
+Architecture: any
+Provides: lm-sensors-mod-2.9
+Depends: kernel-image-_KVERS_, i2c-_KVERS_ (>= 1:2.9.0)
+Conflicts: libsensors3 (<< 2.8.6-8)
+Recommends: lm-sensors (>= 2.8.6-9)
+Description: kernel drivers to read temperature/voltage/fan sensors
+ Lm-sensors is a hardware health monitoring package for Linux. It allows you
+ to access information from temperature, voltage, and fan speed sensors. It
+ works with most newer systems.
+ .
+ This package contains the drivers, compiled for linux kernel
+ _KVERS_. It requires the matching i2c module package.
+ .
+  Homepage: http://www.lm-sensors.nu

@@ -1,6 +1,0 @@
-prog/sensors/sensors.1
-lib/sensors.conf.5
-debian/sensors-detect.8
-debian/i2cdump.8
-debian/i2cset.8
-debian/isadump.8

@@ -1,0 +1,4 @@
+usr/sbin
+usr/share/lm-sensors
+etc/modprobe.d
+etc/hotplug/blacklist.d

@@ -4,6 +4,11 @@
     Copyright (c) 1998, 1999  Frodo Looijaard <frodol@dds.nl> and
     Philip Edelbrock <phil@netroedge.com>
 
+    2003-08-18  Jean Delvare <khali@linux-fr.org>
+    Divide the eeprom in 2-row (arbitrary) slices. This significantly
+    speeds sensors up, as well as various scripts using the eeprom
+    module.
+
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
@@ -20,25 +25,14 @@
 */
 
 #include <linux/module.h>
-#include <linux/version.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include "sensors.h"
-#include "version.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include <linux/sched.h> /* for capable() */
+#include "version.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -60,53 +54,31 @@ MODULE_PARM_DESC(checksum,
 /* EEPROM registers */
 #define EEPROM_REG_CHECKSUM 0x3f
 
-/* EEPROM memory types: */
-#define ONE_K		1
-#define TWO_K		2
-#define FOUR_K		3
-#define EIGHT_K		4
-#define SIXTEEN_K	5
+/* possible natures */
+#define NATURE_UNKNOWN 0
+#define NATURE_VAIO 1
 
-/* Conversions */
 /* Size of EEPROM in bytes */
 #define EEPROM_SIZE 256
 
 /* Each client has this additional data */
 struct eeprom_data {
+	struct i2c_client client;
 	int sysctl_id;
 
 	struct semaphore update_lock;
-	char valid;		/* !=0 if following fields are valid */
-	unsigned long last_updated;	/* In jiffies */
+	u8 valid;		/* bitfield, bit!=0 if slice is valid */
+	unsigned long last_updated[8];	/* In jiffies, 8 slices */
 
 	u8 data[EEPROM_SIZE];	/* Register values */
-#if 0
-	int memtype;
-#endif
+	u8 nature;
 };
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_eeprom_init(void);
-static int __init eeprom_cleanup(void);
 
 static int eeprom_attach_adapter(struct i2c_adapter *adapter);
 static int eeprom_detect(struct i2c_adapter *adapter, int address,
 			 unsigned short flags, int kind);
 static int eeprom_detach_client(struct i2c_client *client);
-static int eeprom_command(struct i2c_client *client, unsigned int cmd,
-			  void *arg);
-
-static void eeprom_inc_use(struct i2c_client *client);
-static void eeprom_dec_use(struct i2c_client *client);
 
 #if 0
 static int eeprom_write_value(struct i2c_client *client, u8 reg,
@@ -115,20 +87,38 @@ static int eeprom_write_value(struct i2c_client *client, u8 reg,
 
 static void eeprom_contents(struct i2c_client *client, int operation,
 			    int ctl_name, int *nrels_mag, long *results);
-static void eeprom_update_client(struct i2c_client *client);
+static void eeprom_update_client(struct i2c_client *client, u8 slice);
 
 
 /* This is the driver that will be inserted */
 static struct i2c_driver eeprom_driver = {
-	/* name */ "EEPROM READER",
-	/* id */ I2C_DRIVERID_EEPROM,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &eeprom_attach_adapter,
-	/* detach_client */ &eeprom_detach_client,
-	/* command */ &eeprom_command,
-	/* inc_use */ &eeprom_inc_use,
-	/* dec_use */ &eeprom_dec_use
+	.name		= "EEPROM READER",
+	.id		= I2C_DRIVERID_EEPROM,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= eeprom_attach_adapter,
+	.detach_client	= eeprom_detach_client,
 };
+
+/* -- SENSORS SYSCTL START -- */
+
+#define EEPROM_SYSCTL1 1000
+#define EEPROM_SYSCTL2 1001
+#define EEPROM_SYSCTL3 1002
+#define EEPROM_SYSCTL4 1003
+#define EEPROM_SYSCTL5 1004
+#define EEPROM_SYSCTL6 1005
+#define EEPROM_SYSCTL7 1006
+#define EEPROM_SYSCTL8 1007
+#define EEPROM_SYSCTL9 1008
+#define EEPROM_SYSCTL10 1009
+#define EEPROM_SYSCTL11 1010
+#define EEPROM_SYSCTL12 1011
+#define EEPROM_SYSCTL13 1012
+#define EEPROM_SYSCTL14 1013
+#define EEPROM_SYSCTL15 1014
+#define EEPROM_SYSCTL16 1015
+
+/* -- SENSORS SYSCTL END -- */
 
 /* These files are created for each detected EEPROM. This is just a template;
    though at first sight, you might think we could use a statically
@@ -171,12 +161,9 @@ static ctl_table eeprom_dir_table_template[] = {
 	{0}
 };
 
-/* Used by init/cleanup */
-static int __initdata eeprom_initialized = 0;
-
 static int eeprom_id = 0;
 
-int eeprom_attach_adapter(struct i2c_adapter *adapter)
+static int eeprom_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, eeprom_detect);
 }
@@ -185,7 +172,7 @@ int eeprom_attach_adapter(struct i2c_adapter *adapter)
 int eeprom_detect(struct i2c_adapter *adapter, int address,
 		  unsigned short flags, int kind)
 {
-	int i, cs;
+	int i;
 	struct i2c_client *new_client;
 	struct eeprom_data *data;
 	int err = 0;
@@ -207,30 +194,44 @@ int eeprom_detect(struct i2c_adapter *adapter, int address,
 	/* OK. For now, we presume we have a valid client. We now create the
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access eeprom_{read,write}_value. */
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct eeprom_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct eeprom_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct eeprom_data *) (new_client + 1);
+	new_client = &data->client;
+	memset(data->data, 0xff, EEPROM_SIZE);
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
 	new_client->driver = &eeprom_driver;
 	new_client->flags = 0;
 
+	/* prevent 24RF08 corruption */
+	i2c_smbus_write_quick(new_client, 0);
+
 	/* Now, we do the remaining detection. It is not there, unless you force
 	   the checksum to work out. */
 	if (checksum) {
-		cs = 0;
+		int cs = 0;
 		for (i = 0; i <= 0x3e; i++)
 			cs += i2c_smbus_read_byte_data(new_client, i);
 		cs &= 0xff;
 		if (i2c_smbus_read_byte_data
 		    (new_client, EEPROM_REG_CHECKSUM) != cs)
 			goto ERROR1;
+	}
+
+	data->nature = NATURE_UNKNOWN;
+	/* Detect the Vaio nature of EEPROMs.
+	   We use the "PCG-" prefix as the signature. */
+	if (address == 0x57)
+	{
+		if (i2c_smbus_read_byte_data(new_client, 0x80) == 'P'
+		 && i2c_smbus_read_byte_data(new_client, 0x81) == 'C'
+		 && i2c_smbus_read_byte_data(new_client, 0x82) == 'G'
+		 && i2c_smbus_read_byte_data(new_client, 0x83) == '-')
+			data->nature = NATURE_VAIO;
 	}
 
 	/* Determine the chip type - only one kind supported! */
@@ -277,12 +278,12 @@ int eeprom_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int eeprom_detach_client(struct i2c_client *client)
+static int eeprom_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -295,67 +296,64 @@ int eeprom_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
 
-
-/* No commands defined yet */
-int eeprom_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-void eeprom_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-void eeprom_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
 
 #if 0
 /* No writes yet (PAE) */
-int eeprom_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int eeprom_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	return i2c_smbus_write_byte_data(client, reg, value);
 }
 #endif
 
-void eeprom_update_client(struct i2c_client *client)
+static void eeprom_update_client(struct i2c_client *client, u8 slice)
 {
 	struct eeprom_data *data = client->data;
-	int i;
+	int i, j;
 
 	down(&data->update_lock);
 
-	if ((jiffies - data->last_updated > 300 * HZ) |
-	    (jiffies < data->last_updated) || !data->valid) {
+	if (!(data->valid & (1 << slice))
+	 || (jiffies - data->last_updated[slice] > 300 * HZ)
+	 || (jiffies < data->last_updated[slice])) {
 
 #ifdef DEBUG
-		printk("Starting eeprom update\n");
+		printk(KERN_DEBUG "eeprom.o: Starting update, slice %u\n", slice);
 #endif
 
-		if (i2c_smbus_write_byte(client, 0)) {
-#ifdef DEBUG
-			printk("eeprom read start has failed!\n");
-#endif
+		if (i2c_check_functionality(client->adapter,
+		                            I2C_FUNC_SMBUS_READ_I2C_BLOCK))
+		{
+			for (i = slice << 5; i < (slice + 1) << 5;
+			                            i += I2C_SMBUS_I2C_BLOCK_MAX)
+				if (i2c_smbus_read_i2c_block_data(client,
+				                           i, data->data + i)
+				                    != I2C_SMBUS_I2C_BLOCK_MAX) {
+					printk(KERN_WARNING "eeprom.o: block read fail at 0x%.2x!\n", i);
+					goto DONE;
+				}
+		} else {
+			if (i2c_smbus_write_byte(client, slice << 5)) {
+				printk(KERN_WARNING "eeprom.o: read start fail at 0x%.2x!\n", slice << 5);
+				goto DONE;
+			}
+			for (i = slice << 5; i < (slice + 1) << 5; i++) {
+				j = i2c_smbus_read_byte(client);
+				if (j < 0) {
+					printk(KERN_WARNING "eeprom.o: read fail at 0x%.2x!\n", i);
+					goto DONE;
+				}
+				data->data[i] = (u8) j;
+			}
 		}
-		for (i = 0; i < EEPROM_SIZE; i++) {
-			data->data[i] = (u8) i2c_smbus_read_byte(client);
-		}
-
-		data->last_updated = jiffies;
-		data->valid = 1;
+		data->last_updated[slice] = jiffies;
+		data->valid |= (1 << slice);
 	}
-
+DONE:
 	up(&data->update_lock);
 }
 
@@ -364,71 +362,31 @@ void eeprom_contents(struct i2c_client *client, int operation,
 		     int ctl_name, int *nrels_mag, long *results)
 {
 	int i;
-	int base = 0;
+	int nr = ctl_name - EEPROM_SYSCTL1;
 	struct eeprom_data *data = client->data;
-
-	switch (ctl_name) {
-		case EEPROM_SYSCTL2:
-			base = 16;
-			break;
-		case EEPROM_SYSCTL3:
-			base = 32;
-			break;
-		case EEPROM_SYSCTL4:
-			base = 48;
-			break;
-		case EEPROM_SYSCTL5:
-			base = 64;
-			break;
-		case EEPROM_SYSCTL6:
-			base = 80;
-			break;
-		case EEPROM_SYSCTL7:
-			base = 96;
-			break;
-		case EEPROM_SYSCTL8:
-			base = 112;
-			break;
-		case EEPROM_SYSCTL9:
-			base = 128;
-			break;
-		case EEPROM_SYSCTL10:
-			base = 144;
-			break;
-		case EEPROM_SYSCTL11:
-			base = 160;
-			break;
-		case EEPROM_SYSCTL12:
-			base = 176;
-			break;
-		case EEPROM_SYSCTL13:
-			base = 192;
-			break;
-		case EEPROM_SYSCTL14:
-			base = 208;
-			break;
-		case EEPROM_SYSCTL15:
-			base = 224;
-			break;
-		case EEPROM_SYSCTL16:
-			base = 240;
-			break;
-	}
 
 	if (operation == SENSORS_PROC_REAL_INFO)
 		*nrels_mag = 0;
 	else if (operation == SENSORS_PROC_REAL_READ) {
-		eeprom_update_client(client);
-		for (i = 0; i < 16; i++) {
-			results[i] = data->data[i + base];
-		}
+		eeprom_update_client(client, nr >> 1);
+		/* Hide Vaio security settings to regular users */
+		if (nr == 0 && data->nature == NATURE_VAIO
+		 && !capable(CAP_SYS_ADMIN))
+			for (i = 0; i < 16; i++)
+				results[i] = 0;
+		else
+			for (i = 0; i < 16; i++)
+				results[i] = data->data[i + nr * 16];
 #ifdef DEBUG
-		printk("eeprom.o: 0x%X EEPROM Contents (base %d): ",
-		       client->addr, base);
-		for (i = 0; i < 16; i++) {
-			printk(" 0x%X", data->data[i + base]);
+		printk(KERN_DEBUG "eeprom.o: 0x%X EEPROM contents (row %d):",
+		       client->addr, nr + 1);
+		if (nr == 0 && data->nature == NATURE_VAIO)
+		 	printk(" <hidden for security reasons>\n");
+		else {
+			for (i = 0; i < 16; i++)
+				printk(" 0x%02X", data->data[i + nr * 16]);
+			printk("\n");
 		}
-		printk(" .\n");
 #endif
 		*nrels_mag = 16;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
@@ -438,54 +396,22 @@ void eeprom_contents(struct i2c_client *client, int operation,
 	}
 }
 
-int __init sensors_eeprom_init(void)
+static int __init sm_eeprom_init(void)
 {
-	int res;
-
 	printk("eeprom.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	eeprom_initialized = 0;
-	if ((res = i2c_add_driver(&eeprom_driver))) {
-		printk
-		    ("eeprom.o: Driver registration failed, module not inserted.\n");
-		eeprom_cleanup();
-		return res;
-	}
-	eeprom_initialized++;
-	return 0;
+	return i2c_add_driver(&eeprom_driver);
 }
 
-int __init eeprom_cleanup(void)
+static void __exit sm_eeprom_exit(void)
 {
-	int res;
-
-	if (eeprom_initialized >= 1) {
-		if ((res = i2c_del_driver(&eeprom_driver))) {
-			printk
-			    ("eeprom.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-	} else
-		eeprom_initialized--;
-
-	return 0;
+	i2c_del_driver(&eeprom_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR
     ("Frodo Looijaard <frodol@dds.nl> and Philip Edelbrock <phil@netroedge.com>");
 MODULE_DESCRIPTION("EEPROM driver");
 
-int init_module(void)
-{
-	return sensors_eeprom_init();
-}
-
-int cleanup_module(void)
-{
-	return eeprom_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_eeprom_init);
+module_exit(sm_eeprom_exit);

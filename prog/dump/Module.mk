@@ -21,19 +21,49 @@
 MODULE_DIR := prog/dump
 PROGDUMPDIR := $(MODULE_DIR)
 
+PROGDUMPMAN8DIR := $(MANDIR)/man8
+PROGDUMPMAN8FILES := $(MODULE_DIR)/i2cdump.8 $(MODULE_DIR)/i2cset.8
+
 # Regrettably, even 'simply expanded variables' will not put their currently
 # defined value verbatim into the command-list of rules...
-PROGDUMPTARGETS := $(MODULE_DIR)/isadump $(MODULE_DIR)/i2cdump \
-		   $(MODULE_DIR)/i2cset
-PROGDUMPSOURCES := $(MODULE_DIR)/isadump.c  $(MODULE_DIR)/i2cdump.c \
-		   $(MODULE_DIR)/i2cset.c
+PROGDUMPTARGETS := $(MODULE_DIR)/i2cdump $(MODULE_DIR)/i2cset
+PROGDUMPSOURCES := $(MODULE_DIR)/i2cdump.c $(MODULE_DIR)/i2cset.c \
+		   $(MODULE_DIR)/i2cbusses.c
+PROGDUMPBININSTALL := $(MODULE_DIR)/i2cdump $(MODULE_DIR)/i2cset
+
+# Only build isadump and isaset on x86 machines.
+ifneq (,$(findstring $(MACHINE), i386 i486 i586 i686 x86_64))
+PROGDUMPMAN8FILES += $(MODULE_DIR)/isadump.8 $(MODULE_DIR)/isaset.8
+PROGDUMPTARGETS += $(MODULE_DIR)/isadump $(MODULE_DIR)/isaset
+PROGDUMPSOURCES += $(MODULE_DIR)/isadump.c $(MODULE_DIR)/isaset.c
+PROGDUMPBININSTALL += $(MODULE_DIR)/isadump $(MODULE_DIR)/isaset
+endif
 
 # Include all dependency files. We use '.rd' to indicate this will create
 # executables.
 INCLUDEFILES += $(PROGDUMPSOURCES:.c=.rd)
 
+REMOVEDUMPBIN := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(SBINDIR)/%,$(PROGDUMPBININSTALL))
+REMOVEDUMPMAN := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(PROGDUMPMAN8DIR)/%,$(PROGDUMPMAN8FILES))
+
 all-prog-dump: $(PROGDUMPTARGETS)
-all :: all-prog-dump
+user :: all-prog-dump
+
+$(MODULE_DIR)/i2cdump: $(MODULE_DIR)/i2cdump.ro $(MODULE_DIR)/i2cbusses.ro
+	$(CC) $(EXLDFLAGS) -o $@ $^
+
+$(MODULE_DIR)/i2cset: $(MODULE_DIR)/i2cset.ro $(MODULE_DIR)/i2cbusses.ro
+	$(CC) $(EXLDFLAGS) -o $@ $^
+
+install-prog-dump: all-prog-dump
+	$(MKDIR) $(DESTDIR)$(SBINDIR) $(DESTDIR)$(PROGDUMPMAN8DIR)
+	$(INSTALL) -m 755 $(PROGDUMPBININSTALL) $(DESTDIR)$(SBINDIR)
+	$(INSTALL) -m 644 $(PROGDUMPMAN8FILES) $(DESTDIR)$(PROGDUMPMAN8DIR)
+user_install :: install-prog-dump
+
+user_uninstall::
+	$(RM) $(REMOVEDUMPBIN)
+	$(RM) $(REMOVEDUMPMAN)
 
 clean-prog-dump:
 	$(RM) $(PROGDUMPDIR)/*.rd $(PROGDUMPDIR)/*.ro $(PROGDUMPTARGETS)
