@@ -1,3 +1,10 @@
+lm-sensors (1:2.9.0-19) unstable; urgency=medium
+
+  * Patch pulled from CVS: read /etc/udev.conf to know how to detect 
+    the presence of udev.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 28 Mar 2005 23:02:35 +0200
+
 lm-sensors (1:2.9.0-18) unstable; urgency=medium
 
   * Also detect udev with /dev/.udevdb (closes: bug#299563).
