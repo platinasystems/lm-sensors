@@ -1,0 +1,6 @@
+usr/sbin/sensors-detect
+usr/sbin/i2cdump
+usr/sbin/i2cset
+usr/sbin/isadump
+usr/bin/sensors
+etc/sensors.conf

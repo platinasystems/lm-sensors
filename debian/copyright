@@ -1,7 +1,12 @@
 This package was debianized by Stephen Crowley crow@debian.org and is now
-maintained by Joey Hess <joeyh@debian.org>.
+maintained by David Z. Maze <dmaze@debian.org>.
 
 It was downloaded from http://www2.lm-sensors.nu/~lm78/
 
-This package is licensed under the GNU General Public License
-see /usr/share/common-licences/GPL
+This package is copyright under the GNU General Public License by
+Alexander Larsson, Philip Edelbrock, Frodo Looijaard, William Morgan,
+Kyösti Mälkki, Mark D. Studebaker, Bob Dougherty, Geert Uytterhoeven, Fons
+Rademakers, Merlin Hughes, Simon Vogl, Gerd Knorr, and others. See
+CONTRIBUTORS for more detail.
+
+See /usr/share/common-licenses/GPL for the full text of the GPL.

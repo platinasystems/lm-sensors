@@ -1,3 +1,382 @@
+lm-sensors (2.6.3-5) unstable; urgency=low
+
+  * Okay, don't actually depend on the exact kernel version.  (Herbert Xu
+    claims the kernel ABI shouldn't change appreciably between kernel builds.)
+
+ -- David Z Maze <dmaze@debian.org>  Tue, 16 Apr 2002 21:13:13 -0400
+
+lm-sensors (2.6.3-4) unstable; urgency=low
+
+  * Don't just Recommend the kernel we built against; Depend on it,
+    and more precisely, depend on the exact version that was used.
+
+ -- David Z Maze <dmaze@debian.org>  Mon, 15 Apr 2002 10:43:56 -0400
+
+lm-sensors (2.6.3-3) unstable; urgency=low
+
+  * Abandon genchanges.sh, and use debsign to sign the .changes file
+    in 'debian/rules kdist'.  This is the same change that was made to
+    i2c.
+
+ -- David Z Maze <dmaze@debian.org>  Sun, 14 Apr 2002 18:33:21 -0400
+
+lm-sensors (2.6.3-2) unstable; urgency=low
+
+  * Make the debconf question about creating /dev entries priority high,
+    and have it default to true.  (Closes: #142225)
+  * Add a German translation of this question as well; thanks to
+    Sebastian Feltel.  (Closes: #119938)
+
+ -- David Z Maze <dmaze@debian.org>  Wed, 10 Apr 2002 23:43:51 -0400
+
+lm-sensors (2.6.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * Added a helper script (i2ccheck.pl) to find the best version of
+    i2c in between what's installed and what's in the kernel.  Use
+    that now.
+  * The glaring debconf warning points users to README.thinkpad in
+    lm-sensors-source; install that.  (Closes: #110595)
+  * Added Russian debconf template for lm-sensors...  (Closes: #136597)
+  * ...and for lm-sensors-source.  Thanks to Ilgiz Kalmetev for these.
+    (Closes: #136929)
+
+ -- David Z Maze <dmaze@debian.org>  Tue,  2 Apr 2002 22:41:34 -0500
+
+lm-sensors (2.6.2-1) unstable; urgency=low
+
+  * New upstream release.  (Closes: #122102)
+  * Update lm-sensors README.Debian to be clearer about how to build
+    the kernel modules.  Mention that it's possible to use the i2c
+    support in the kernel as of kernel 2.4.13.  Update package
+    descriptions, too.
+  * No longer have the lm-sensors kernel modules depend on the
+    matching i2c kernel modules.  Still keep a suggests around, though.
+    (Closes: #120554)
+  * For now, disable checking for the existence of i2c modules headers
+    when building lm-sensors modules.  This should allow building
+    the modules with only the kernel support, but if you have neither
+    kernel support nor external modules, you'll lose oddly.  Document
+    this failure in the lm-sensors-source README.Debian; it should get
+    fixed before too long.
+
+ -- David Z Maze <dmaze@debian.org>  Mon,  3 Dec 2001 22:39:50 -0500
+
+lm-sensors (2.6.1-3) unstable; urgency=low
+
+  * Use the right check to see if we're using devfs or not.
+    (Closes: #118404)
+
+ -- David Z Maze <dmaze@debian.org>  Mon,  5 Nov 2001 22:29:42 -0500
+
+lm-sensors (2.6.1-2) unstable; urgency=low
+
+  * Ask before creating devices (via debconf), but only if we're not
+    in a devfs world.  (Closes: #111432)
+  * Various clean-ups to make lintian happy once again.
+
+ -- David Z Maze <dmaze@debian.org>  Sun,  4 Nov 2001 21:37:31 -0500
+
+lm-sensors (2.6.1-1) unstable; urgency=low
+
+  * New upstream release.  Not that we support it, but patching 2.4.7
+    or newer kernels should work with this release.  (Closes: #107774)
+
+ -- David Z Maze <dmaze@debian.org>  Tue, 16 Oct 2001 10:58:21 -0400
+
+lm-sensors (2.6.0-4) unstable; urgency=low
+
+  * Eliminate duplicate dependencies on libsensors1.
+  * Install extra utility programs (i2cdump, i2cset, isadump) with
+    lm-sensors.
+  * No longer have the source package conflict with suidmanager,
+    since it no longer contains any non-standard permissions.
+  * Update lm-sensors README.Debian to mention the dependency on
+    i2c-source and known common problems.
+  * Added German debconf template; thanks to Sebastian Feltel.
+    (Closes: #106894)
+  * lm-sensors now Recommends: (not just Suggests:) lm-sensors-mod.
+  * 'debian/rules clean' no longer omits the kernel directories,
+    so it should work even on the module source.  This should clean
+    up people's nasty problems building modules.
+    (Closes: #108107, #109065)
+
+ -- David Z Maze <dmaze@debian.org>  Mon, 27 Aug 2001 17:11:55 -0400
+
+lm-sensors (2.6.0-3) unstable; urgency=low
+
+  * Let definitions of MODULE_LOC in the environment override the default
+    setting.  (Fixes a problem reported on debian-user.)
+
+ -- David Z Maze <dmaze@debian.org>  Sun, 15 Jul 2001 12:11:31 -0400
+
+lm-sensors (2.6.0-2) unstable; urgency=low
+
+  * Don't include /usr/src/modules or /usr/src/modules/lm-sensors
+    in the lm-sensors-source package.  (Apparently this causes conflicts
+    with things like pcmcia, and it's not necessary any more.)
+    (Closes: #103829)
+
+ -- David Z Maze <dmaze@debian.org>  Sat,  7 Jul 2001 16:10:05 -0400
+
+lm-sensors (2.6.0-1) unstable; urgency=low
+
+  * New upstream release.  This depends on the new upstream i2c as well.
+  * !!! NOTE !!!  Upstream claims this release will permanently fry
+    IBM ThinkPads!
+  * Don't print "modprobe" before lines going in /etc/modules in
+    sensors-detect script.  (Closes: #101934)
+  * Run /usr/bin/sensors -s in /etc/init.d/sensord to initialize the
+    sensor driver.  (Closes: #92792), though not optimally.
+  * Good news for bug 94697: i2c-voodoo3 no longer interacts with
+    ddcmon.  Bad news: it thinks it can talk to the eeprom driver, so
+    there's pretty much the same symptom.  :-(
+
+ -- David Z Maze <dmaze@debian.org>  Fri,  6 Jul 2001 11:09:18 -0400
+
+lm-sensors (2.5.4-15) unstable; urgency=low
+
+  * Add a default for MODULE_LOC in debian/rules, and explain a little
+    more about it in lm-sensors-source's README.Debian.
+
+ -- David Z Maze <dmaze@debian.org>  Sat, 26 May 2001 11:33:24 -0400
+
+lm-sensors (2.5.4-14) unstable; urgency=low
+
+  * lm-sensors-source now depends on bison and flex.  (Closes: #98409)
+  * Check for common user errors when building modules.
+  * Minor documentation updates.
+  * Added logcheck ignore files to not listen to sensord syslog spew.
+    (Closes: #98559)
+
+ -- David Z Maze <dmaze@debian.org>  Sat, 26 May 2001 11:13:53 -0400
+
+lm-sensors (2.5.4-13) unstable; urgency=low
+
+  * New maintainer.  (Closes: #93350)
+  * lm-sensors now depends on makedev | devfsd, so that people using devfs
+    don't necessarily need to have makedev installed.  (Closes: #96309)
+  * Don't unpack the source into /usr/src/modules directly; instead,
+    build a tarball in /usr/src/lm-sensors.tar.gz.  This is more consistent
+    with what ALSA, OpenAFS, etc. do.
+  * It was never correct to put the package out of the modules source
+    into $(MODULE_LOC)/..; put the package in $(KSRC)/.. instead.
+    (Closes: #94577)  This also causes the package to not be lost under
+    the root directory (half of #93545).
+  * Build the correct makefile targets when building kernel modules.
+    Without doing this, no modules get built.  (Closes: #93545)
+  * If the kernel has i2c support, use its i2c headers; otherwise,
+    depend on having the i2c-modules-source package installed.  There's
+    not a good way to do this with dpkg dependencies.  :-/
+
+ -- David Z Maze <dmaze@debian.org>  Mon, 14 May 2001 20:52:24 -0400
+
+lm-sensors (2.5.4-12) unstable; urgency=low
+
+  * Only build kernel modules in make-kpkg target; Closes: #89014
+  * Added a few more notes about i2c.
+  * Use MODULE_LOC, although I can imagine no way on earth that it can be
+    better than using ../ . Of course, the bug reporter didn't bother to
+    explain his particular configuration, or show any type of log, or any
+    type of useful information, so this may not actually Closes: #91828.
+    That's their tough luck.
+  * Orphaned the package. I'm tired of this monkey on my back.
+
+ -- Joey Hess <joeyh@debian.org>  Sun,  8 Apr 2001 21:21:26 -0700
+
+lm-sensors (2.5.4-11) unstable; urgency=low
+
+  * Made the library package only recommend lm-sensors. You may want 
+    to install something like mrtgutils w/o dragging in all of
+    lm-sensors.
+
+ -- Joey Hess <joeyh@debian.org>  Tue,  3 Apr 2001 15:15:26 -0700
+
+lm-sensors (2.5.4-10) unstable; urgency=low
+
+  * Turned off -w in sensors-detect to shut it up when it finds non-hex
+    values in /proc/bus/pci/devices. Closes: #87213
+
+ -- Joey Hess <joeyh@debian.org>  Wed, 14 Mar 2001 12:58:24 -0800
+
+lm-sensors (2.5.4-9) unstable; urgency=low
+
+  * Updated libsensors man page.
+  * Made sensord stop spamming syslog every minute with debug messages.
+    Closes: 88600
+
+ -- Joey Hess <joeyh@debian.org>  Mon,  5 Mar 2001 13:19:14 -0800
+
+lm-sensors (2.5.4-8) unstable; urgency=low
+
+  * New sensord package thanks to Merlin Hughes <merlin@merlin.org>
+
+ -- Joey Hess <joeyh@debian.org>  Fri,  9 Feb 2001 13:57:13 -0800
+
+lm-sensors (2.5.4-7) unstable; urgency=low
+
+  * Fixed override disparities. 
+
+ -- Joey Hess <joeyh@debian.org>  Wed, 31 Jan 2001 12:27:52 -0800
+
+lm-sensors (2.5.4-6) unstable; urgency=low
+
+  * Downgraded dependancy on i2c-source to a suggests, as it is in the
+    2.4.0 kernel. Closes: #83974
+
+ -- Joey Hess <joeyh@debian.org>  Tue, 30 Jan 2001 13:50:25 -0800
+
+lm-sensors (2.5.4-5) unstable; urgency=low
+
+  * statoverride transition.
+
+ -- Joey Hess <joeyh@debian.org>  Wed, 10 Jan 2001 14:58:59 -0800
+
+lm-sensors (2.5.4-4) unstable; urgency=low
+
+  * Re-upload with full source, as:
+    "Rejected: lm-sensors_2.5.4-3.dsc refers to lm-sensors_2.5.4.orig.tar.gz, but I
+    can't find it in Incoming or in the pool." -- becuase
+    lm-sensors_2.5.4-2.tar.gz somehow got uploaded. Yuck!
+  * Added kdist_clean target, even though it is pretty useless --
+    the other kdist_ targets clean up after themselves. Closes: #81360
+
+ -- Joey Hess <joeyh@debian.org>  Sat,  6 Jan 2001 00:45:07 -0800
+
+lm-sensors (2.5.4-2) unstable; urgency=low
+
+  * README.Debian grammar fix, Closes: #80414
+
+ -- Joey Hess <joeyh@debian.org>  Wed,  3 Jan 2001 17:14:31 -0800
+
+lm-sensors (2.5.4-1) unstable; urgency=low
+
+  * New upstream release, which should fix build problems on recent 2.4pre
+    kernels.
+
+ -- Joey Hess <joeyh@debian.org>  Mon, 23 Oct 2000 11:51:57 -0700
+
+lm-sensors (2.5.2-3) unstable; urgency=low
+
+  * Removed CVS directories that snuck into the deb.
+
+ -- Joey Hess <joeyh@debian.org>  Fri, 13 Oct 2000 01:26:57 -0400
+
+lm-sensors (2.5.2-2) unstable; urgency=low
+
+  * Moved lm-sensors binary package from section misc to section utils
+    (well, the override filee will probably still need to be updated to 
+    follow suit, so I am actually going to reassign bug #74467 to ftp.d.o).
+
+ -- Joey Hess <joeyh@debian.org>  Thu, 12 Oct 2000 11:11:08 -0400
+
+lm-sensors (2.5.2-1) unstable; urgency=low
+
+  * New upstream version. This version has known problems with the
+    2.4.0-test8 kernel.
+
+ -- Joey Hess <joeyh@debian.org>  Thu, 21 Sep 2000 21:43:01 -0700
+
+lm-sensors (2.5.0-10) unstable; urgency=low
+
+  * Rebuilt (and build-dends on) debhelper 2.1.9. Earlier versions produced
+    postinst/postrm files that did not work on systems with non-modular
+    kernels. Closes: #64457
+
+ -- Joey Hess <joeyh@debian.org>  Tue, 19 Sep 2000 20:40:28 -0700
+
+lm-sensors (2.5.0-9) unstable; urgency=low
+
+  * Epoch and version number patch. Closes: #69522
+
+ -- Joey Hess <joeyh@debian.org>  Fri,  1 Sep 2000 16:42:59 -0700
+
+lm-sensors (2.5.0-8) unstable; urgency=low
+
+  * Quoted some text used inside a m// in sensors-detect. Closes: #69461
+  * Now depends on the current makedev package, which uses /dev/i2c-*, in
+    complience with devices.txt and upstream, not /dev/i2c* that Debian 
+    used to use for some reason. I belive this Closes: #61670, #65381
+  * Note that this means that /dev/i2c0 and /dev/i2c1 will still be around
+    after this upgrade. Policy says I cannot remove them; up to admin. So
+    be it.
+
+ -- Joey Hess <joeyh@debian.org>  Mon, 21 Aug 2000 12:13:14 -0700
+
+lm-sensors (2.5.0-7) unstable; urgency=low
+
+  * Type fix, Closes: #68415
+
+ -- Joey Hess <joeyh@debian.org>  Wed,  2 Aug 2000 13:40:01 -0700
+
+lm-sensors (2.5.0-6) unstable; urgency=low
+
+  * Applied most of a documentation patch by Josip Rodin. Killed the bit
+    about chowning the tree to a user, that's what the src group is for.
+    Closes: #65806
+
+ -- Joey Hess <joeyh@debian.org>  Sun, 18 Jun 2000 20:25:59 -0700
+
+lm-sensors (2.5.0-5) unstable; urgency=low
+
+  * The source package now installs everything owned by root.src, and
+    directories are 2755. This is to mirror the standard permissions of
+    /usr/src.
+
+ -- Joey Hess <joeyh@debian.org>  Wed, 14 Jun 2000 20:48:50 -0700
+
+lm-sensors (2.5.0-4) unstable; urgency=low
+
+  * Build .deb in $(KSRC)/.., not $(MOD_DIR)/.. I started using the latter
+    by accident in the last release.
+
+ -- Joey Hess <joeyh@debian.org>  Tue, 23 May 2000 11:54:13 -0700
+
+lm-sensors (2.5.0-3) unstable; urgency=low
+
+  * Shut up warnings about .d files, Closes: 64045
+  
+ -- Joey Hess <joeyh@debian.org>  Tue, 16 May 2000 01:01:24 -0700
+
+lm-sensors (2.5.0-2) unstable; urgency=low
+
+  * Listed the (many) authors in debian/copyright. Closes: #64082
+  * Enhanced README.Debian in lm-sensors-source, based on the work of Josip
+    Rodin. Closes: #64044 (Well, part of it anyway. I disagree with the
+    other parts, amd if people want to file multipart bug reports,
+    getting them closed like this is the price they pay for that
+    convenience.)
+
+ -- Joey Hess <joeyh@debian.org>  Mon, 15 May 2000 17:05:28 -0700
+
+lm-sensors (2.5.0-1) unstable; urgency=low
+
+  * Major new upstream release. Closes: #62362
+  * i2c stuff is split off into a separate package. Lots of changes for
+    this.
+  * Major code tree reogranaization, both upstream and in debian/
+  * The shared library is at soname 1 now.
+  * Cleaned up the control file handling.
+  * genchanges.sh now supports gpg.
+  * lm-sensors install now runs MAKEDEV i2c for you.
+  * lm-sensors-source uses dh_installmodules to handle maintainer scripts,
+    and so depends on the latest version of debhelper, 2.0.96
+
+ -- Joey Hess <joeyh@debian.org>  Wed,  3 May 2000 13:25:41 -0700
+
+lm-sensors (2.4.4-3) unstable; urgency=low
+
+  * Corrected section and priority information to match the overrides file.
+
+ -- Joey Hess <joeyh@debian.org>  Mon,  1 May 2000 21:12:59 -0700
+
+lm-sensors (2.4.4-2) unstable; urgency=low
+
+  * Removed bogus lm-sensor-mod Suggests lines. Closes: #63360, which
+    Christian says is important. Hmm.
+
+ -- Joey Hess <joeyh@debian.org>  Mon,  1 May 2000 10:02:37 -0700
+
 lm-sensors (2.4.4-1) unstable; urgency=low
 
   * New upstream.

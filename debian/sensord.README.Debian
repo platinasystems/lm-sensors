@@ -1,0 +1,18 @@
+This is the Debian packaging of sensord, the sensory
+logging daemon.
+
+The file /etc/default/sensord specifies the configuration
+parameters used to start the daemon. In particular, the
+syslog facility is set to `daemon' and not `local4'.
+
+You must load the appropriate lm-sensors modules during
+system boot in order for the daemon to function correctly.
+
+The file /etc/modules is a useful place to list these
+modules; for example, you might list i2c-amd756 (an
+I2C/SMBUS module) and w83781d (a sensor chip module).
+
+For full documentation on setting up lm-sensors on your system,
+see /usr/share/doc/lm-sensors.
+
+-- David Z. Maze <dmaze@debian.org>

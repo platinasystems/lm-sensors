@@ -1,0 +1,4 @@
+/etc/default/sensord
+/etc/init.d/sensord
+/etc/logcheck/ignore.d.server/sensord
+/etc/logcheck/ignore.d.workstation/sensord

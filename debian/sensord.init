@@ -1,0 +1,53 @@
+#!/bin/sh
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+DAEMON=/usr/sbin/sensord
+# PIDFILE=/var/run/sensord.pid
+CONFIG=/etc/default/sensord
+
+test -x $DAEMON || exit 0
+
+if [ -f $CONFIG ]; then . $CONFIG; fi
+
+if [ -n "$ALARM_INTERVAL" ]; then ALARM_INTERVAL="-i $ALARM_INTERVAL"; fi
+if [ -n "$LOG_INTERVAL" ]; then LOG_INTERVAL="-l $LOG_INTERVAL"; fi
+if [ -n "$SYSLOG_FACILITY" ]; then SYSLOG_FACILITY="-f $SYSLOG_FACILITY"; fi
+if [ -n "$CONFIG_FILE" ]; then CONFIG_FILE="-c $CONFIG_FILE"; fi
+
+case "$1" in
+  start)
+	echo -n "Starting sensor daemon:"
+	echo -n " sensors"
+	/usr/bin/sensors -s
+	echo -n " sensord"
+        if start-stop-daemon --quiet --stop --signal 0 --exec $DAEMON --name sensord
+	then
+		echo " already running."
+		exit
+	fi
+	/sbin/start-stop-daemon --start --quiet --exec $DAEMON -- $ALARM_INTERVAL $LOG_INTERVAL $SYSLOG_FACILITY $CONFIG_FILE $SCAN_CHIPS
+	echo "."
+	;;
+  stop)
+	echo -n "Stopping sensor daemon: sensord"
+	if start-stop-daemon --quiet --stop --signal 0 --exec $DAEMON --name sensord
+	then
+		start-stop-daemon --quiet --stop --exec $DAEMON --name sensord
+		# Now we wait for it to die
+		# while kill -0 $PID 2>/dev/null; do sleep 1; done
+		while start-stop-daemon --quiet --stop --signal 0 --exec $DAEMON --name sensord 2>/dev/null; do sleep 1; done
+		echo "."
+	else
+		echo " not running.";
+	fi
+	;;
+  force-reload|restart)
+	$0 stop
+	$0 start
+	;;
+  *)
+	echo "Usage: /etc/init.d/sensord {start|stop|restart|force-reload}"
+	exit 1
+esac
+
+exit 0

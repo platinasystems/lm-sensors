@@ -1,47 +1,51 @@
 Source: lm-sensors
-Section: misc
-Priority: optional
-Build-Depends: debhelper, bison, flex
-Maintainer: Joey Hess <joeyh@debian.org>
-Standards-Version: 3.0.1.1
+Section: utils
+Priority: extra
+Build-Depends: bison, flex, debhelper (>= 2.1.9), i2c-source (>= 2.6.0), docbook-to-man
+Maintainer: David Z Maze <dmaze@debian.org>
+Standards-Version: 3.5.2.0
 
 Package: lm-sensors
 Architecture: i386
-Depends: libsensors0, ${shlibs:Depends}
-Suggests: lm-sensors-source, lm-sensors-mod
 Section: utils
+Depends: makedev (>= 2.3.1-45) | devfsd, ${misc:Depends}, ${shlibs:Depends}
+Recommends: lm-sensors-mod
+Suggests: lm-sensors-source, i2c-source, i2c, sensord
 Description: Utilities to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
  to access information from temperature, voltage, and fan speed sensors. It
  works with most newer systems.
  .
  This package contains programs to help you set up and read data from
- lm-sensors. To use this you must have the lm-sensors module package
- installed. You will need to build a modules package from source, using
- the lm-sensors-source package.
+ lm-sensors.
+ .
+ You will need lm-sensors and i2c kernel modules to use this package.
+ This requires installing the lm-sensors-source package, and possibly
+ the kernel-package package, and using those to build lm-sensors
+ modules.  i2c modules can be built from either the i2c-source package
+ or from the Linux kernel sources (version 2.4.13 or later).
 
-Package: libsensors0
+Package: libsensors1
 Architecture: i386
-Depends: lm-sensors, ${shlibs:Depends}
-Conflicts: lm-sensors (= 2.3.2-1)
+Depends: ${shlibs:Depends}
+Conflicts: lm-sensors (= 2.3.2-1), libsensors0
 Replaces: lm-sensors (= 2.3.2-1)
-Suggests: lm-sensors-source, lm-sensors-mod
+Priority: optional
+Recommends: lm-sensors
 Section: libs
 Description: Library to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
  to access information from temperature, voltage, and fan speed sensors. It
  works with most newer systems.
  .
- This package contains a shared library for querying lm-sensors. To use this
- you must have the lm-sensors module package installed. You will need to build
- a modules package from source, using the lm-sensors-source package.
+ This package contains a shared library for querying lm-sensors.
 
 Package: libsensors-dev
 Architecture: i386
-Depends: libsensors0
+Depends: libsensors1
 Conflicts: lm-sensors (= 2.3.2-1)
 Replaces: lm-sensors (= 2.3.2-1)
-Section: libs
+Section: devel
 Architecture: i386
 Description: Lm-sensors development kit
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -53,8 +57,9 @@ Description: Lm-sensors development kit
 
 Package: lm-sensors-source
 Architecture: i386
-Depends: debhelper
-Recommends: lm-sensors (>= 2.3.2)
+Depends: debhelper (>= 2.0.96), devscripts (>= 2.5.20), bison, flex, ${misc:Depends}
+Section: misc
+Suggests: lm-sensors (>= 2.3.2), i2c-source (>= 2.6.0)
 Description: Kernel drivers to read temperature/voltage/fan sensors (source)
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
  to access information from temperature, voltage, and fan speed sensors. It
@@ -63,3 +68,24 @@ Description: Kernel drivers to read temperature/voltage/fan sensors (source)
  This package contains the source for kernel modules that are necessary to
  access the data. The kernel sources must be installed to compile these
  modules.
+ .
+ lm-sensors requires a separate set of drivers to access the I2C bus.  If
+ you are using kernel 2.4.13 or newer, it is sufficient to enable
+ "I2C /proc support" and a set of I2C drivers in your kernel configuration.
+ If you have an older kernel or want more up-to-date support, you need to
+ also install the i2c-source package and build modules from that.
+
+Package: sensord
+Architecture: i386
+Section: utils
+Depends: lm-sensors, ${shlibs:Depends}
+Replaces: lm-sensors (<< 2.5.4-8)
+Description: Hardware sensor information logging daemon
+ Lm-sensors is a hardware health monitoring package for Linux. It allows you
+ to access information from temperature, voltage, and fan speed sensors. It
+ works with most newer systems.
+ .
+ This package contains a daemon that logs hardware health status to the
+ system log with optional warnings on potential system problems.
+ .
+ You will need lm-sensors and i2c kernel modules to use this package.

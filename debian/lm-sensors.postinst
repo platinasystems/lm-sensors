@@ -1,0 +1,15 @@
+#!/bin/sh -e
+
+# Source debconf library.
+. /usr/share/debconf/confmodule
+
+# Create the device node, if the user has approved and we're in a devfs
+# world.
+if [ ! -c /dev/.devfsd ]; then
+  db_get lm-sensors/create-devices
+  if [ "$RET" = "true" ]; then
+    cd /dev ; /sbin/MAKEDEV i2c
+  fi
+fi
+
+#DEBHELPER#
