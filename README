@@ -1,4 +1,4 @@
-=============================================================================
+&=============================================================================
 
      FOR QUICK INSTALLATION INSTRUCTIONS SEE THE 'QUICKSTART' FILE.
      FOR FULL INSTALLATION INSTRUCTIONS SEE THE 'INSTALL' FILE.
@@ -58,44 +58,44 @@ At least the following I2C/SMBus adapters are supported:
   AMD 8111 SMBus 2.0
   Apple Hydra (used on some PPC machines)
   DEC 21272/21274 (Tsunami/Typhoon - on Alpha boards)
-  Intel I801 ICH/ICH0/ICH2/ICH3/ICH4/ICH5/ICH6 (82801xx), 6300ESB
+  Intel I801 ICH/ICH0/ICH2/ICH3/ICH4/ICH5/ICH6 (82801xx), 6300ESB, ICH7
   Intel PIIX4 (used in many Intel chipsets)
   Intel I810/I815 GMCH
   Intel 82443MX (440MX)
-  NVidia nForce
-  ServerWorks OSB4, CSB5
+  NVidia nForce, nForce2, nForce3, nForce4
+  ServerWorks OSB4, CSB5, CSB6
   SiS 5595, 630, 645, 655, 730
   SMSC Victory66
   3Dfx Voodoo 3 and Banshee
   VIA Technologies VT82C586B, VT82C596A/B, VT82C686A/B, VT8231,
-                   VT8233, VT8233A, and VT8235.
+                   VT8233, VT8233A, VT8235 and VT8237
 
 
 At least the following hardware sensor chips are supported:
   Analog Devices ADM1021, ADM1021A, ADM1022, ADM1023, ADM1024,
-                 ADM1025, ADM1026, ADM1027 and ADM9240
-                 ADT7463
+                 ADM1025, ADM1026, ADM1027, ADM1030, ADM1031,
+                 ADM1032, ADM9240, ADT7461 and ADT7463
   Asus AS99127F, ASB100 Bach
   Dallas Semiconductor DS75, DS1621, DS1625, DS1775, and DS1780
   Hewlett Packard Maxilife (several revisions including '99 NBA)
   Fujitsu Siemens Poseidon, Scylla, Hermes
-  Genesys Logic GL518SM (rev 00, 80), GL520SM, GL523SM
+  Genesys Logic GL518SM, GL520SM, GL523SM
   Intel Xeon processor embedded sensors
   ITE IT8705F, IT8712F embedded sensors
   Maxim MAX1617, MAX1617A, MAX1619, MAX6650, MAX6651,
-        MAX6633, MAX6634, MAX6635
+        MAX6633, MAX6634, MAX6635, MAX6657, MAX6658
   Microchip TC1068, TCM1617, TCN75
   Myson MTP008
   National Semiconductor LM75, LM76, LM78, LM78-J, LM79,
-                         LM80, LM81, LM83, LM84, LM85, LM87,
-                         LM89, LM90, LM92, LM99, PC87360,
+                         LM80, LM81, LM83, LM84, LM85, LM86, LM87,
+                         LM89, LM90, LM92, LM93, LM99, PC87360,
                          PC87363, PC87364, PC87365, PC87366
   Philips NE1617, NE1617A, NE1619
   SiS 5595, 950 embedded sensors
-  SMSC 47M1xx embedded sensors, EMC6D100, EMC6D101
+  SMSC 47M1xx embedded sensors, EMC6D100, EMC6D101, EMC6D102
   TI THMC10 and THMC50
   VIA Technologies VT1211, VT8231 and VT82C686A/B embedded sensors
-  Winbond W83781D, W83782D, W83783S, W83791D,
+  Winbond W83781D, W83782D, W83783S, W83791D, W83792D,
           W83627HF, W83627THF, W83637HF, and W83697HF
 
 
@@ -163,21 +163,18 @@ are too many mainboards to keep a list of busses and chips used on them.
 On the other hand, we provide a program called 'sensors-detect' which
 tries to figure out what hardware is available on your system.
 
-The developers of this package can be reached through the email address
+The developers of this package can be reached through the mailing-list
 <sensors@stimpy.netroedge.com>. Do not hesitate to mail us if you have 
 questions, suggestions, problems, want to contribute, or just want to 
 report it works for you. But please try to read the documentation and
 FAQ before you ask any questions!
 
 The latest version of this package can always be found on our homepage:
-http://secure.netroedge.com/~lm78. Pre-release versions can be retrieved
+http://secure.netroedge.com/~lm78/. Pre-release versions can be retrieved
 through anonymous CVS; see doc/cvs for more information.
 
-This whole package is copyright (c) 1998 - 2004 by Frodo Looijaard and
-Philip Edelbrock, except for a few drivers written by other people. See the
-individual files for more exact copyright information.  This package may be
-distributed according to the GNU General Public License (GPL), as included
-in the file COPYING.
+This package may be distributed according to the GNU General Public
+License (GPL), as included in the file COPYING.
 
 Note that libsensors falls under the GPL, not the LGPL.  In more human
 language, that means it is FORBIDDEN to link any application to the
@@ -187,4 +184,4 @@ fall under the GPL.
 
 -----
 [1] SMBus is a trademark of Intel Corporation
-[2] I2Câis a trademark of Philips Corporation
+[2] I2C is a trademark of Philips Corporation

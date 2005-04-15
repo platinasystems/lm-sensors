@@ -22,7 +22,7 @@
 # example, and the real parts. Search for '####' if you want to skip
 # to the real stuff.
 #
-# Hash marks introduce comments, which continue until the end of a line
+# Hash marks introduce comments, which continue until the end of a line.
 #
 # Identifiers consisting of only digits and letters can be used
 # unquoted; other identifiers must be quoted. Escape characters within
@@ -57,7 +57,7 @@
 # when running 'sensors -s'.
 #
 # Unfortunately, feature names starting with a number must be in
-# double quotes or you get 'parse error, expecting 'NAME''.
+# double quotes or you get "parse error, expecting 'NAME'".
 #
 # If you have trouble, verify the features in lib/chips.c!!!
 #
@@ -155,6 +155,36 @@
 #  	compute in5 -(210/60.4)*@  ,  -@/(210/60.4)
 #  	compute in6 -(90.9/60.4)*@ ,  -@/(90.9/60.4)
 #
+# NOTE: On many motherboards, the -5V and -12V sensors are not connected.
+# Add ignore lines so these readings will not be displayed. For example:
+#	ignore in5
+#	ignore in6
+#
+#
+# TEMPERATURE COMPUTATION EXAMPLES
+# --------------------------------
+# There are two common ways to adjust temperature readings.
+# One is to adjust by a constant. The other is to change the
+# temperature sensor type.
+#
+# Add 5 degrees to temperature sensor 1:
+#	compute temp1 @+5,@-5
+#
+# Sensor type adjustments (certain chips only):
+# ...Set temp1 to processor's thermal diode:
+#	set sensor1 1 (Winbond chips)
+#	set sensor1 3 (IT87xx and MTP008 chips)
+#
+# ...Set temp1 sensor to 3904 transistor:
+#	set sensor1 2 (Winbond chips)
+#
+# ...Set temp1 to thermistor:
+#	set sensor1 3435 (Winbond chips)
+#	set sensor1 2 (IT87xx and MTP008 chips)
+#
+# Often, a temperature sensor is disconnected; disable it with an ignore line:
+#	ignore temp3
+#
 #
 # SET LINES
 # ---------
@@ -233,6 +263,7 @@
 # or disable them using:
 #
 # 	set beep_enable 0
+#
 #
 ##########################################################################
 #### Here begins the real configuration file
@@ -327,6 +358,7 @@ chip "lm78-*" "lm78-j-*" "lm79-*" "w83781d-*"
 
 # Uncomment the following line to enable beeps for all alarms on this chip
 #    set beep_enable 1
+
 
 
 chip "lm75-*"
@@ -593,8 +625,8 @@ chip "w83697hf-*"
 #    set in2_max 1.5 * 1.05
 #    set in5_min 3.3 * 0.95
 #    set in5_max 3.3 * 1.05
-#    set in6_min 2.5 * 0.95 # 2.6 on Epox?
-#    set in6_max 2.5 * 1.05 # 2.6 on Epox?
+#    set in6_min 2.5 * 0.95 # 2.6 on Epox
+#    set in6_max 2.5 * 1.05 # 2.6 on Epox
 #    set in7_min 3.0 * 0.90
 #    set in7_max 3.0 * 1.10
 #    set in8_min 5 * 0.90
@@ -625,6 +657,9 @@ chip "w83627thf-*" "w83637hf-*"
 # Note that in1 (+12V) is the usual in4, and in4 (-12V) is the usual in5.
 # Data sheet is obviously wrong for in4, the usual formula should work.
 # No in5 nor in6.
+# sensors doesn't need the ignore lines but sensord does...
+    ignore in5
+    ignore in6
 
     label in0 "VCore"
     label in1 "+12V"
@@ -690,6 +725,74 @@ chip "w83627thf-*" "w83637hf-*"
 #   ignore fan3
 
 
+# Here are configurations for Winbond W83792AD/D chip.
+chip "w83792d-*"
+
+    label in0 "VCoreA"
+    label in1 "VCoreB"
+    label in2 "VIN0"
+    label in3 "VIN1"
+    label in4 "VIN2"
+    label in5 "VIN3"
+    label in6 "5VCC"
+    label in7 "5VSB"
+    label in8 "VBAT"
+    label fan1 "Fan1"
+    label fan2 "Fan2"
+    label fan3 "Fan3"
+    label fan4 "Fan4"
+    label fan5 "Fan5"
+    label fan6 "Fan6"
+    label fan7 "Fan7"
+    label temp1 "Temp1"
+    label temp2 "Temp2"
+    label temp3 "Temp3"
+
+    set in0_min 1.4
+    set in0_max 1.6
+    set in1_min 1.4
+    set in1_max 1.6
+    set in2_min 3.2
+    set in2_max 3.4
+    set in3_min 3.1
+    set in3_max 3.3
+    set in4_min 1.4
+    set in4_max 1.5
+    set in5_min 2.6
+    set in5_max 2.65
+    set in6_min 5 * 0.95
+    set in6_max 5 * 1.05
+    set in7_min 5 * 0.95
+    set in7_max 5 * 1.05
+    set in8_min 3 * 0.95
+    set in8_max 3 * 1.05
+
+    #set fan1_div 4
+    #set fan1_min 1500
+    set fan2_div 4
+    set fan2_min 1500
+    #set fan3_min 1300
+    #set fan4_min 1500
+    #set fan5_min 1500
+    #set fan6_min 1500
+    #set fan7_min 1500
+
+    set temp1_over 42
+    set temp1_hyst 37
+    set temp2_over 43
+    set temp2_hyst 38
+    set temp3_over 45
+    set temp3_hyst 40
+
+    #ignore fan1
+    #ignore fan3
+    #ignore fan4
+    #ignore fan5
+    #ignore fan6
+    #ignore fan7
+    #ignore temp3
+
+
 chip "as99127f-*"
 
 # Asus won't release a datasheet so this is guesswork.
@@ -719,30 +822,30 @@ chip "as99127f-*"
 #   compute in5 (5.14 * @) - 14.91 , (@ + 14.91) / 5.14
 #   compute in6 (3.14 * @) -  7.71 , (@ +  7.71) / 3.14
 
-# Depending on your motherboard, you have to choose between three formulae
-# for temp2. Quoting Artur Gawryszczak:
-# "I guess, that the formula "temp2 (@*30/43)+25, (@-25)*43/30" is correct
+# Depending on your motherboard, you may have to use any of two formulae
+# for temp2. Quoting Artur Gawryszczak (edited to reflect subsequent fixes
+# to the driver):
+# "I guess, that the formula "(@*15/43)+25, (@-25)*43/15" is correct
 # for those Asus motherboards, which get CPU temperature from internal 
-# thermal diode (Pentium Coppermine, and above), and "temp2 @*2.0, @/2.0" 
-# is correct for Athlon/Duron boards, which use a thermistor in the 
-# socket."
-# The third formula was found and reported by Victor G. Marimon.
-# Asus CUV4X, Asus A7V8X
-#   compute temp2 (@*30/43)+25, (@-25)*43/30
+# thermal diode (Pentium Coppermine, and above), while no formula is needed
+# for Athlon/Duron boards, which use a thermistor in the socket."
+# An alternative formula was then found and reported by Victor G. Marimon.
+
 # Asus A7V133, Asus A7M266
-    compute temp2 @*2.0, @/2.0
-# Asus CUSL2, Asus CUV266-DLS
-#   compute temp2 (@*60/43)+25, (@-25)*43/60
+#   No compute line is needed
+# Asus CUV4X, Asus A7V8X
+#   compute temp2 (@*15/43)+25, (@-25)*43/15
+# Asus CUSL2, Asus CUV266-DLS, Asus TUSL2-C
+#   compute temp2 (@*30/43)+25, (@-25)*43/30
 
 # See comments above if temp3 looks bad. What works for temp2 is likely
-# to work for temp3.
-    compute temp3 @*2.0, @/2.0
+# to work for temp3 for dual-CPU boards.
 
 # Most Asus boards have temperatures settled like that:
     label temp1 "M/B Temp"
     label temp2 "CPU Temp"
-# However, some boards have them swapped (A7N8X Deluxe rev.2, A7N8X-X,
-# CUV4X):
+# However, some boards have them swapped (A7N8X Deluxe rev.2,
+# A7N8X-E Deluxe rev.2, A7N8X-X, CUV4X):
 #   label temp1 "CPU Temp"
 #   label temp2 "M/B Temp"
 
@@ -1583,19 +1686,19 @@ chip "fscpos-*"
 
     label temp1       "Temp1/CPU"
     label temp2       "Temp2/MB"
-    label temp3       "Temp2/AUX"
+    label temp3       "Temp3/AUX"
 
 # Fans
 
-    label  fan1       "Fan1"
-    ignore  fan2
-    ignore  fan3
+    label fan1        "Fan1"
+    label fan2        "Fan2"
+    label fan3        "Fan3"
 
 # Voltage
 
     label volt12      "+12V"
     label volt5       "+5V"
-    label voltbatt    "+3.3V"
+    label voltbatt    "Battery"
 
 
 chip "fscscy-*"
@@ -1750,7 +1853,7 @@ chip "max1619-*"
    set temp2_hyst  40
 
 
-chip "lm90-*" "adm1032-*" "lm86-*" "max6657-*"
+chip "lm90-*" "adm1032-*" "lm86-*" "max6657-*" "adt7461-*"
 
    label temp1 "M/B Temp"
    label temp2 "CPU Temp"
@@ -2231,3 +2334,45 @@ chip "adm1031-*"
 
    set fan1_min 2000
    set fan2_min 2000
+
+
+chip "w83l785ts-*"
+
+   label temp1 "CPU Diode"
+
+chip "lm92-*"
+
+   label temp "CPU Temp"
+
+# Change limits as you see fit
+#   set temp_low 14
+#   set temp_high 60
+#   set temp_crit 72
+# Hysteresis is computed from critical limit for Linux 2.6,
+# and from high limit for Linux 2.4. That might change in the future.
+# Whatever, the same relative hysteresis is used for all of low, high
+# and critical limits.
+#   set temp_hyst 70 # Linux 2.6
+#   set temp_hyst 58 # Linux 2.4
+
+
+# Winbond W83627EHF configuration originally contributed by Leon Moonen
+# This is for an Asus P5P800.
+chip "w83627ehf-*"
+# Fans
+   label fan1      "Case Fan"
+   label fan2      "CPU Fan"
+#  ignore fan3
+#  ignore fan4
+   set fan1_min    1200
+   set fan2_min    1700
+
+# Temperatures
+   label temp1     "Sys Temp"
+   label temp2     "CPU Temp"
+#  ignore temp3
+   set temp1_over  45
+   set temp1_hyst  40
+   set temp2_over  45
+   set temp2_hyst  40
+

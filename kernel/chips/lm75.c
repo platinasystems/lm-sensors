@@ -94,8 +94,6 @@ static ctl_table lm75_dir_table_template[] = {
 	{0}
 };
 
-static int lm75_id = 0;
-
 static int lm75_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, lm75_detect);
@@ -192,8 +190,6 @@ int lm75_detect(struct i2c_adapter *adapter, int address,
 
 	/* Fill in the remaining client fields and put it into the global list */
 	strcpy(new_client->name, client_name);
-
-	new_client->id = lm75_id++;
 	data->valid = 0;
 	init_MUTEX(&data->update_lock);
 
@@ -259,8 +255,12 @@ static int lm75_write_value(struct i2c_client *client, u8 reg, u16 value)
 
 static void lm75_init_client(struct i2c_client *client)
 {
-	/* Initialize the LM75 chip */
-	lm75_write_value(client, LM75_REG_CONF, 0);
+	int i;
+
+	/* Enable if in shutdown */
+	i = lm75_read_value(client, LM75_REG_CONF);
+	if(i >= 0 && ((u8) i) & 0x01)
+		lm75_write_value(client, LM75_REG_CONF, ((u8) i) & 0xfe);
 }
 
 static void lm75_update_client(struct i2c_client *client)

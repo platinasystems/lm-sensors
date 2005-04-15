@@ -105,9 +105,9 @@ gl520sm
         gl520sm 	1-2	4-5	2	-	yes	no
 
 it87
-	(all are reported as an "it87")
-	it8705		3	8	3	3 pwm	yes	yes
 	it8712		3	8	3	3 pwm	yes	yes
+	(the following are reported as an "it87")
+	it8705		3	8	3	3 pwm	yes	yes
 	sis950		3	8	3	3 pwm	yes	yes
 
 lm63
@@ -149,8 +149,11 @@ lm90
 	max6657		2	-	-	-	yes	no
 	(lm89 is detected as an lm99)
 	lm89		2	-	-	-	yes	no
-	(max6658 is detected as a max6657)
+	(max6658 and max6659 are detected as a max6657)
 	max6658		2	-	-	-	yes	no
+	max6659		2	-	-	-	yes	no
+	(adt7461 only works in ADM1032 compatibility mode)
+	adt7461		2	-	-	-	yes	no
 
 lm92
 	(all are reported as an "lm92")

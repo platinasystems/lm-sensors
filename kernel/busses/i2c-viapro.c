@@ -119,12 +119,12 @@ static int vt596_transaction(void)
 		inb_p(SMBHSTDAT1));
 
 	/* Make sure the SMBus host is ready to start transmitting */
-	if ((temp = inb_p(SMBHSTSTS)) != 0x00) {
+	if ((temp = inb_p(SMBHSTSTS)) & 0x1F) {
 		dev_dbg(&vt596_adapter, "SMBus busy (0x%02x). "
 				"Resetting...\n", temp);
 		
 		outb_p(temp, SMBHSTSTS);
-		if ((temp = inb_p(SMBHSTSTS)) != 0x00) {
+		if ((temp = inb_p(SMBHSTSTS)) & 0x1F) {
 			dev_dbg(&vt596_adapter, "Failed! (0x%02x)\n", temp);
 			
 			return -1;
@@ -166,13 +166,14 @@ static int vt596_transaction(void)
 		dev_dbg(&vt596_adapter, "Error: no response!\n");
 	}
 
-	if (inb_p(SMBHSTSTS) != 0x00)
-		outb_p(inb(SMBHSTSTS), SMBHSTSTS);
-
-	if ((temp = inb_p(SMBHSTSTS)) != 0x00) {
-		dev_dbg(&vt596_adapter, "Failed reset at end of "
-			"transaction (%02x)\n", temp);
+	if ((temp = inb_p(SMBHSTSTS)) & 0x1F) {
+		outb_p(temp, SMBHSTSTS);
+		if ((temp = inb_p(SMBHSTSTS)) & 0x1F) {
+			dev_warn(&vt596_adapter, "Failed reset at end "
+				 "of transaction (%02x)\n", temp);
+		}
 	}
+
 	dev_dbg(&vt596_adapter, "Transaction (post): CNT=%02x, CMD=%02x, "
 		"ADD=%02x, DAT0=%02x, DAT1=%02x\n", inb_p(SMBHSTCNT),
 		inb_p(SMBHSTCMD), inb_p(SMBHSTADD), inb_p(SMBHSTDAT0), 
@@ -227,8 +228,8 @@ static s32 vt596_access(struct i2c_adapter *adap, u16 addr,
 			len = data->block[0];
 			if (len < 0)
 				len = 0;
-			if (len > 32)
-				len = 32;
+			if (len > I2C_SMBUS_BLOCK_MAX)
+				len = I2C_SMBUS_BLOCK_MAX;
 			outb_p(len, SMBHSTDAT0);
 			i = inb_p(SMBHSTCNT);	/* Reset SMBBLKDAT */
 			for (i = 1; i <= len; i++)
@@ -265,8 +266,8 @@ static s32 vt596_access(struct i2c_adapter *adap, u16 addr,
 		break;
 	case VT596_BLOCK_DATA:
 		data->block[0] = inb_p(SMBHSTDAT0);
-		if (data->block[0] > 32)
-			data->block[0] = 32;
+		if (data->block[0] > I2C_SMBUS_BLOCK_MAX)
+			data->block[0] = I2C_SMBUS_BLOCK_MAX;
 		i = inb_p(SMBHSTCNT);	/* Reset SMBBLKDAT */
 		for (i = 1; i <= data->block[0]; i++)
 			data->block[i] = inb_p(SMBBLKDAT);

@@ -103,8 +103,6 @@ static inline long TEMP_FROM_REG(u16 temp)
                                                       ((val)+50)/100), \
                                              0,255)
 
-#define ALARMS_FROM_REG(val) (val)
-
 #define DIV_FROM_REG(val) (1 << (val))
 #define DIV_TO_REG(val) ((val)==8?3:(val)==4?2:(val)==1?0:1)
 
@@ -153,8 +151,6 @@ static void lm80_alarms(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results);
 static void lm80_fan_div(struct i2c_client *client, int operation,
 			 int ctl_name, int *nrels_mag, long *results);
-
-static int lm80_id = 0;
 
 static struct i2c_driver lm80_driver = {
 	.name		= "LM80 sensor driver",
@@ -302,8 +298,6 @@ int lm80_detect(struct i2c_adapter *adapter, int address,
 
 	/* Fill in the remaining client fields and put it into the global list */
 	strcpy(new_client->name, client_name);
-
-	new_client->id = lm80_id++;
 	data->valid = 0;
 	init_MUTEX(&data->update_lock);
 
@@ -551,7 +545,7 @@ void lm80_alarms(struct i2c_client *client, int operation, int ctl_name,
 		*nrels_mag = 0;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		lm80_update_client(client);
-		results[0] = ALARMS_FROM_REG(data->alarms);
+		results[0] = data->alarms;
 		*nrels_mag = 1;
 	}
 }

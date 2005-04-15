@@ -177,8 +177,6 @@ static ctl_table adm1021_max_dir_table_template[] = {
 	{0}
 };
 
-static int adm1021_id = 0;
-
 static int adm1021_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, adm1021_detect);
@@ -228,10 +226,8 @@ static int adm1021_detect(struct i2c_adapter *adapter, int address,
 	if (kind < 0) {
 		if ((adm1021_read_value(new_client, ADM1021_REG_STATUS) & 0x03) != 0x00
 		 || (adm1021_read_value(new_client, ADM1021_REG_CONFIG_R) & 0x3F) != 0x00
-		 || (adm1021_read_value(new_client, ADM1021_REG_CONV_RATE_R) & 0xF8) != 0x00) {
-			err = -ENODEV;
+		 || (adm1021_read_value(new_client, ADM1021_REG_CONV_RATE_R) & 0xF8) != 0x00)
  			goto error1;
-		}
 	}
 
 	/* Determine the chip type. */
@@ -292,8 +288,6 @@ static int adm1021_detect(struct i2c_adapter *adapter, int address,
 	/* Fill in the remaining client fields and put it into the global list */
 	strcpy(new_client->name, client_name);
 	data->type = kind;
-
-	new_client->id = adm1021_id++;
 	data->valid = 0;
 	init_MUTEX(&data->update_lock);
 

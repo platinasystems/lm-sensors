@@ -2,8 +2,8 @@
     it87.c - Part of lm_sensors, Linux kernel modules for hardware
              monitoring.
 
-    Supports: IT8705F  Super I/O chip w/LPC interface
-              IT8712F  Super I/O chup w/LPC interface & SMbus
+    Supports: IT8705F  Super I/O chip w/LPC interface & SMBus
+              IT8712F  Super I/O chip w/LPC interface & SMBus
               Sis950   A clone of the IT8705F
 
     Copyright (c) 2001 Chris Gauthron <chrisg@0-in.com> 
@@ -51,12 +51,12 @@ MODULE_LICENSE("GPL");
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
-static unsigned short normal_i2c_range[] = { 0x20, 0x2f, SENSORS_I2C_END };
+static unsigned short normal_i2c_range[] = { 0x28, 0x2f, SENSORS_I2C_END };
 static unsigned int normal_isa[] = { 0x0290, SENSORS_ISA_END };
 static unsigned int normal_isa_range[] = { SENSORS_ISA_END };
 
 /* Insmod parameters */
-SENSORS_INSMOD_4(it87, it8705, it8712, sis950);
+SENSORS_INSMOD_2(it87, it8712);
 
 
 #define	REG	0x2e	/* The register to read/write */
@@ -64,12 +64,23 @@ SENSORS_INSMOD_4(it87, it8705, it8712, sis950);
 #define	VAL	0x2f	/* The value to read/write */
 #define PME	0x04	/* The device with the fan registers in it */
 #define	DEVID	0x20	/* Register: Device ID */
+#define	DEVREV	0x22	/* Register: Device Revision */
 
 static inline int
 superio_inb(int reg)
 {
 	outb(reg, REG);
 	return inb(VAL);
+}
+
+static int superio_inw(int reg)
+{
+	int val;
+	outb(reg++, REG);
+	val = inb(VAL) << 8;
+	outb(reg, REG);
+	val |= inb(VAL);
+	return val;
 }
 
 static inline void
@@ -95,9 +106,7 @@ superio_exit(void)
 	outb(0x02, VAL);
 }
 
-/* just IT8712F for now - this should be extended to support the other
-   chips as well */
-#define IT87_DEVID_MATCH(id) ((id) == 0x8712)
+#define IT87_DEVID_MATCH(id) ((id) == 0x8712 || (id) == 0x8705)
 
 #define IT87_ACT_REG  0x30
 #define IT87_BASE_REG 0x60
@@ -161,6 +170,7 @@ static int reset = 0;
 #define IT87_REG_TEMP_ENABLE   0x51
 
 #define IT87_REG_CHIPID        0x58
+#define IT87_REG_CHIPID2       0x5b /* IT8712F only */
 
 /* sensor pin types */
 #define UNUSED		0
@@ -282,8 +292,6 @@ static struct i2c_driver it87_driver = {
 	.attach_adapter	= it87_attach_adapter,
 	.detach_client	= it87_detach_client,
 };
-
-static int it87_id = 0;
 
 /* The /proc/sys entries */
 
@@ -418,25 +426,33 @@ static int it87_attach_adapter(struct i2c_adapter *adapter)
 
 static int it87_find(int *address)
 {
-	u16 val;
+	int err = -ENODEV;
+	u16 devid;
 
 	superio_enter();
-	val = (superio_inb(DEVID) << 8) |
-	       superio_inb(DEVID + 1);
-	if (!IT87_DEVID_MATCH(val)) {
-		superio_exit();
-		return -ENODEV;
-	}
+	devid = superio_inw(DEVID);
+	if (!IT87_DEVID_MATCH(devid))
+		goto exit;
 
 	superio_select();
-	val = (superio_inb(IT87_BASE_REG) << 8) |
-	       superio_inb(IT87_BASE_REG + 1);
-	superio_exit();
-	*address = val & ~(IT87_EXTENT - 1);
-	if (*address == 0) {
-		return -ENODEV;
+	if (!(superio_inb(IT87_ACT_REG)) & 0x01) {
+		printk(KERN_INFO "it87: Device not activated, skipping\n");
+		goto exit;
 	}
-	return 0;
+
+	*address = superio_inw(IT87_BASE_REG) & ~(IT87_EXTENT - 1);
+	if (*address == 0) {
+		printk(KERN_INFO "it87: Base address not set, skipping\n");
+		goto exit;
+	}
+
+	err = 0;
+	printk(KERN_INFO "it87: Found IT%04xF chip at 0x%x, revision %d\n",
+	       devid, *address, superio_inb(DEVREV) & 0x0f);
+
+exit:
+	superio_exit();
+	return err;
 }
 
 /* This function is called by i2c_detect */
@@ -469,7 +485,7 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 		if (inb_p(address + 2) != i
 		 || inb_p(address + 3) != i
 		 || inb_p(address + 7) != i)
-			return -ENODEV;
+			return 0;
 #undef REALLY_SLOW_IO
 
 		/* Let's just hope nothing breaks here */
@@ -477,7 +493,7 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 		outb_p(~i & 0x7f, address + 5);
 		if ((inb_p(address + 5) & 0x7f) != (~i & 0x7f)) {
 			outb_p(i, address + 5);
-			return -ENODEV;
+			return 0;
 		}
 	}
 
@@ -504,10 +520,8 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 	if (kind < 0) {
 		if ((it87_read_value(new_client, IT87_REG_CONFIG) & 0x80)
 		 || (!is_isa
-		  && it87_read_value(new_client, IT87_REG_I2C_ADDR) != address)) {
-		  	err = -ENODEV;
+		  && it87_read_value(new_client, IT87_REG_I2C_ADDR) != address))
 		 	goto ERROR1;
-		}
 	}
 
 	/* Determine the chip type. */
@@ -515,6 +529,9 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 		i = it87_read_value(new_client, IT87_REG_CHIPID);
 		if (i == 0x90) {
 			kind = it87;
+			i = it87_read_value(new_client, IT87_REG_CHIPID2);
+			if (i == 0x12)
+				kind = it8712;
 		}
 		else {
 			if (kind == 0)
@@ -522,7 +539,6 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 				    ("it87.o: Ignoring 'force' parameter for unknown chip at "
 				     "adapter %d, address 0x%02x\n",
 				     i2c_adapter_id(adapter), address);
-			err = -ENODEV;
 			goto ERROR1;
 		}
 	}
@@ -530,10 +546,10 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 	if (kind == it87) {
 		type_name = "it87";
 		client_name = "IT87 chip";
-	} /* else if (kind == it8712) {
+	} else if (kind == it8712) {
 		type_name = "it8712";
-		client_name = "IT87-J chip";
-	} */ else {
+		client_name = "IT8712 chip";
+	} else {
 #ifdef DEBUG
 		printk("it87.o: Internal error: unknown kind (%d)?!?",
 		       kind);
@@ -548,10 +564,11 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 	/* Fill in the remaining client fields and put it into the global list */
 	strcpy(new_client->name, client_name);
 	data->type = kind;
-
-	new_client->id = it87_id++;
 	data->valid = 0;
 	init_MUTEX(&data->update_lock);
+
+	/* The IT8705F doesn't have VID capability */
+	data->vid = 0x1f;
 
 	/* Tell the I2C layer a new client has arrived */
 	if ((err = i2c_attach_client(new_client)))
@@ -730,13 +747,9 @@ static void it87_update_client(struct i2c_client *client)
 			    it87_read_value(client, IT87_REG_TEMP_LOW(i));
 		}
 
-		/* The 8705 does not have VID capability */
-		/*if (data->type == it8712) {
+		if (data->type == it8712) {
 			data->vid = it87_read_value(client, IT87_REG_VID);
 			data->vid &= 0x1f;
-		}
-		else */ {
-			data->vid = 0x1f;
 		}
 
 		i = it87_read_value(client, IT87_REG_FAN_DIV);

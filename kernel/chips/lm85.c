@@ -55,7 +55,6 @@
     2003-06-30   Add support for EMC6D100 extra voltage inputs.
 */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
@@ -75,7 +74,7 @@ static unsigned int normal_isa[] = { SENSORS_ISA_END };
 static unsigned int normal_isa_range[] = { SENSORS_ISA_END };
 
 /* Insmod parameters */
-SENSORS_INSMOD_5(lm85b, lm85c, adm1027, adt7463, emc6d100);
+SENSORS_INSMOD_6(lm85b, lm85c, adm1027, adt7463, emc6d100, emc6d102);
 
 /* Many LM85 constants specified below */
 
@@ -115,8 +114,10 @@ SENSORS_INSMOD_5(lm85b, lm85c, adm1027, adt7463, emc6d100);
 #define LM85_VERSTEP_LM85B 0x62
 #define LM85_VERSTEP_ADM1027 0x60
 #define LM85_VERSTEP_ADT7463 0x62
+#define LM85_VERSTEP_ADT7463C 0x6A
 #define LM85_VERSTEP_EMC6D100_A0 0x60
 #define LM85_VERSTEP_EMC6D100_A1 0x61
+#define LM85_VERSTEP_EMC6D102 0x65
 
 #define LM85_REG_CONFIG 0x40
 
@@ -785,7 +786,8 @@ int lm85_detect(struct i2c_adapter *adapter, int address,
 		    && verstep == LM85_VERSTEP_ADM1027 ) {
 			kind = adm1027 ;
 		} else if( company == LM85_COMPANY_ANALOG_DEV
-		    && verstep == LM85_VERSTEP_ADT7463 ) {
+		    && (verstep == LM85_VERSTEP_ADT7463
+			 || verstep == LM85_VERSTEP_ADT7463C) ) {
 			kind = adt7463 ;
 		} else if( company == LM85_COMPANY_ANALOG_DEV
 		    && (verstep & LM85_VERSTEP_VMASK) == LM85_VERSTEP_GENERIC) {
@@ -793,6 +795,9 @@ int lm85_detect(struct i2c_adapter *adapter, int address,
 			printk("lm85: Unrecgonized version/stepping 0x%02x"
 			    " Defaulting to Generic LM85.\n", verstep );
 			kind = any_chip ;
+		} else if( company == LM85_COMPANY_SMSC
+		    && verstep == LM85_VERSTEP_EMC6D102) {
+			kind = emc6d102;
 		} else if( company == LM85_COMPANY_SMSC
 		    && (verstep == LM85_VERSTEP_EMC6D100_A0
 			 || verstep == LM85_VERSTEP_EMC6D100_A1) ) {
@@ -823,7 +828,6 @@ int lm85_detect(struct i2c_adapter *adapter, int address,
 				" found at %d,0x%02x. Try force_lm85c.\n",
 				i2c_adapter_id(adapter), address );
 			}
-			err = 0 ;
 			goto ERROR1;
 		}
 	}
@@ -867,6 +871,11 @@ int lm85_detect(struct i2c_adapter *adapter, int address,
 		memcpy(template, emc6d100_specific, sizeof(emc6d100_specific));
 		template_used = CTLTBL_EMC6D100 ;
 		break ;
+	case emc6d102 :
+		type_name = "emc6d102";
+		strcpy(new_client->name, "SMSC EMC6D102");
+		template_used = 0;
+		break;
 	default :
 		printk("lm85: Internal error, invalid kind (%d)!", kind);
 		err = -EFAULT ;

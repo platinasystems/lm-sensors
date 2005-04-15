@@ -1,3 +1,9 @@
+lm-sensors (1:2.9.1-1) unstable; urgency=low
+
+  * New upstream version. 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Fri, 15 Apr 2005 07:33:35 +0200
+
 lm-sensors (1:2.9.0-19) unstable; urgency=medium
 
   * Patch pulled from CVS: read /etc/udev.conf to know how to detect 

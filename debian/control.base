@@ -10,7 +10,7 @@ Package: lm-sensors
 Architecture: any
 Section: utils
 Depends: makedev (>= 2.3.1-45) | devfsd,  ucf (>= 0.28), sysvinit (>= 2.85-19), sed (>= 4.0.5-1), ${misc:Depends}, ${shlibs:Depends}, ${perl:Depends}
-Recommends: lm-sensors-mod-2.9 | kernel-image-2.6
+Recommends: lm-sensors-mod-2.9.1 | kernel-image-2.6
 Suggests: lm-sensors-source | kernel-image-2.6, i2c-source | kernel-image-2.6, sensord, read-edid
 Description: utilities to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -31,7 +31,7 @@ Package: libsensors3
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Priority: optional
-Suggests: lm-sensors, lm-sensors-mod-2.9 | kernel-image-2.6
+Suggests: lm-sensors, lm-sensors-mod-2.9.1 | kernel-image-2.6
 Section: libs
 Description: library to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -80,7 +80,7 @@ Description: hardware sensor information logging daemon
 Package: kernel-patch-2.4-lm-sensors
 Architecture: all
 Section: devel
-Depends: ${kpatch:Depends}, ${misc:Depends}, kernel-patch-2.4-i2c (>= 2.9.0-1)
+Depends: ${kpatch:Depends}, ${misc:Depends}, kernel-patch-2.4-i2c (>= 2.9.1)
 Suggests: kernel-package, kernel-source-2.4
 Description: drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
@@ -97,7 +97,7 @@ Description: drivers to read temperature/voltage/fan sensors
 Package: lm-sensors-source
 Section: misc
 Architecture: all
-Depends: i2c-source (>= 1:2.9.0), debhelper (>= 4.0), module-assistant, bison, flex | flex-old
+Depends: i2c-source (>= 1:2.9.1), debhelper (>= 4.0), module-assistant, bison, flex | flex-old
 Description: kernel drivers to read temperature/voltage/fan sensors (source)
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
  to access information from temperature, voltage, and fan speed sensors. It

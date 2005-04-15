@@ -57,12 +57,32 @@
 
 /* 82801CA is undefined before kernel 2.4.13 */
 #ifndef PCI_DEVICE_ID_INTEL_82801CA_3
-#define PCI_DEVICE_ID_INTEL_82801CA_3      0x2483
+#define PCI_DEVICE_ID_INTEL_82801CA_3	0x2483
 #endif
 
 /* 82801DB is undefined before kernel 2.4.19 */
 #ifndef PCI_DEVICE_ID_INTEL_82801DB_3
-#define PCI_DEVICE_ID_INTEL_82801DB_3      0x24c3
+#define PCI_DEVICE_ID_INTEL_82801DB_3	0x24c3
+#endif
+
+/* 82801EB is undefined before kernel 2.4.21 */
+#ifndef PCI_DEVICE_ID_INTEL_82801EB_3
+#define PCI_DEVICE_ID_INTEL_82801EB_3	0x24d3
+#endif
+
+/* ESB is undefined before kernel 2.4.22 */
+#ifndef PCI_DEVICE_ID_INTEL_ESB_4
+#define PCI_DEVICE_ID_INTEL_ESB_4	0x25a4
+#endif
+
+/* ICH6 is undefined */
+#ifndef PCI_DEVICE_ID_INTEL_ICH6_16
+#define PCI_DEVICE_ID_INTEL_ICH6_16	0x266a
+#endif
+
+/* ICH7 is undefined */
+#ifndef PCI_DEVICE_ID_INTEL_ICH7_17
+#define PCI_DEVICE_ID_INTEL_ICH7_17	0x27da
 #endif
 
 #ifdef I2C_FUNC_SMBUS_BLOCK_DATA_PEC
@@ -138,10 +158,10 @@ static int i801_setup(struct pci_dev *dev)
 
 	I801_dev = dev;
 	if (dev->device == PCI_DEVICE_ID_INTEL_82801DB_3 ||
-	    dev->device == 0x24d3 ||
-	    dev->device == 0x25a4 ||
-	    dev->device == 0x266a ||
-	    dev->device == 0x27da)
+	    dev->device == PCI_DEVICE_ID_INTEL_82801EB_3 ||
+	    dev->device == PCI_DEVICE_ID_INTEL_ESB_4 ||
+	    dev->device == PCI_DEVICE_ID_INTEL_ICH6_16 ||
+	    dev->device == PCI_DEVICE_ID_INTEL_ICH7_17)
 		isich4 = 1;
 	else
 		isich4 = 0;
@@ -571,8 +591,10 @@ static u32 i801_func(struct i2c_adapter *adapter)
 	                 I2C_FUNC_SMBUS_HWPEC_CALC
 	               : 0)
 #endif
+#if 0
 	     | (isich5 ? I2C_FUNC_SMBUS_READ_I2C_BLOCK
 	               : 0)
+#endif
 	    ;
 }
 
@@ -624,25 +646,25 @@ static struct pci_device_id i801_ids[] __devinitdata = {
 	},
 	{
 		.vendor =	PCI_VENDOR_ID_INTEL,
-		.device =	0x24d3,	/* 82801EB ICH5 */
+		.device =	PCI_DEVICE_ID_INTEL_82801EB_3,
 		.subvendor =	PCI_ANY_ID,
 		.subdevice =	PCI_ANY_ID,
 	},
 	{
 		.vendor =	PCI_VENDOR_ID_INTEL,
-		.device =	0x25a4, /* PCI_DEVICE_ID_INTEL_ESB_4 */
+		.device =	PCI_DEVICE_ID_INTEL_ESB_4,
 		.subvendor =	PCI_ANY_ID,
 		.subdevice = 	PCI_ANY_ID,
 	},
 	{
 		.vendor =	PCI_VENDOR_ID_INTEL,
-		.device =	0x266a, /* PCI_DEVICE_ID_INTEL_ICH6_16 */
+		.device =	PCI_DEVICE_ID_INTEL_ICH6_16,
 		.subvendor =	PCI_ANY_ID,
 		.subdevice =	PCI_ANY_ID,
   	},
 	{
 		.vendor =	PCI_VENDOR_ID_INTEL,
-		.device =	0x27da,	/* ICH7 */
+		.device =	PCI_DEVICE_ID_INTEL_ICH7_17,
 		.subvendor =	PCI_ANY_ID,
 		.subdevice =	PCI_ANY_ID,
 	},
