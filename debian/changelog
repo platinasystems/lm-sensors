@@ -1,36 +1,11 @@
-lm-sensors (1:2.9.1-1sarge5) oldstable-security; urgency=low
+lm-sensors (1:2.9.1-2) unstable; urgency=low
 
-  * Correctly increment ABI to -4 (Closes: Bug#475164). 
+  * Added Vietnamese debconf translation. Thanks to Clytie Siddall (closes:
+    bug#312510).
+  * Fixed a typo in the debconf template. Thanks to Clytie Siddall (closes:
+    bug#312511).
 
- -- Aurelien Jarno <aurel32@debian.org>  Thu, 17 Apr 2008 10:25:01 +0000
-
-lm-sensors (1:2.9.1-1sarge4) oldstable-security; urgency=high
-
-  * Build against kernel-build-2.4.27-4_2.4.27-10sarge6.
-  * Increment ABI to -4.
-
- -- dann frazier <dannf@debian.org>  Wed, 20 Feb 2008 13:55:43 -0700
-
-lm-sensors (1:2.9.1-1sarge3) stable-security; urgency=high
-
-  * Build against kernel-build-2.4.27-3_2.4.27-10sarge2.
-  * Increment ABI to -3.
-
- -- Aurelien Jarno <aurel32@debian.org>  Wed, 15 Feb 2006 15:10:18 +0000
-
-lm-sensors (1:2.9.1-1sarge2) stable-security; urgency=high
-
-  * Non-maintainer upload by the Security Team
-  * Applied maintainer patch to fix insecure temporary file creation
-    [prog/pwm/pwmconfig, CAN-2005-2672], Closes: Bug#324193
-
- -- Martin Schulze <joey@infodrom.org>  Mon, 12 Sep 2005 09:13:40 +0200
-
-lm-sensors (1:2.9.1-1sarge1) stable-security; urgency=low
-
-  * Fixed and insecure tempfile usage in pwmconfig.
-
- -- Aurelien Jarno <aurel32@debian.org>  Sat, 20 Aug 2005 23:23:39 +0200
+ -- Aurelien Jarno <aurel32@debian.org>  Thu,  9 Jun 2005 01:17:29 +0200
 
 lm-sensors (1:2.9.1-1) unstable; urgency=low
 

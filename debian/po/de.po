@@ -49,8 +49,8 @@ msgid ""
 msgstr ""
 "Wenn Sie das aktivieren wollen, können Sie:\n"
 " - Die zu Ihrem Kernel passenden Pakete i2c-2.4-xx-x-xxx und \n"
-"   lm-sensors-2.4-xx-x-xxx installieren, wenn Sie einen "
-"   vorgefertigten Kernel benutzen;\n"
+"   lm-sensors-2.4-xx-x-xxx installieren, wenn Sie einen    vorgefertigten "
+"Kernel benutzen;\n"
 " - Patchen Ihres Kernel mit den Paketen kernel-patch-2.4-i2c und\n"
 "   kernel-patch-2.4-lm-sensors;\n"
 " - Module selbst aus i2c-source und lm-sensors-source bauen."
@@ -95,9 +95,9 @@ msgid ""
 "2.8.6. This version of libsensors3 doesn't support kernels older than "
 "version 2.6.5 anymore."
 msgstr ""
-"Das Interface /sys hat sich in der Kernelversion 2.6.5 und der Version 2.8.6. "
-"von libsensors geändert. Diese Version von libsensors unterstützt keine "
-"älteren Kernel als 2.6.5."
+"Das Interface /sys hat sich in der Kernelversion 2.6.5 und der Version "
+"2.8.6. von libsensors geändert. Diese Version von libsensors unterstützt "
+"keine älteren Kernel als 2.6.5."
 
 #. Type: note
 #. Description
@@ -113,7 +113,8 @@ msgstr ""
 #. Description
 #: ../libsensors3.templates:26
 msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
-msgstr "(Beachten Sie, dass libsensors3 weiterhin zu 2.4er Kerneln kompatibel ist."
+msgstr ""
+"(Beachten Sie, dass libsensors3 weiterhin zu 2.4er Kerneln kompatibel ist."
 
 #. Type: note
 #. Description
@@ -126,7 +127,7 @@ msgstr "Geänderter Vergleich von Negativen"
 #: ../lm-sensors.templates:3
 msgid ""
 "Starting with version 2.6.3, the comparison of negative voltages have "
-"changed to be mathematicaly correct."
+"changed to be mathematically correct."
 msgstr ""
 "Seit Version 2.6.3 hat sich der Vergleich der negativen Spannungen geändert, "
 "damit er mathematisch richtig ist."
@@ -152,6 +153,5 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../lm-sensors.templates:3
-msgid "Please update your sensors.conf if need."
+msgid "Please update your sensors.conf if necessary."
 msgstr "Bitte passen Sie eventuell Ihre Datei sensors.conf an."
-

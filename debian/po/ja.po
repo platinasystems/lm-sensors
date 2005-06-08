@@ -128,7 +128,7 @@ msgstr "負値の比較が変更されました"
 #: ../lm-sensors.templates:3
 msgid ""
 "Starting with version 2.6.3, the comparison of negative voltages have "
-"changed to be mathematicaly correct."
+"changed to be mathematically correct."
 msgstr ""
 "バージョン 2.6.3 から、負値の電圧の比較が数学的に正しいように変更されました。"
 
@@ -152,5 +152,5 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../lm-sensors.templates:3
-msgid "Please update your sensors.conf if need."
+msgid "Please update your sensors.conf if necessary."
 msgstr "必要なら sensors.conf を更新してください。"

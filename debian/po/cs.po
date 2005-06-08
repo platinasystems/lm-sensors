@@ -123,7 +123,7 @@ msgstr "Porovnávání záporných napětí se změnilo"
 #: ../lm-sensors.templates:3
 msgid ""
 "Starting with version 2.6.3, the comparison of negative voltages have "
-"changed to be mathematicaly correct."
+"changed to be mathematically correct."
 msgstr ""
 "Od verze 2.6.3 se porovnávání záporných napětí změnilo tak, aby bylo "
 "matematicky správné."
@@ -147,5 +147,5 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../lm-sensors.templates:3
-msgid "Please update your sensors.conf if need."
+msgid "Please update your sensors.conf if necessary."
 msgstr "Prosím opravte váš sensors.conf podle potřeby."

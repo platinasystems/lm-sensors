@@ -107,7 +107,7 @@ msgstr ""
 #: ../lm-sensors.templates:3
 msgid ""
 "Starting with version 2.6.3, the comparison of negative voltages have "
-"changed to be mathematicaly correct."
+"changed to be mathematically correct."
 msgstr ""
 
 #. Type: note
@@ -124,5 +124,5 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../lm-sensors.templates:3
-msgid "Please update your sensors.conf if need."
+msgid "Please update your sensors.conf if necessary."
 msgstr ""

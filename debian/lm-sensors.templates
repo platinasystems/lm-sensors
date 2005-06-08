@@ -2,7 +2,7 @@ Template: lm-sensors/negatives
 Type: note
 _Description: Comparison of negatives have changed
  Starting with version 2.6.3, the comparison of negative voltages have changed
- to be mathematicaly correct.
+ to be mathematically correct.
  .
  For example the following lines in /etc/sensors.conf
  	set in5_max -12 * 1.05
@@ -11,5 +11,5 @@ _Description: Comparison of negatives have changed
  	set in5_min -12 * 1.05
  	set in5_max -12 * 0.95
  .
- Please update your sensors.conf if need.
+ Please update your sensors.conf if necessary.
 

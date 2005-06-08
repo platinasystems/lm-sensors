@@ -1,25 +1,19 @@
-#
-#    Translators, if you are not familiar with the PO format, gettext
-#    documentation is worth reading, especially sections dedicated to
-#    this format, e.g. by running:
-#         info -n '(gettext)PO Files'
-#         info -n '(gettext)Header Entry'
-#    Some information specific to po-debconf are available at
-#            /usr/share/doc/po-debconf/README-trans
-#         or http://www.debian.org/intl/l10n/po-debconf/README-trans#
-#    Developers do not need to manually edit POT or PO files.
-#
+# Vietnamese Translation for lm-sensors.
+# Copyright © 2005 Free Software Foundation, Inc.
+# Clytie Siddall <clytie@riverland.net.au>, 2005.
+# 
 msgid ""
 msgstr ""
-"Project-Id-Version: lm-sensors_2.8.6-5\n"
+"Project-Id-Version: lm-sensors 1/2.9.1-1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2004-08-31 01:14+0200\n"
-"PO-Revision-Date: 2004-08-27 18:16+0200\n"
-"Last-Translator: Michel Grentzinger <mic.grentz@online.fr>\n"
-"Language-Team: French <debian-l10n-french@lists.debian.org>\n"
+"PO-Revision-Date: 2005-06-08 23:26+0930\n"
+"Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
+"Language-Team: Vietnamese <gnomevi-list@lists.sourceforge.net>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=ISO-8859-15\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0\n"
 
 #. Type: note
 #. Description
@@ -29,9 +23,9 @@ msgid ""
 "you don't have sensors modules installed. As a result, libsensors3 will not "
 "be functional on your system."
 msgstr ""
-"Il semble que votre noyau ne soit pas compil� avec la gestion des capteurs "
-"et que les modules des capteurs ne soient pas install�s. En cons�quence, "
-"libsensors3 ne fonctionnera pas sur votre syst�me."
+"Hình như hạt nhân bạn không được biên dịch với cách hỗ trợ máy nhạy, và cũng "
+"như bạn chưa cài đặt mô-đun máy nhạy nào. Vì vậy, libsensors3 không thể chức "
+"năng trong hệ thống bạn."
 
 #. Type: note
 #. Description
@@ -44,20 +38,20 @@ msgid ""
 "   kernel-patch-2.4-lm-sensors;\n"
 " - Build the modules yourself using i2c-source and lm-sensors-source."
 msgstr ""
-"Si vous voulez l'activer, vous pouvez�:\n"
-" - installer les paquets i2c-2.4-xx-x-xxx et\n"
-"   lm-sensors-2.4-xx-x-xxx correspondant � votre noyau si vous\n"
-"   utilisez un noyau pr�-compil�;\n"
-" - corriger votre noyau en utilisant les paquets kernel-patch-2.4-i2c\n"
-"   et kernel-patch-2.4-lm-sensors�;\n"
-" - compiler les modules vous-m�me en utilisant i2c-source et\n"
-"   lm-sensors-source."
+"Nếu bạn muốn hiệu lực libsensors3 thì bạn có thểL\n"
+" • Cài đặt hai gói tin «i2c-2.4-xx-x-xxx» và\n"
+"\t«lm-sensors-2.4-xx-x-xxx» tương ứng với hạt nhân,\n"
+"\tnếu bạn đang sử dụng một hạt nhân có sẵn;\n"
+" • Đáp vá hạt nhân dùng những gói tin «kernel-patch-2.4-i2c»\n"
+"\tvà «kernel-patch-2.4-lm-sensors»\n"
+" • Tự xây dụng những mô-đun, dùng «i2c-source» và\n"
+"\t«lm-sensors-source»."
 
 #. Type: note
 #. Description
 #: ../libsensors3.templates:17
 msgid "libsensors3 not functional"
-msgstr "Libsensors3 ne fonctionnera pas"
+msgstr "libsensors3 không chức năng được."
 
 #. Type: note
 #. Description
@@ -66,8 +60,8 @@ msgid ""
 "It appears that your kernel is not compiled with sensors support. As a "
 "result, libsensors3 will not be functional on your system."
 msgstr ""
-"Il semble que votre noyau n'ait pas �t� compil� avec la gestion des "
-"capteurs. En cons�quence, libsensors3 ne fonctionnera pas sur votre syst�me."
+"Hình như hạt nhân bạn không được biên dịch với cách hỗ trợ máy nhạy. Vì vậy, "
+"libsensors3 sẽ không thể chức năng trong hệ thống bạn."
 
 #. Type: note
 #. Description
@@ -76,14 +70,14 @@ msgid ""
 "If you want to enable it, have a look at \"I2C Hardware Sensors Chip support"
 "\" in your kernel configuration."
 msgstr ""
-"Si vous souhaitez l'activer, reportez-vous � la partie ��I2C Hardware "
-"Sensors Chip support�� de la configuration du noyau."
+"Nếu bạn muốn hiệu lực nó, hãy xem «I2C Hardware Sensors Chip support» (Cách "
+"hỗ trợ tinh thể máy nhạy phần cứng I2C) trong cấu hình hạt nhân bạn."
 
 #. Type: note
 #. Description
 #: ../libsensors3.templates:26
 msgid "libsensors3 needs kernel >= 2.6.5"
-msgstr "libsensors3 n�cessite un noyau >= 2.6.5"
+msgstr "libsensors3 cần hạt nhân ≥ 2.6.5."
 
 #. Type: note
 #. Description
@@ -93,9 +87,9 @@ msgid ""
 "2.8.6. This version of libsensors3 doesn't support kernels older than "
 "version 2.6.5 anymore."
 msgstr ""
-"L'interface /sys a chang� dans le noyau 2.6.5 et dans libsensors 2.8.6. "
-"Cette version de libsensors3 ne g�re plus les noyaux ant�rieurs � la version "
-"2.6.5."
+"Giao diện «/sys» đã thay đổi trong hạt nhân phiên bản 2.6.5, và trong "
+"libsensors phiên bản 2.8.6. Phiên bản libsensors3 không còn hỗ trợ lại hạt "
+"nhân cũ hơn phiên bản 2.6.5."
 
 #. Type: note
 #. Description
@@ -104,21 +98,20 @@ msgid ""
 "It appears that your are running a kernel older than version 2.6.5. As a "
 "result libsensors3 will not be functional on your system."
 msgstr ""
-"Il semble que vous utilisiez un noyau ant�rieur � la version 2.6.5. En "
-"cons�quence, libsensors3 ne fonctionnera pas sur votre syst�me. "
+"Hình như bạn đang chạy một hạt nhân cũ hơn phiên bản 2.6.5. Vì vậy "
+"libsensors3 sẽ không thể chức năng trong hệ thống bạn."
 
 #. Type: note
 #. Description
 #: ../libsensors3.templates:26
 msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
-msgstr ""
-"Veuillez noter que libsensors3 est toujours compatible avec les noyaux 2.4."
+msgstr "(Ghi chú rằng libsensors3 vẫn còn tương thích với hạt nhân 2.4.)"
 
 #. Type: note
 #. Description
 #: ../lm-sensors.templates:3
 msgid "Comparison of negatives have changed"
-msgstr "Changement dans la comparaison des n�gatifs"
+msgstr "So sánh điều âm đã thay đổi rồi."
 
 #. Type: note
 #. Description
@@ -127,8 +120,8 @@ msgid ""
 "Starting with version 2.6.3, the comparison of negative voltages have "
 "changed to be mathematically correct."
 msgstr ""
-"� partir de la version 2.6.3, la comparaison des tensions n�gatives a chang� "
-"pour �tre math�matiquement correcte."
+"Bắt đầu từ phiên bản 2.6.3, việc so sánh nhiều điện áp âm đã được thay đổi "
+"để có khả năng tính toán đúng."
 
 #. Type: note
 #. Description
@@ -140,9 +133,10 @@ msgid ""
 "\tset in5_min -12 * 1.05\n"
 "\tset in5_max -12 * 0.95"
 msgstr ""
-"Par exemple, les lignes suivantes dans /etc/sensors.conf\n"
+"Lấy thí dụ, những dòng này trong «/etc/sensors.conf»:\n"
 "\tset in5_max -12 * 1.05\n"
-"\tset in5_min -12 * 0.95 doivent �tre chang�es en�:\n"
+"set in5_min -12 * 0.95\n"
+"\tnên là:\n"
 "\tset in5_min -12 * 1.05\n"
 "\tset in5_max -12 * 0.95"
 
@@ -150,4 +144,4 @@ msgstr ""
 #. Description
 #: ../lm-sensors.templates:3
 msgid "Please update your sensors.conf if necessary."
-msgstr "Veuillez mettre � jour sensors.conf si n�cessaire."
+msgstr "Hãy cập nhật tập tin «sensors.conf» nếu cần thiết."

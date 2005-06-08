@@ -5,7 +5,7 @@
 #export DH_VERBOSE=1
 
 # Kernel versions to automatically build
-MODULES_KERNEL_VERSIONS=2.4.27-4
+MODULES_KERNEL_VERSIONS=2.4.27-2
 PATCH_KERNEL_VERSIONS=2.4.27
 KPATCHESFILE=$(CURDIR)/debian/kernel-patch-2.4-lm-sensors.kpatches
 

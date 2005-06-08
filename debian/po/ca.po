@@ -117,7 +117,7 @@ msgstr "S'ha modificat la comparació de negatius"
 #: ../lm-sensors.templates:3
 msgid ""
 "Starting with version 2.6.3, the comparison of negative voltages have "
-"changed to be mathematicaly correct."
+"changed to be mathematically correct."
 msgstr ""
 "Des de la versió 2.6.3, la comparació de tensions negatives s'ha modificat "
 "per ser matemàticament correcta."
@@ -141,5 +141,5 @@ msgstr ""
 #. Type: note
 #. Description
 #: ../lm-sensors.templates:3
-msgid "Please update your sensors.conf if need."
+msgid "Please update your sensors.conf if necessary."
 msgstr "Si és necessari actualitzeu el fitxer sensors.conf."
