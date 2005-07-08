@@ -65,7 +65,7 @@ build-indep-stamp:
 	cp -f debian/rules debian/build/lm-sensors-source/usr/src/modules/lm-sensors/debian
 
 	cd debian/build/lm-sensors-source/usr/src/modules/lm-sensors \
-		&& $(MAKE) clean
+		&& $(MAKE) CC=gcc-3.3 clean
 
 	# kernel-patch-2.4-lm-sensors
 	mkdir -p debian/build/kernel-patch-2.4-lm-sensors
@@ -112,10 +112,12 @@ ifeq ($(DEB_HOST_ARCH),i386)
 		mkdir -p debian/build/lm-sensors-$$flavor ; \
 		find . -path ./debian -prune -o -print | cpio -admp debian/build/lm-sensors-$$flavor ; \
 		$(MAKE) -C debian/build/lm-sensors-$$flavor all-kernel-chips all-kernel-busses \
+			CC=gcc-3.3 \
 			LINUX=/usr/src/kernel-headers-$$flavor \
 			I2C_HEADERS=$(CURDIR)/debian/build/modules/i2c \
 			MODPREF=/lib/modules/$$flavor ; \
 		$(MAKE) -C debian/build/lm-sensors-$$flavor/prog/hotplug -f Makefile.p4b \
+			CC=gcc-3.3 \
 			LINUX=/usr/src/kernel-headers-$$flavor ; \
 		cp debian/lm-sensors-_KVERS_.README.Debian.modules.in debian/lm-sensors-$$flavor.README.Debian ; \
 	done
@@ -181,6 +183,7 @@ install-arch-stamp: build-arch-stamp
 ifeq ($(DEB_HOST_ARCH),i386)
 	for flavor in $(MODULES_KERNEL_FLAVORS); do \
 		$(MAKE) -C debian/build/lm-sensors-$$flavor install-kernel-chips install-kernel-busses \
+			CC=gcc-3.3 \
 			DESTDIR=$(CURDIR)/debian/lm-sensors-$$flavor \
 			LINUX=/usr/src/kernel-headers-$$flavor \
 			I2C_HEADERS=$(CURDIR)/debian/build/modules/i2c \
@@ -248,15 +251,18 @@ ifeq ($(KMAJ), 2.4)
 	tar xzf $(I2C_DIR)/i2c.tar.gz -C debian
 	ln -s kernel $(CURDIR)/debian/modules/i2c/linux
 	$(MAKE) all-kernel-busses all-kernel-chips \
+		CC=gcc-3.3 \
 		LINUX=$(KSRC) \
 		I2C_HEADERS=$(CURDIR)/debian/modules/i2c \
 		MODPREF=/lib/modules/$(KVERS)
 ifeq ($(DEB_HOST_ARCH),i386)
 	$(MAKE) -C prog/hotplug -f Makefile.p4b \
+		CC=gcc-3.3 \
 		LINUX=$(KSRC)
 endif
 	$(MAKE) install-kernel-chips install-kernel-busses \
 		DESTDIR=$(CURDIR)/debian/lm-sensors-$(KVERS) \
+		CC=gcc-3.3 \
 		LINUX=$(KSRC) \
 		I2C_HEADERS=$(CURDIR)/debian/modules/i2c \
 		MODPREF=/lib/modules/$(KVERS)
@@ -286,5 +292,5 @@ endif
 
 .PHONY: kdist_clean
 kdist_clean:
-	$(MAKE) clean
+	$(MAKE) CC=gcc-3.3 clean
 	-dh_clean
