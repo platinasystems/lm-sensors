@@ -1,3 +1,10 @@
+lm-sensors (1:2.9.1-5) unstable; urgency=low
+
+  * Explain why gcc-3.3 is used to build modules in
+    /usr/share/doc/lm-sensors-source/README.Debian.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon,  1 Aug 2005 01:16:47 +0200
+
 lm-sensors (1:2.9.1-4) unstable; urgency=low
 
   * Build the modules with gcc-3.3
