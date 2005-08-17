@@ -1,7 +1,7 @@
 Source: lm-sensors
 Section: utils
 Priority: extra
-Build-Depends: bison, flex, librrd0-dev, gcc-3.3, debhelper (>= 4.1.16), i2c-source (>= 1:2.9.0-13) [i386], kernel-build-2.4.27-2 [i386]
+Build-Depends: bison, flex, librrd2-dev, gcc-3.3, debhelper (>= 4.1.16), i2c-source (>= 1:2.9.0-13) [i386], kernel-build-2.4.27-2 [i386]
 Build-Depends-Indep: debhelper (>> 4.0.0), dh-kpatches (>= 0.99.27), perl, bzip2, kernel-patch-2.4-i2c (>= 2.9.0-1), kernel-source-2.4.27
 Maintainer: Aurelien Jarno <aurel32@debian.org>
 Standards-Version: 3.6.2
