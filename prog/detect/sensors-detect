@@ -45,7 +45,10 @@ $ENV{PATH} = '/usr/local/sbin:'.$ENV{PATH}
 # CONSTANT DECLARATIONS #
 #########################
 
-use vars qw(@pci_adapters @chip_ids @superio_ids);
+use vars qw(@pci_adapters @chip_ids @superio_ids $revision);
+
+$revision = '$Revision: 1.393 $ ($Date: 2005/08/30 18:51:18 $)';
+$revision =~ s/\$\w+: (.*?) \$/$1/g;
 
 # This is the list of SMBus or I2C adapters we recognize by their PCI
 # signature. This is an easy and fast way to determine which SMBus or I2C
@@ -132,6 +135,14 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
      } , 
      { 
        vendid => 0x8086,
+       devid  => 0x269B,
+       func => 3,
+       procid => "Intel Enterprise Southbridge - ESB2",
+       driver => "i2c-i801",
+       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+     },
+     {
+       vendid => 0x8086,
        devid  => 0x266A,
        func => 3,
        procid => "Intel 82801FB ICH6",
@@ -160,7 +171,7 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
        func => 3,
        procid => "VIA Technologies VT82C596 Apollo ACPI",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus Via Pro adapter at/ },
+       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
      } ,
      { 
        vendid => 0x1106,
@@ -168,7 +179,7 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
        func => 3,
        procid => "VIA Technologies VT82C596B ACPI",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus Via Pro adapter at/ },
+       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
      } ,
      { 
        vendid => 0x1106,
@@ -176,7 +187,7 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
        func => 4,
        procid => "VIA Technologies VT82C686 Apollo ACPI",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus Via Pro adapter at/ },
+       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
      } ,
      { 
        vendid => 0x1106,
@@ -184,7 +195,7 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
        func => 0,
        procid => "VIA Technologies VT8233 VLink South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus Via Pro adapter at/ },
+       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
      } ,
      { 
        vendid => 0x1106,
@@ -192,7 +203,7 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
        func => 0,
        procid => "VIA Technologies VT8233A South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus Via Pro adapter at/ },
+       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
      } ,
      { 
        vendid => 0x1106,
@@ -200,7 +211,7 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
        func => 0,
        procid => "VIA Technologies VT8233A/8235 South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus Via Pro adapter at/ },
+       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
      } ,
      {
        vendid => 0x1106,
@@ -208,7 +219,7 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
        func => 0,
        procid => "VIA Technologies VT8237 South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus Via Pro adapter at/ },
+       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
      } ,
      { 
        vendid => 0x1106,
@@ -216,7 +227,7 @@ use vars qw(@pci_adapters @chip_ids @superio_ids);
        func => 4,
        procid => "VIA Technologies VT8231 South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus Via Pro adapter at/ },
+       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
      } ,
      {
        vendid => 0x1039,
@@ -901,7 +912,8 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
             m5879_detect pca9540_detect smartbatt_mgr_detect
             smartbatt_chgr_detect adt7467_detect lm92_detect max1619_detect
             lm93_detect lm77_detect lm63_detect pca9556_detect
-            w83791sd_detect vt1211_i2c_detect vt1211_alias_detect);
+            w83791sd_detect vt1211_i2c_detect vt1211_alias_detect
+            smsc47m192_detect);
 
 # This is a list of all recognized chips. 
 # Each entry must have the following fields:
@@ -1049,7 +1061,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
      },
      {
        name => "Winbond W83792D",
-       driver => "to-be-written",
+       driver => "w83792d",
        i2c_addrs => [0x2c..0x2f],
        i2c_detect => sub { w83781d_detect 8, @_},
      },
@@ -1070,7 +1082,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
      } ,
      {
        name => "Winbond W83627EHF",
-       driver => "to-be-written",
+       driver => "w83627ehf",
        i2c_addrs => [0x28..0x2f], 
        i2c_detect => sub { w83781d_detect 9, @_},
        isa_addrs => [0x290],
@@ -1270,13 +1282,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
        i2c_detect => sub { max1619_detect 0, @_ },
      },
      {
-       name => "National Semiconductor LM82",
-       driver => "to-be-written",
-       i2c_addrs => [0x18..0x1a,0x29..0x2b,0x4c..0x4e],
-       i2c_detect => sub { lm83_detect 1, @_ },
-     },
-     {
-       name => "National Semiconductor LM83",
+       name => "National Semiconductor LM82/LM83",
        driver => "lm83",
        i2c_addrs => [0x18..0x1a,0x29..0x2b,0x4c..0x4e],
        i2c_detect => sub { lm83_detect 0, @_ },
@@ -1414,12 +1420,11 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
        i2c_detect => sub { ite_detect 0, @_ },
        isa_addrs => [0x290],
        isa_detect => sub { ite_isa_detect 0, @_ },
-     } ,
+       alias_detect => sub { ite_alias_detect 0, @_ },
+     },
      {
        name => "ITE IT8705F / SiS 950",
        driver => "it87",
-       i2c_addrs => [0x28..0x2f],
-       i2c_detect => sub { ite_detect 1, @_ },
        isa_addrs => [0x290],
        isa_detect => sub { ite_isa_detect 1, @_ },
      } ,
@@ -1471,7 +1476,13 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
        driver => "to-be-written",
        i2c_addrs => [0x2c..0x2d],
        i2c_detect => sub { m5879_detect @_},
-     } ,
+     },
+     {
+       name => "SMSC LPC47M15x or LPC47M192",
+       driver => "to-be-written",
+       i2c_addrs => [0x2c..0x2d],
+       i2c_detect => sub { smsc47m192_detect @_ },
+     },
      {
        name => "Philips Semiconductors SAA1064",
        driver => "saa1064",
@@ -1578,6 +1589,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
 	driver => "it87",
 	devid => 0x8712,
 	logdev => 0x04,
+	alias_detect => sub { ite_alias_detect 0, @_ },
       },
     ],
   },
@@ -1687,6 +1699,13 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
 	driver => "not-a-sensor",
 	devid => 0xee,
       },
+      {
+	# This one actually has sensors but we don't know the logical
+	# device number(s) yet
+	name => "Nat. Semi. PCPC87427 Super IO",
+	driver => "not-a-sensor",
+	devid => 0xf2,
+      },
     ],
   },
   {
@@ -1718,7 +1737,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
       },
       {
 	name => "SMSC 47M15x/192 Super IO Fan Sensors",
-	driver => "to-be-written",
+	driver => "smsc47m1",
 	devid => 0x60,
 	logdev => 0x0a,
       },
@@ -1782,6 +1801,13 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
 	logdev => 0x0b,
       },
       {
+	name => "Winbond W83687THF Super IO Sensors",
+	driver => "to-be-written", # w83627hf
+	# A datasheet would be needed to confirm this
+	devid => 0x85,
+	logdev => 0x0b,
+      },
+      {
 	name => "Winbond W83697HF Super IO Sensors",
 	driver => "w83627hf",
 	devid => 0x60,
@@ -1809,9 +1835,10 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
     chips =>
     [
       {
-	name => "Winbond W83627EHF Super IO Sensors",
-	driver => "to-be-written",
-	# Datasheet says 0x886x but 0x8853 was seen, thus the broader mask
+	name => "Winbond W83627EHF/EHG Super IO Sensors",
+	driver => "w83627ehf",
+	# W83627EHF datasheet says 0x886x but 0x8853 was seen, thus the
+	# broader mask. W83627EHG was seen with ID 0x8863.
 	devid => 0x8840,
 	devid_mask => 0xFFC0,
 	logdev => 0x0b,
@@ -3191,11 +3218,11 @@ sub lm80_detect
 }
 
 # $_[0]: Chip to detect
-#   (0 = LM83, 1 = LM82)
+#   (0 = LM82/LM83)
 # $_[1]: A reference to the file descriptor to access this chip.
 #        We may assume an i2c_set_slave_addr was already done.
 # $_[2]: Address
-# Returns: undef if not detected, 5 to 8 if detected.
+# Returns: undef if not detected, 4 to 8 if detected.
 # Registers used:
 #   0x02: Status 1
 #   0x03: Configuration
@@ -3206,13 +3233,17 @@ sub lm80_detect
 # We can use the LM84 Company ID register because the LM83 and the LM82 are
 # compatible with the LM84.
 # The LM83 chip ID is missing from the datasheet and was contributed by
-# Magnus Forsstrom.
+# Magnus Forsstrom: 0x03.
+# At least some revisions of the LM82 seem to be repackaged LM83, so they
+# have the same chip ID, and temp2/temp4 will be stuck in "OPEN" state.
+# For this reason, we don't even try to distinguish between both chips.
+# Thanks to Ben Gardner for reporting.
 sub lm83_detect
 {
   my ($chip, $file) = @_;
   return if i2c_smbus_read_byte_data($file,0xfe) != 0x01;
-  return if $chip == 0 and i2c_smbus_read_byte_data($file,0xff) != 0x03;
-  return if $chip == 1 and i2c_smbus_read_byte_data($file,0xff) != 0x01;
+  my $chipid = i2c_smbus_read_byte_data($file,0xff);
+  return if $chipid != 0x01 && $chipid != 0x03;
 
   my $confidence = 4;
   $confidence++
@@ -3222,8 +3253,7 @@ sub lm83_detect
   $confidence++
     if i2c_smbus_read_byte_data($file,0x04) == 0x00;
   $confidence++
-    if $chip == 0
-    && (i2c_smbus_read_byte_data($file,0x35) & 0x48) == 0x00;
+    if (i2c_smbus_read_byte_data($file,0x35) & 0x48) == 0x00;
 
   return $confidence;
 }
@@ -4060,7 +4090,7 @@ sub via8231_isa_detect
   return 9;
 }
 
-# $_[0]: Chip to detect (0 = IT8712F, 1 = IT8705F/SiS950)
+# $_[0]: Chip to detect (0 = IT8712F)
 # $_[1]: A reference to the file descriptor to access this chip.
 #        We may assume an i2c_set_slave_addr was already done.
 # $_[2]: Address
@@ -4077,11 +4107,10 @@ sub ite_detect
   my $reg;
   my ($chip,$file,$addr) = @_;
   return unless i2c_smbus_read_byte_data($file,0x48) == $addr;
-  return unless (i2c_smbus_read_byte_data($file,0x00) & 0x80) == 0x00;
+  return unless (i2c_smbus_read_byte_data($file, 0x00) & 0x90) == 0x10;
   return unless i2c_smbus_read_byte_data($file,0x58) == 0x90;
   return if $chip == 0 and i2c_smbus_read_byte_data($file,0x5b) != 0x12;
-  return if $chip == 1 and i2c_smbus_read_byte_data($file,0x5b) == 0x12;
-  return (7 + ($chip == 0));
+  return (7 + ($addr == 0x2d));
 }
 
 # $_[0]: Chip to detect (0 = IT8712F, 1 = IT8705F/SiS950)
@@ -4089,6 +4118,7 @@ sub ite_detect
 # Returns: undef if not detected, 7 or 8 if detected (tops LM78).
 # Registers used:
 #   0x00: Configuration
+#   0x48: Full I2C Address (IT8712F only)
 #   0x58: Mfr ID
 #   0x5b: Device ID (IT8712F only)
 # Note: Only address 0x290 is scanned at this moment.
@@ -4106,7 +4136,7 @@ sub ite_isa_detect
     return;
   }
   my $readproc = sub { isa_read_byte $addr + 5, $addr + 6, @_ };
-  return unless (&$readproc(0x00) & 0x80) == 0x00;
+  return unless (&$readproc(0x00) & 0x90) == 0x10;
   return unless &$readproc(0x58) == 0x90;
   return if $chip == 0 and &$readproc(0x5b) != 0x12;
   return if $chip == 1 and &$readproc(0x5b) == 0x12;
@@ -4118,11 +4148,19 @@ sub ite_isa_detect
     return if (($val2 & 0x80) && $val == 0x5c)
            or (!($val2 & 0x80) && $val == 0xa3);
   }
-  return (7 + ($chip == 0));
+
+  # I2C address must be possible
+  if ($chip == 0) {
+    my $i2caddr = &$readproc(0x48);
+    return if ($i2caddr < 0x03 || $i2caddr > 0x77);
+    return (7 + ($i2caddr == 0x2d));
+  }
+
+  return (7);
 }
 
 
-# $_[0]: Chip to detect (0 = ..., 1 = ...)
+# $_[0]: Chip to detect (0 = IT8712F)
 # $_[1]: ISA address
 # $_[2]: I2C file handle
 # $_[3]: I2C address
@@ -4132,7 +4170,7 @@ sub ite_alias_detect
   my $i;
   my $readproc = sub { isa_read_byte $isa_addr + 5, $isa_addr + 6, @_ };
   return 0 unless &$readproc(0x48) == $i2c_addr;
-  for ($i = 0x2b; $i <= 0x3d; $i ++) {
+  for ($i = 0x30; $i <= 0x45; $i++) {
     return 0 unless &$readproc($i) == i2c_smbus_read_byte_data($file,$i);
   }
   return 1;
@@ -4360,6 +4398,25 @@ sub m5879_detect
        and (i2c_smbus_read_byte_data($file, 0x58) & 0xEF) == 0;
 
   return (7);
+}
+
+# $_[0]: A reference to the file descriptor to access this chip.
+#        We assume an i2c_set_slave_addr was already done.
+# $_[1]: Address
+# Returns: undef if not detected, 5 or 6 if detected.
+# Registers used:
+#   0x3E: Manufacturer ID
+#   0x3F: Version/Stepping
+#   0x47: VID (3 reserved bits)
+#   0x49: VID4 (7 reserved bits)
+sub smsc47m192_detect
+{
+  my ($file, $addr) = @_;
+  return unless i2c_smbus_read_byte_data($file, 0x3E) == 0x55
+           and (i2c_smbus_read_byte_data($file, 0x3F) & 0xF0) == 0x20
+           and (i2c_smbus_read_byte_data($file, 0x47) & 0x70) == 0x00
+           and (i2c_smbus_read_byte_data($file, 0x49) & 0xFE) == 0x80;
+  return ($addr == 0x2d ? 6 : 5);
 }
 
 # $_[0]: A reference to the file descriptor to access this chip.
@@ -4942,6 +4999,7 @@ sub main
   initialize_modules_list;
   initialize_kernel_version;
 
+  print "# sensors-detect revision $revision\n";
   print "\nThis program will help you determine which I2C/SMBus modules you need to\n",
         "load to use lm_sensors most effectively. You need to have i2c and\n",
         "lm_sensors installed before running this program.\n";

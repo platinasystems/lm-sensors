@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-# $Id: fancontrol.pl,v 1.4 2004/06/23 18:34:24 khali Exp $
+# $Id: fancontrol.pl,v 1.6 2005/06/23 21:07:10 khali Exp $
 #
 # Perl script for temperature dependent fan speed control.
 #
@@ -157,7 +157,6 @@ while(1)
 1;
 
 ################################################################ 
-loadconfig($)
 sub loadconfig($)
 {
    my $file = shift;
@@ -187,7 +186,7 @@ $minstop);
    unless (defined($interval))
      { die("Some settings missing ..."); }
 
-   print("\nCommon settings: \n");
+   print("\nCommon settings:\n");
    print("  INTERVAL=$interval\n");
 
    my $fcvcount = 0;
@@ -215,7 +214,6 @@ $minstop);
 
 
 ################################################################ 
-pwmdisable($)
 sub pwmdisable($)
 {
    my $p = shift;
@@ -257,7 +255,6 @@ sub pwmdisable($)
 
 
 ################################################################# 
-pwmenable($)
 sub pwmenable($)
 {
    my $p = shift;
@@ -291,7 +288,6 @@ sub pwmenable($)
 
 
 ################################################################ 
-restorefans()
 sub restorefans()
 {
    $SIG{TERM} = 'IGNORE';
@@ -314,7 +310,6 @@ sub restorefans()
 
 
 ############################################################ 
-UpdateFanSpeeds()
 sub UpdateFanSpeeds()
 {
    my $fcvcount = 0;

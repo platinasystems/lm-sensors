@@ -269,7 +269,7 @@ static inline u8 DIV_TO_REG(long val)
 {
 	int i;
 	val = SENSORS_LIMIT(val, 1, 128) >> 1;
-	for (i = 0; i < 6; i++) {
+	for (i = 0; i < 7; i++) {
 		if (val == 0)
 			break;
 		val >>= 1;
@@ -383,9 +383,9 @@ static struct i2c_driver w83627hf_driver = {
 #define W83781D_SYSCTL_FAN1 1101	/* Rotations/min */
 #define W83781D_SYSCTL_FAN2 1102
 #define W83781D_SYSCTL_FAN3 1103
-#define W83781D_SYSCTL_TEMP1 1200	/* Degrees Celcius * 10 */
-#define W83781D_SYSCTL_TEMP2 1201	/* Degrees Celcius * 10 */
-#define W83781D_SYSCTL_TEMP3 1202	/* Degrees Celcius * 10 */
+#define W83781D_SYSCTL_TEMP1 1200	/* Degrees Celsius * 10 */
+#define W83781D_SYSCTL_TEMP2 1201	/* Degrees Celsius * 10 */
+#define W83781D_SYSCTL_TEMP3 1202	/* Degrees Celsius * 10 */
 #define W83781D_SYSCTL_VID 1300		/* Volts * 1000 */
 #define W83781D_SYSCTL_VRM 1301
 #define W83781D_SYSCTL_PWM1 1401
@@ -587,7 +587,7 @@ static int w83627hf_attach_adapter(struct i2c_adapter *adapter)
 	return i2c_detect(adapter, &addr_data, w83627hf_detect);
 }
 
-static int w83627hf_find(int sioaddr, int *address)
+static int __init w83627hf_find(int sioaddr, int *address)
 {
 	u16 val;
 

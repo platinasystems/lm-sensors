@@ -1,3 +1,12 @@
+lm-sensors (1:2.9.2-1) unstable; urgency=low
+
+  * New upstream version.
+  * Fixed the detection of RAM in sensord (closes: bug#328268).
+  * Dropped the debconf note about upgrading from version < 2.7 as
+    woody -> etch upgrades are not supported.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed,  7 Sep 2005 16:01:38 +0200
+
 lm-sensors (1:2.9.1-7) unstable; urgency=high
 
   * Urgency set to high due to security fix.

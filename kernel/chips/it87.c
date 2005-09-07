@@ -250,7 +250,6 @@ struct it87_data {
 
 
 static int it87_attach_adapter(struct i2c_adapter *adapter);
-static int it87_find(int *address);
 static int it87_detect(struct i2c_adapter *adapter, int address,
 		       unsigned short flags, int kind);
 static int it87_detach_client(struct i2c_client *client);
@@ -308,9 +307,9 @@ static struct i2c_driver it87_driver = {
 #define IT87_SYSCTL_FAN1 1101   /* Rotations/min */
 #define IT87_SYSCTL_FAN2 1102
 #define IT87_SYSCTL_FAN3 1103
-#define IT87_SYSCTL_TEMP1 1200  /* Degrees Celcius * 10 */
-#define IT87_SYSCTL_TEMP2 1201  /* Degrees Celcius * 10 */
-#define IT87_SYSCTL_TEMP3 1202  /* Degrees Celcius * 10 */
+#define IT87_SYSCTL_TEMP1 1200  /* Degrees Celsius * 10 */
+#define IT87_SYSCTL_TEMP2 1201  /* Degrees Celsius * 10 */
+#define IT87_SYSCTL_TEMP3 1202  /* Degrees Celsius * 10 */
 #define IT87_SYSCTL_VID 1300    /* Volts * 100 */
 #define IT87_SYSCTL_FAN_DIV 2000        /* 1, 2, 4 or 8 */
 #define IT87_SYSCTL_ALARMS 2004    /* bitvector */
@@ -424,7 +423,7 @@ static int it87_attach_adapter(struct i2c_adapter *adapter)
 	return i2c_detect(adapter, &addr_data, it87_detect);
 }
 
-static int it87_find(int *address)
+static int __init it87_find(int *address)
 {
 	int err = -ENODEV;
 	u16 devid;
@@ -622,7 +621,7 @@ static int it87_detach_client(struct i2c_client *client)
 	return 0;
 }
 
-/* The SMBus locks itself, but ISA access must be locked explicitely! 
+/* The SMBus locks itself, but ISA access must be locked explicitly! 
    We don't want to lock the whole ISA bus, so we lock each client
    separately.
    We ignore the IT87 BUSY flag at this moment - it could lead to deadlocks,
@@ -642,7 +641,7 @@ static int it87_read_value(struct i2c_client *client, u8 reg)
 		return i2c_smbus_read_byte_data(client, reg);
 }
 
-/* The SMBus locks itself, but ISA access muse be locked explicitely! 
+/* The SMBus locks itself, but ISA access muse be locked explicitly! 
    We don't want to lock the whole ISA bus, so we lock each client
    separately.
    We ignore the IT87 BUSY flag at this moment - it could lead to deadlocks,

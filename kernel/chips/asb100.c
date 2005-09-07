@@ -266,7 +266,7 @@ static struct i2c_driver asb100_driver = {
 #define ASB100_SYSCTL_FAN2	1102
 #define ASB100_SYSCTL_FAN3	1103
 
-#define ASB100_SYSCTL_TEMP1	1200	/* Degrees Celcius * 10 */
+#define ASB100_SYSCTL_TEMP1	1200	/* Degrees Celsius * 10 */
 #define ASB100_SYSCTL_TEMP2	1201
 #define ASB100_SYSCTL_TEMP3	1202
 #define ASB100_SYSCTL_TEMP4	1203
@@ -1006,7 +1006,7 @@ static void __exit asb100_exit(void)
 
 MODULE_AUTHOR(	"Mark M. Hoffman <mhoffman@lightlink.com>, "
 		"Frodo Looijaard <frodol@dds.nl>, "
-		"Philip Edelbrock <phil@netroedge.com>, and"
+		"Philip Edelbrock <phil@netroedge.com>, and "
 		"Mark Studebaker <mdsxyz123@yahoo.com>");
 
 MODULE_DESCRIPTION("ASB100 'Bach' driver");

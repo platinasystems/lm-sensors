@@ -200,7 +200,6 @@ static int sis5595_write_value(struct i2c_client *client, u8 register,
 			       u8 value);
 static void sis5595_update_client(struct i2c_client *client);
 static void sis5595_init_client(struct i2c_client *client);
-static int sis5595_find_sis(int *address);
 
 
 static void sis5595_in(struct i2c_client *client, int operation,
@@ -234,7 +233,7 @@ static struct i2c_driver sis5595_driver = {
 #define SIS5595_SYSCTL_IN4 1004
 #define SIS5595_SYSCTL_FAN1 1101	/* Rotations/min */
 #define SIS5595_SYSCTL_FAN2 1102
-#define SIS5595_SYSCTL_TEMP 1200	/* Degrees Celcius * 10 */
+#define SIS5595_SYSCTL_TEMP 1200	/* Degrees Celsius * 10 */
 #define SIS5595_SYSCTL_FAN_DIV 2000	/* 1, 2, 4 or 8 */
 #define SIS5595_SYSCTL_ALARMS 2001	/* bitvector */
 
@@ -286,7 +285,7 @@ static int sis5595_attach_adapter(struct i2c_adapter *adapter)
 }
 
 /* Locate SiS bridge and correct base address for SIS5595 */
-static int sis5595_find_sis(int *address)
+static int __init sis5595_find_sis(int *address)
 {
 	u16 val;
 	int *i;

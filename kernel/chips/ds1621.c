@@ -124,7 +124,7 @@ static struct i2c_driver ds1621_driver = {
 };
 
 /* -- SENSORS SYSCTL START -- */
-#define DS1621_SYSCTL_TEMP 1200	/* Degrees Celcius * 10 */
+#define DS1621_SYSCTL_TEMP 1200	/* Degrees Celsius * 10 */
 #define DS1621_SYSCTL_ALARMS 2001	/* bitvector */
 #define DS1621_ALARM_TEMP_HIGH 0x40
 #define DS1621_ALARM_TEMP_LOW 0x20
@@ -321,7 +321,7 @@ static void ds1621_init_client(struct i2c_client *client)
 	int reg;
 
 	reg = ds1621_read_value(client, DS1621_REG_CONF);
-	/* start the continous conversion */
+	/* start the continuous conversion */
 	if(reg & 0x01)
 		ds1621_write_value(client, DS1621_REG_CONF, reg & 0xfe);
 }
@@ -362,7 +362,7 @@ static void ds1621_update_client(struct i2c_client *client)
 				ds1621_write_value(client, DS1621_COM_START, 0);
 		}
 
-		/* reset alarms if neccessary */
+		/* reset alarms if necessary */
 		new_conf = data->conf;
 		if (data->temp < data->temp_over)
 			new_conf &= ~DS1621_ALARM_TEMP_HIGH;
@@ -440,7 +440,7 @@ void ds1621_enable(struct i2c_client *client, int operation, int ctl_name,
 		   int *nrels_mag, long *results)
 {
 	/* If you really screw up your chip (like I did) this is */
-	/* sometimes needed to (re)start the continous conversion */
+	/* sometimes needed to (re)start the continuous conversion */
 	/* there is no data to read so this might hang your SMBus! */
 
 	struct ds1621_data *data = client->data;

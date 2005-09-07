@@ -10,7 +10,7 @@ Status: Stable
 
 Supported chips:
   * Fujitsu-Siemens Hermes chip
-    Prefix `fscher'
+    Prefix: 'fscher'
     Addresses scanned: I2C 0x73 
 
 Author: Reinhard Nissl <rnissl@gmx.de> based on work from Hermann Jung
@@ -54,7 +54,7 @@ The chip provides three temperature values (CPU, motherboard and auxiliary),
 three voltage values (+12V, +5V and battery) and three fans (power supply,
 CPU and auxiliary). 
 
-Temperatures are measured in degrees Celcius. The resolution is 1 degree.
+Temperatures are measured in degrees Celsius. The resolution is 1 degree.
 
 Fan rotation speeds are reported in RPM (rotations per minute). 
 The value can be divided by a programmable divider (1, 2 or 4) which 

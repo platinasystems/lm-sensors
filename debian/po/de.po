@@ -13,8 +13,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: lm-sensors_2.8.8-3_de\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-08-31 01:14+0200\n"
+"Report-Msgid-Bugs-To: aurel32@debian.org\n"
+"POT-Creation-Date: 2005-09-07 16:05+0200\n"
 "PO-Revision-Date: 2004-11-14 19:17+0100\n"
 "Last-Translator: Erik Schanze <mail@erikschanze.de>\n"
 "Language-Team: German <debian-l10n-german@lists.debian.org>\n"
@@ -115,43 +115,3 @@ msgstr ""
 msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
 msgstr ""
 "(Beachten Sie, dass libsensors3 weiterhin zu 2.4er Kerneln kompatibel ist."
-
-#. Type: note
-#. Description
-#: ../lm-sensors.templates:3
-msgid "Comparison of negatives have changed"
-msgstr "Geänderter Vergleich von Negativen"
-
-#. Type: note
-#. Description
-#: ../lm-sensors.templates:3
-msgid ""
-"Starting with version 2.6.3, the comparison of negative voltages have "
-"changed to be mathematically correct."
-msgstr ""
-"Seit Version 2.6.3 hat sich der Vergleich der negativen Spannungen geändert, "
-"damit er mathematisch richtig ist."
-
-#. Type: note
-#. Description
-#: ../lm-sensors.templates:3
-msgid ""
-"For example the following lines in /etc/sensors.conf\n"
-"\tset in5_max -12 * 1.05\n"
-"set in5_min -12 * 0.95 should be changed into\n"
-"\tset in5_min -12 * 1.05\n"
-"\tset in5_max -12 * 0.95"
-msgstr ""
-"Beispielsweise sollten folgende Zeilen der Datei /etc/sensors.conf:\n"
-"\tset in5_max -12 * 1.05\n"
-"\tset in5_min -12 * 0.95\n"
-"\n"
-"so geändert werden:\n"
-"\tset in5_min -12 * 1.05\n"
-"\tset in5_max -12 * 0.95"
-
-#. Type: note
-#. Description
-#: ../lm-sensors.templates:3
-msgid "Please update your sensors.conf if necessary."
-msgstr "Bitte passen Sie eventuell Ihre Datei sensors.conf an."

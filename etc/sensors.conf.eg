@@ -346,6 +346,11 @@ chip "lm78-*" "lm78-j-*" "lm79-*" "w83781d-*"
 #    set temp3_over 52
 #    set temp3_hyst 47
 
+# Examples of fan low speed limits
+#    set fan1_min 3000
+#    set fan2_min 3000
+#    set fan3_min 3000
+
 # Ignore fans you don't actually have
 #    ignore fan1
 #    ignore fan2
@@ -767,31 +772,20 @@ chip "w83792d-*"
     set in8_min 3 * 0.95
     set in8_max 3 * 1.05
 
-    #set fan1_div 4
-    #set fan1_min 1500
-    set fan2_div 4
-    set fan2_min 1500
-    #set fan3_min 1300
-    #set fan4_min 1500
-    #set fan5_min 1500
-    #set fan6_min 1500
-    #set fan7_min 1500
+# fan1 adjustments examples
 
-    set temp1_over 42
-    set temp1_hyst 37
-    set temp2_over 43
-    set temp2_hyst 38
-    set temp3_over 45
-    set temp3_hyst 40
+#   set fan1_div 4
+#   set fan1_min 1500
 
-    #ignore fan1
-    #ignore fan3
-    #ignore fan4
-    #ignore fan5
-    #ignore fan6
-    #ignore fan7
-    #ignore temp3
+# temp2 limits examples
 
+#    set temp2_over 42
+#    set temp2_hyst 37
+
+# ignore examples
+
+#    ignore fan7
+#    ignore temp3
 
 chip "as99127f-*"
 
@@ -839,7 +833,7 @@ chip "as99127f-*"
 #   compute temp2 (@*30/43)+25, (@-25)*43/30
 
 # See comments above if temp3 looks bad. What works for temp2 is likely
-# to work for temp3 for dual-CPU boards.
+# to work for temp3 for dual-CPU boards, such as the CUV4X-D.
 
 # Most Asus boards have temperatures settled like that:
     label temp1 "M/B Temp"
@@ -849,7 +843,8 @@ chip "as99127f-*"
 #   label temp1 "CPU Temp"
 #   label temp2 "M/B Temp"
 
-# Most boards have no temp3 by default
+# Most boards have no temp3 by default, except for dual-CPU boards.
+#   label temp3 "CPU 2 Temp"
 #   ignore temp3
 
 # adjust this if your vid is wrong; see doc/vid
@@ -1474,8 +1469,8 @@ chip "adm9240-*" "ds1780-*" "lm81-*"
 #   set "12V_max" xxx
 #   set Vccp2_max xxx
 #
-#   set fan1_div xxx
-#   set fan2_div xxx
+#   set fan1_div xxx	Note: do not uncomment with kernel 2.6 driver
+#   set fan2_div xxx	Note: do not uncomment with kernel 2.6 driver
 #   set fan1_min xxx
 #   set fan2_min xxx
 #   set temp1_hyst xxx
@@ -1888,7 +1883,7 @@ chip "lm99-*"
 
 # note #1: only the LM99 needs this; for a LM89, comment the compute line
 # out
-# note #2: there is no way for us to differenciate between a LM89 and a
+# note #2: there is no way for us to differentiate between a LM89 and a
 # LM99; you have to know what you have; LM99 are frequently found on
 # graphics cards, most notably nVidia ones
    compute temp2 @+16, @-16
@@ -2264,7 +2259,7 @@ chip "pc87366-*"
 
 # 3435 is the thermistor beta.
 # This assumes that the thermistor forms a resistor divider with a resistor
-# equal to its nominal value at 25 degres Celcius. If not, change the values.
+# equal to its nominal value at 25 degres Celsius. If not, change the values.
 # We also assume that you have a working in10 (which is forcibly enabled by
 # default). If not, use 3.3 instead, but you lose accuracy.
 

@@ -327,7 +327,7 @@ static struct i2c_driver pc87360_driver = {
 #define PC87365_STATUS_IN_MIN		0x02
 #define PC87365_STATUS_IN_MAX		0x04
 
-#define PC87365_SYSCTL_TEMP1		3101 /* degrees Celcius */
+#define PC87365_SYSCTL_TEMP1		3101 /* degrees Celsius */
 #define PC87365_SYSCTL_TEMP2		3102
 #define PC87365_SYSCTL_TEMP3		3103 /* not for PC87365 */
 #define PC87365_SYSCTL_TEMP1_STATUS	3301 /* bit field */
@@ -468,7 +468,7 @@ static int pc87360_attach_adapter(struct i2c_adapter *adapter)
 	return i2c_detect(adapter, &addr_data, pc87360_detect);
 }
 
-static int pc87360_find(int sioaddr, u8 *devid, int *address)
+static int __init pc87360_find(int sioaddr, u8 *devid, int *address)
 {
 	u16 val;
 	int i;
@@ -760,7 +760,7 @@ static void pc87360_init_client(struct i2c_client *client, int use_thermistors)
 	if (init >= 2 && data->innr) {
 		reg = pc87360_read_value(data, LD_IN, NO_BANK,
 					 PC87365_REG_IN_CONVRATE);
-		printk(KERN_INFO "pc87360.o: VLM conversion set to"
+		printk(KERN_INFO "pc87360.o: VLM conversion set to "
 		       "1s period, 160us delay\n");
 		pc87360_write_value(data, LD_IN, NO_BANK,
 				    PC87365_REG_IN_CONVRATE,

@@ -216,7 +216,7 @@ static inline u8 DIV_TO_REG(long val, enum chips type)
 	int i;
 	val = SENSORS_LIMIT(val, 1,
 		((type == w83781d || type == as99127f) ? 8 : 128)) >> 1;
-	for (i = 0; i < 6; i++) {
+	for (i = 0; i < 7; i++) {
 		if (val == 0)
 			break;
 		val >>= 1;
@@ -352,9 +352,9 @@ static struct i2c_driver w83781d_driver = {
 #define W83781D_SYSCTL_FAN4 1104
 #define W83781D_SYSCTL_FAN5 1105
 
-#define W83781D_SYSCTL_TEMP1 1200	/* Degrees Celcius * 10 */
-#define W83781D_SYSCTL_TEMP2 1201	/* Degrees Celcius * 10 */
-#define W83781D_SYSCTL_TEMP3 1202	/* Degrees Celcius * 10 */
+#define W83781D_SYSCTL_TEMP1 1200	/* Degrees Celsius * 10 */
+#define W83781D_SYSCTL_TEMP2 1201	/* Degrees Celsius * 10 */
+#define W83781D_SYSCTL_TEMP3 1202	/* Degrees Celsius * 10 */
 #define W83781D_SYSCTL_VID 1300		/* Volts * 1000 */
 #define W83781D_SYSCTL_VRM 1301
 #define W83781D_SYSCTL_PWM1 1401
@@ -891,10 +891,10 @@ static int w83781d_detect(struct i2c_adapter *adapter, int address,
 			kind = w83697hf;
 		else {
 			if (kind == 0)
-				printk
-				    (KERN_WARNING "w83781d.o: Ignoring 'force' parameter for unknown chip at"
-				     "adapter %d, address 0x%02x\n",
-				     i2c_adapter_id(adapter), address);
+				printk(KERN_WARNING "w83781d.o: Ignoring "
+				       "'force' parameter for unknown chip "
+				       "at adapter %d, address 0x%02x\n",
+				       i2c_adapter_id(adapter), address);
 			goto ERROR1;
 		}
 	}

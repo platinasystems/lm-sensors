@@ -720,7 +720,7 @@ fmtTemps_W8378x_1
 }
 
 static const char *w83782d_names[] = {
-  SENSORS_W83782D_PREFIX, SENSORS_W83627HF_PREFIX, SENSORS_W83627THF_PREFIX, NULL
+  SENSORS_W83782D_PREFIX, SENSORS_W83627HF_PREFIX, SENSORS_W83627THF_PREFIX, SENSORS_W83637HF_PREFIX, NULL
 };
 
 static const FeatureDescriptor w83782d_features[] = {
@@ -1008,27 +1008,56 @@ static const ChipDescriptor asb100_chip = {
 /** EEPROM **/
 
 static const char *
-fmtType_EEPROM
+fmt_EEPROM
 (const double values[], int alarm, int beep) {
-  if ((int) values[0] == 4)
-    sprintf (buff, "SDRAM DIMM SPD");
-  else if ((int) values[0] == 7)
-    sprintf (buff, "DDR SDRAM DIMM SPD");
-  else
-    sprintf (buff, "Invalid"); /* N.B: sensors just returns, aborting further tests; I don't.. */
-  return fmtExtra (alarm, beep);
-}
+  int i, k;
+  int type = values[0];
+  int row = (int) values[1];
+  int col = (int) values[2];
+  int num = (int) values[3];
+  int banks = (int) values[4];
 
-static const char *
-fmtRowCol_EEPROM
-(const double values[], int alarm, int beep) {
-  int row = (int) values[0];
-  int col = (int) values[1];
-  int num = (int) values[2];
-  int banks = (int) values[3];
-  int foo = (row & 0xf) + (col & 0xf) + 17;
-  if ((foo > 0) && (foo <= 12) && (num <= 8) && (banks <= 8)) {
-    sprintf (buff, "%d", (1 << foo) * num * banks);
+  switch (type) {
+    case 1:
+            sprintf (buff, "DRDRAM RIMM SPD");
+	    break;
+    case 2:
+            sprintf (buff, "EDO SPD");
+	    break;
+    case 4:
+            sprintf (buff, "SDR SDRAM DIMM SPD");
+	    break;
+    case 7:
+            sprintf (buff, "DDR SDRAM DIMM SPD");
+	    break;
+    case 8:
+            sprintf (buff, "DDR2 SDRAM DIMM SPD");
+	    break;
+    case 17:
+            sprintf (buff, "RAMBUS RIMM SPD");
+	    break;
+    default:
+	    sprintf (buff, "Invalid");
+	    return buff;
+  }	    
+
+  k = 0; /* multiplier, 0 if invalid */
+  if (type == 17) { /* RAMBUS */
+    i = (((int) row) & 0x0f) + (((int) row) >> 4) + (((int) num) & 0x07) - 13;
+    k = 1;
+  } else if (type == 1) { /* DRDRAM */
+    i = (((int) col) & 0x0f) + (((int) col) >> 4) + (((int) num) & 0x07) - 13;
+    k = 1;
+  } else if (type == 8) { /* DDR2 */
+    i = (((int) row) & 0x0f) + (((int) col) & 0x0f) - 17;
+    k = ((((int) num) & 0x7) + 1) * ((int) banks);
+  } else { /* SDRAM */
+    i = (((int) row) & 0x0f) + (((int) col) & 0x0f) - 17;
+    if (((int) num) <= 8 && ((int) banks) <= 8)
+      k = ((int) num) * ((int) banks);
+  }
+  if(i > 0 && i <= 12 && k > 0) {
+    sprintf (buff, "%d", (1 << i) * k);
   } else {
     sprintf (buff, "Invalid %d %d %d %d", row, col, num, banks);
   }
@@ -1040,15 +1069,100 @@ static const char *eeprom_names[] = {
 };
 
 static const FeatureDescriptor eeprom_features[] = {
-  { fmtType_EEPROM, NULL, DataType_other, 0, 0,
-    { SENSORS_EEPROM_TYPE, -1 } },
-  { fmtRowCol_EEPROM, NULL, DataType_other, 0, 0,
-    { SENSORS_EEPROM_ROWADDR, SENSORS_EEPROM_COLADDR, SENSORS_EEPROM_NUMROWS, SENSORS_EEPROM_BANKS, -1 } },
+  { fmt_EEPROM, NULL, DataType_other, 0, 0,
+    { SENSORS_EEPROM_TYPE, SENSORS_EEPROM_ROWADDR, SENSORS_EEPROM_COLADDR, SENSORS_EEPROM_NUMROWS, SENSORS_EEPROM_BANKS, -1 } },
   { NULL }
 };
 
 static const ChipDescriptor eeprom_chip = {
   eeprom_names, eeprom_features, 0, 0
+};
+
+/** PC87360 **/
+
+static const char *
+fmtTemps_PC87360_0
+(const double values[], int alarm, int beep) {
+  sprintf (buff, "%.0f C (min = %.0f C, max = %.0f C, crit = %.0f C)",
+	   values[0], values[1], values[2], values[3]);
+  return fmtExtra (alarm, beep);
+}
+
+static const char *
+fmtTemps_PC87360_1
+(const double values[], int alarm, int beep) {
+  sprintf (buff, "%.1f C (min = %.1f C, max = %.1f C, crit = %.1f C)",
+	   values[0], values[1], values[2], values[3]);
+  return fmtExtra (alarm, beep);
+}
+
+static const char *pc87360_names[] = {
+  SENSORS_PC87360_PREFIX,
+  SENSORS_PC87363_PREFIX,
+  SENSORS_PC87364_PREFIX,
+  SENSORS_PC87365_PREFIX,
+  SENSORS_PC87366_PREFIX,
+  NULL
+};
+
+static const FeatureDescriptor pc87360_features[] = {
+  { fmtFans_0, rrdF0, DataType_rpm, 0, 0,
+    { SENSORS_PC87360_FAN1, SENSORS_PC87360_FAN1_MIN, SENSORS_PC87360_FAN1_DIV, -1 } },
+  { fmtFans_0, rrdF0, DataType_rpm, 0, 0,
+    { SENSORS_PC87360_FAN2, SENSORS_PC87360_FAN2_MIN, SENSORS_PC87360_FAN2_DIV, -1 } },
+  { fmtFans_0, rrdF0, DataType_rpm, 0, 0,
+    { SENSORS_PC87360_FAN3, SENSORS_PC87360_FAN3_MIN, SENSORS_PC87360_FAN3_DIV, -1 } },
+
+  { fmtTemps_PC87360_0, rrdF0, DataType_temperature, SENSORS_PC87360_ALARMS_TEMP, 0,
+    { SENSORS_PC87360_TEMP1, SENSORS_PC87360_TEMP1_MIN, SENSORS_PC87360_TEMP1_MAX,
+      SENSORS_PC87360_TEMP1_CRIT, -1 } },
+  { fmtTemps_PC87360_0, rrdF0, DataType_temperature, SENSORS_PC87360_ALARMS_TEMP, 0,
+    { SENSORS_PC87360_TEMP2, SENSORS_PC87360_TEMP2_MIN, SENSORS_PC87360_TEMP2_MAX,
+      SENSORS_PC87360_TEMP2_CRIT, -1 } },
+  { fmtTemps_PC87360_0, rrdF0, DataType_temperature, SENSORS_PC87360_ALARMS_TEMP, 0,
+    { SENSORS_PC87360_TEMP3, SENSORS_PC87360_TEMP3_MIN, SENSORS_PC87360_TEMP3_MAX,
+      SENSORS_PC87360_TEMP3_CRIT, -1 } },
+  { fmtTemps_PC87360_1, rrdF1, DataType_temperature, SENSORS_PC87360_ALARMS_TEMP, 0,
+    { SENSORS_PC87360_TEMP4, SENSORS_PC87360_TEMP4_MIN, SENSORS_PC87360_TEMP4_MAX,
+      SENSORS_PC87360_TEMP4_CRIT, -1 } },
+  { fmtTemps_PC87360_1, rrdF1, DataType_temperature, SENSORS_PC87360_ALARMS_TEMP, 0,
+    { SENSORS_PC87360_TEMP5, SENSORS_PC87360_TEMP5_MIN, SENSORS_PC87360_TEMP5_MAX,
+      SENSORS_PC87360_TEMP5_CRIT, -1 } },
+  { fmtTemps_PC87360_1, rrdF1, DataType_temperature, SENSORS_PC87360_ALARMS_TEMP, 0,
+    { SENSORS_PC87360_TEMP6, SENSORS_PC87360_TEMP6_MIN, SENSORS_PC87360_TEMP6_MAX,
+      SENSORS_PC87360_TEMP6_CRIT, -1 } },
+
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN0, SENSORS_PC87360_IN0_MIN, SENSORS_PC87360_IN0_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN1, SENSORS_PC87360_IN1_MIN, SENSORS_PC87360_IN1_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN2, SENSORS_PC87360_IN2_MIN, SENSORS_PC87360_IN2_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN3, SENSORS_PC87360_IN3_MIN, SENSORS_PC87360_IN3_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN4, SENSORS_PC87360_IN4_MIN, SENSORS_PC87360_IN4_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN5, SENSORS_PC87360_IN5_MIN, SENSORS_PC87360_IN5_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN6, SENSORS_PC87360_IN6_MIN, SENSORS_PC87360_IN6_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN7, SENSORS_PC87360_IN7_MIN, SENSORS_PC87360_IN7_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN8, SENSORS_PC87360_IN8_MIN, SENSORS_PC87360_IN8_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN9, SENSORS_PC87360_IN9_MIN, SENSORS_PC87360_IN9_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SENSORS_PC87360_ALARMS_IN, 0,
+    { SENSORS_PC87360_IN10, SENSORS_PC87360_IN10_MIN, SENSORS_PC87360_IN10_MAX, -1 } },
+
+  { fmtVolt_3, rrdF3, DataType_voltage, 0, 0,
+    { SENSORS_PC87360_VID, -1 } },
+  { NULL }
+};
+
+static const ChipDescriptor pc87360_chip = {
+  /* No room for SENSORS_PC87360_ALARMS_TEMP */
+  pc87360_names, pc87360_features, SENSORS_PC87360_ALARMS_IN, 0
 };
 
 /** ALL **/
@@ -1074,5 +1188,6 @@ const ChipDescriptor * const knownChips[] = {
   &w83697hf_chip,
   &it87_chip,
   &asb100_chip,
+  &pc87360_chip,
   NULL
 };

@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: lm-sensors 1/2.9.1-1\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-08-31 01:14+0200\n"
+"Report-Msgid-Bugs-To: aurel32@debian.org\n"
+"POT-Creation-Date: 2005-09-07 16:05+0200\n"
 "PO-Revision-Date: 2005-06-08 23:26+0930\n"
 "Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
 "Language-Team: Vietnamese <gnomevi-list@lists.sourceforge.net>\n"
@@ -106,42 +106,3 @@ msgstr ""
 #: ../libsensors3.templates:26
 msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
 msgstr "(Ghi chú rằng libsensors3 vẫn còn tương thích với hạt nhân 2.4.)"
-
-#. Type: note
-#. Description
-#: ../lm-sensors.templates:3
-msgid "Comparison of negatives have changed"
-msgstr "So sánh điều âm đã thay đổi rồi."
-
-#. Type: note
-#. Description
-#: ../lm-sensors.templates:3
-msgid ""
-"Starting with version 2.6.3, the comparison of negative voltages have "
-"changed to be mathematically correct."
-msgstr ""
-"Bắt đầu từ phiên bản 2.6.3, việc so sánh nhiều điện áp âm đã được thay đổi "
-"để có khả năng tính toán đúng."
-
-#. Type: note
-#. Description
-#: ../lm-sensors.templates:3
-msgid ""
-"For example the following lines in /etc/sensors.conf\n"
-"\tset in5_max -12 * 1.05\n"
-"set in5_min -12 * 0.95 should be changed into\n"
-"\tset in5_min -12 * 1.05\n"
-"\tset in5_max -12 * 0.95"
-msgstr ""
-"Lấy thí dụ, những dòng này trong «/etc/sensors.conf»:\n"
-"\tset in5_max -12 * 1.05\n"
-"set in5_min -12 * 0.95\n"
-"\tnên là:\n"
-"\tset in5_min -12 * 1.05\n"
-"\tset in5_max -12 * 0.95"
-
-#. Type: note
-#. Description
-#: ../lm-sensors.templates:3
-msgid "Please update your sensors.conf if necessary."
-msgstr "Hãy cập nhật tập tin «sensors.conf» nếu cần thiết."

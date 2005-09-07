@@ -2,6 +2,7 @@
 #
 # Copyright 1998, 1999 Philip Edelbrock <phil@netroedge.com>
 # modified by Christian Zuckschwerdt <zany@triq.net>
+# modified by Burkart Lingner <burkart@bollchen.de>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -29,6 +30,12 @@
 #  miscellaneous formatting enhancements and bug fixes
 #  clearer HTML output (original patch by Nick Kurshev <nickols_k@mail.ru>)
 #  stop decoding on checksum error by default (--checksum option forces)
+# Version 0.8  2005-06-20  Burkart Lingner <burkart@bollchen.de>
+#  adapted to Kernel 2.6's /sys filesystem
+# Version 0.9  2005-07-15  Jean Delvare <khali@linux-fr.org>
+#  fix perl warning
+#  fix typo
+#  refactor some code
 #
 #
 # EEPROM data decoding for SDRAM DIMM modules. 
@@ -53,7 +60,9 @@
 #
 
 use strict;
-use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck);
+use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs);
+
+$use_sysfs = -d '/sys/bus';
 
 sub printl ($$) # print a line w/ label and value
 {
@@ -115,6 +124,30 @@ sub printh ($) # print header w/ given text
    }
 }
 
+sub readspd16 ($$) { # reads 16 bytes from SPD-EEPROM
+	my ($offset, $dimm_i) = @_;
+	if ($use_sysfs) {
+		# Kernel 2.6 with sysfs
+		open (HANDLE, "/sys/bus/i2c/drivers/eeprom/$dimm_i/eeprom")
+			or die "Cannot open /sys/bus/i2c/drivers/eeprom/$dimm_i/eeprom";
+		binmode HANDLE;
+		seek (HANDLE, $offset, 0);
+		read (HANDLE, my $eeprom, 16);
+		close HANDLE;
+		my @bytes = ();
+		for my $i ( 0 .. 15 ) {
+			$_ = ord substr($eeprom, $i, 1);
+			push(@bytes, $_);
+		}
+		return @bytes;
+	} else {
+		# Kernel 2.4 with procfs
+		$offset = sprintf('%02x', $offset);
+		$_ = `cat /proc/sys/dev/sensors/$dimm_i/$offset`;
+		return split(" ");
+	}
+}
+
 for (@ARGV) {
     if (/-h/) {
 		print "Usage: $0 [-f|-b|-h]\n\n",
@@ -142,34 +175,38 @@ if ($opt_body)
 
 printh '
 PC DIMM Serial Presence Detect Tester/Decoder
-By Philip Edelbrock, Christian Zuckschwerdt and others
-Version 2.6.6
+By Philip Edelbrock, Christian Zuckschwerdt, Burkart Lingner and others
+Version 2.9.2
 ';
 
 
 my $dimm_count=0;
-$_=`ls /proc/sys/dev/sensors/`;
+if ($use_sysfs) { $_=`ls /sys/bus/i2c/drivers/eeprom`; }
+else { $_=`ls /proc/sys/dev/sensors/`; }
 my @dimm_list=split();
 
 for my $i ( 0 .. $#dimm_list ) {
 	$_=$dimm_list[$i];
-	if (/^eeprom-/) {
+	if (($use_sysfs && /^\d+-\d+$/)
+	 || (!$use_sysfs && /^eeprom-/)) {
 		my $dimm_checksum=0;
 		$dimm_count += 1;
 		
 		print "<b><u><br><br>" if $opt_html;
-		printl2 "Decoding EEPROM" , " /proc/sys/dev/sensors/$dimm_list[$i]";
+		printl2 "Decoding EEPROM", ($use_sysfs ?
+			"/sys/bus/i2c/drivers/eeprom/$dimm_list[$i]" :
+			"/proc/sys/dev/sensors/$dimm_list[$i]");
 		print "</u></b>" if $opt_html;
 		print "<table border=1>\n" if $opt_html;
-		if (/^[^-]+-[^-]+-[^-]+-([^-]+)$/) {
+		if (($use_sysfs && /^[^-]+-([^-]+)$/)
+		 || (!$use_sysfs && /^[^-]+-[^-]+-[^-]+-([^-]+)$/)) {
 			my $dimm_num=$1 - 49;
 			printl "Guessing DIMM is in", "bank $dimm_num";
 		}
 # Decode first 16 bytes
 		prints "The Following is Required Data and is Applicable to all DIMM Types";
 
-		$_=`cat /proc/sys/dev/sensors/$dimm_list[$i]/00`;
-		my @bytes=split(" ");
+		my @bytes = readspd16(0, $dimm_list[$i]);
 		for my $j ( 0 .. 15 ) { $dimm_checksum = $dimm_checksum + $bytes[$j];  }
 		
 		printl "# of bytes written to SDRAM EEPROM",$bytes[0];
@@ -185,6 +222,7 @@ for my $i ( 0 .. $#dimm_list ) {
 		if ($bytes[2] == 2) { printl $l, "EDO"; }
 		elsif ($bytes[2] == 4) { printl $l, "SDR SDRAM"; }
 		elsif ($bytes[2] == 7) { printl $l, "DDR SDRAM"; }
+		elsif ($bytes[2] == 8) { printl $l, "DDR2 SDRAM"; }
 		elsif ($bytes[2] == 17) { printl $l, "Rambus [UNSUPPORTED]"; }
 		elsif ($bytes[2] == 1) { printl $l, "Direct Rambus [UNSUPPORTED]"; }
 		else { printl $l, "???"; }
@@ -225,6 +263,22 @@ for my $i ( 0 .. $#dimm_list ) {
 		my $temp=($bytes[9] >> 4) + ($bytes[9] & 0xf) * 0.1;
 		printl $l, "${temp}ns";
 		
+		if (($bytes[2] == 7) || ($bytes[2] == 8)) {
+			my $mul = 2;
+			my $ddr = "DDR";
+			if ($bytes[2] == 8) {
+				$mul = 4;
+				$ddr = "DDR2";
+			} 
+			my $ddrclk = $mul * (1000/$temp);
+			my $tbits = ($bytes[7]*256) + $bytes[6];
+			if (($bytes[11] == 2) ||  ($bytes[11] == 1)) { $tbits = $tbits - 8;}
+			my $pcclk = int ($ddrclk * $tbits / 8);
+			$pcclk = $pcclk - ($pcclk % 100);
+			$ddrclk = int ($ddrclk);
+			printl "Maximum module speed", "$ddr ${ddrclk}MHz (PC${pcclk})";
+		}
+	
 		$l = "Access Time (SDRAM)";
 		$temp=($bytes[10] >> 4) + ($bytes[10] & 0xf) * 0.1;
 		printl $l, "${temp}ns";
@@ -274,8 +328,7 @@ for my $i ( 0 .. $#dimm_list ) {
 		prints "The Following Apply to SDRAM DIMMs ONLY";
 		
 # Decode next 16 bytes
-		$_=`cat /proc/sys/dev/sensors/$dimm_list[$i]/10`;
-		@bytes=split(" ");
+		@bytes = readspd16(16, $dimm_list[$i]);
 		for my $j ( 0 .. 15 ) { $dimm_checksum = $dimm_checksum + $bytes[$j]; }
 		
 		$l = "Burst lengths supported";
@@ -391,7 +444,7 @@ for my $i ( 0 .. $#dimm_list ) {
 		
 		prints "The Following are Required (for SDRAMs)";
 		
-		$l = "Minumum Row Precharge Time";
+		$l = "Minimum Row Precharge Time";
 		if ($bytes[11] == 0) { printl $l, "Undefined!"; }
 		else { printl $l, "$bytes[11]nS"; }
 		
@@ -425,8 +478,7 @@ for my $i ( 0 .. $#dimm_list ) {
 		
 		
 # Decode next 16 bytes (32-47)
-		$_=`cat /proc/sys/dev/sensors/$dimm_list[$i]/20`;
-		@bytes=split(" ");
+		@bytes = readspd16(32, $dimm_list[$i]);
 		for my $j ( 0 .. 15 ) { $dimm_checksum = $dimm_checksum + $bytes[$j];  }
 		
 		prints "The Following are Proposed and Apply to SDRAM DIMMs";
@@ -449,8 +501,7 @@ for my $i ( 0 .. $#dimm_list ) {
 
 # That's it for the lower part of an SDRAM EEPROM's memory!
 # Decode next 16 bytes (48-63)
-		$_=`cat /proc/sys/dev/sensors/$dimm_list[$i]/30`;
-		@bytes=split(" ");
+		@bytes = readspd16(48, $dimm_list[$i]);
 		for my $j ( 0 .. 14 ) { $dimm_checksum = $dimm_checksum + $bytes[$j];  }
 
 		printl "SPD Revision code ", sprintf("%x", $bytes[14]);
@@ -462,13 +513,12 @@ for my $i ( 0 .. $#dimm_list ) {
 
 		if($bytes[15]==$dimm_checksum || $opt_igncheck) {
 # Decode next 16 bytes (64-79)
-		$_=`cat /proc/sys/dev/sensors/$dimm_list[$i]/40`;
-		@bytes=split(" ");
+		@bytes = readspd16(64, $dimm_list[$i]);
 		
 		$l = "Manufacturer's JEDEC ID Code";
 		$temp = sprintf("0x%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X\n",$bytes[0],$bytes[1],$bytes[2],$bytes[3],$bytes[4],$bytes[5],$bytes[6],$bytes[7]);
 		printl $l, $temp;
-		$temp = pack("c8",
+		$temp = pack("C8",
 			$bytes[0],$bytes[1],$bytes[2],$bytes[3],$bytes[4],$bytes[5],$bytes[6],$bytes[7]);
 		printl $l, "(\"$temp\")";
 		
@@ -478,9 +528,9 @@ for my $i ( 0 .. $#dimm_list ) {
 		
 		$l = "Manufacurer's Part Number";
 # Decode next 16 bytes (80-95)
-		$_=`cat /proc/sys/dev/sensors/$dimm_list[$i]/50`;
-		my @bytes2 = split ' ';
-		$temp = pack("c18",$bytes[9],$bytes[10],$bytes[11],$bytes[12],$bytes[13],$bytes[14],$bytes[15],
+		my @bytes2= readspd16(80, $dimm_list[$i]);
+
+		$temp = pack("C18",$bytes[9],$bytes[10],$bytes[11],$bytes[12],$bytes[13],$bytes[14],$bytes[15],
 			$bytes2[0],$bytes2[1],$bytes2[2],$bytes2[3],$bytes2[4],$bytes2[5],$bytes2[6],$bytes2[7],$bytes2[8],$bytes2[9],$bytes2[10]);
 		printl $l, $temp;
 		
@@ -494,13 +544,11 @@ for my $i ( 0 .. $#dimm_list ) {
 		
 		$l = "Assembly Serial Number";
 # Decode next 16 bytes (96-111)
-		$_=`cat /proc/sys/dev/sensors/$dimm_list[$i]/60`;
-		@bytes=split(" ");
+		@bytes = readspd16(96, $dimm_list[$i]);
 		
 		$temp = sprintf("0x%.2X%.2X%.2X%.2X\n",$bytes2[15],$bytes[0],$bytes[1],$bytes[2]);
 # Decode next 16 bytes (112-127)
-		$_=`cat /proc/sys/dev/sensors/$dimm_list[$i]/70`;
-		@bytes=split(" ");
+		@bytes = readspd16(112, $dimm_list[$i]);
 		
 		$l = "Intel Specification for Frequency";
 		if ($bytes[14] == 102) { printl $l, "66MHz\n"; }

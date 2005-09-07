@@ -3,7 +3,6 @@
 
 set -e
 
-
 case "$1" in
 	purge)
 		if [ -e /etc/sensors.conf ]; then
