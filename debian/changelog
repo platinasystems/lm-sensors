@@ -1,3 +1,11 @@
+lm-sensors (1:2.9.1-1sarge2) stable-security; urgency=high
+
+  * Non-maintainer upload by the Security Team
+  * Applied maintainer patch to fix insecure temporary file creation
+    [prog/pwm/pwmconfig, CAN-2005-2672], Closes: Bug#324193
+
+ -- Martin Schulze <joey@infodrom.org>  Mon, 12 Sep 2005 09:13:40 +0200
+
 lm-sensors (1:2.9.1-1sarge1) stable-security; urgency=low
 
   * Fixed and insecure tempfile usage in pwmconfig.
