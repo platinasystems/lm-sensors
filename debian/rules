@@ -173,10 +173,6 @@ install-arch-stamp: build-arch-stamp
 	        cp -f prog/dump/isaset.8 debian/lm-sensors/usr/share/man/man8 ; \
 	fi
 
-	# Blacklist i2c-viapro module
-	echo -e "# i2c-viapro conflicts with via686a, and thus should not be load automatically\ni2c-viapro" \
-		> debian/lm-sensors/etc/hotplug/blacklist.d/lm-sensors
-
 	dh_install -s --sourcedir=debian/tmp
 
 	# binary modules

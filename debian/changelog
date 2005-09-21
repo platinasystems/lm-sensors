@@ -1,3 +1,11 @@
+lm-sensors (1:2.9.2-2) unstable; urgency=low
+
+  * The conflict between i2c-viapro and via686a modules has been fixed in
+    kernel 2.6.10. As the problem is not present anymore in kernels shipped
+    by Debian, don' blacklist i2c-viapro anymore.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 21 Sep 2005 15:24:28 +0200
+
 lm-sensors (1:2.9.2-1) unstable; urgency=low
 
   * New upstream version.
