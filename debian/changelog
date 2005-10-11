@@ -1,3 +1,10 @@
+lm-sensors (1:2.9.2-4) unstable; urgency=low
+
+  * Moved README.Debian from the lm-sensors package to the libsensors3
+    package (closes: bug#333323).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 11 Oct 2005 13:42:48 +0200
+
 lm-sensors (1:2.9.2-3) unstable; urgency=low
 
   * Added Swedish debconf translation. Thanks to Daniel Nylander (closes:
