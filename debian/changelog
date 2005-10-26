@@ -1,3 +1,11 @@
+lm-sensors (1:2.9.2-5) unstable; urgency=low
+
+  * Also recommends linux-image-2.6 as an alternative to kernel-image-2.6, as
+    aptitude is a bit dumb and can't cope with the current recommends line
+    (closes: bug#335746).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 26 Oct 2005 02:36:08 +0200
+
 lm-sensors (1:2.9.2-4) unstable; urgency=low
 
   * Moved README.Debian from the lm-sensors package to the libsensors3
