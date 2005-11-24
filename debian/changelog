@@ -1,3 +1,10 @@
+lm-sensors (1:2.9.2-6) unstable; urgency=low
+
+  * Fixed Suggests line: s/ inux/linux/g (closes: bug#340614).
+  * Fixed FSF address in copyright file.  
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 24 Nov 2005 20:10:31 +0100
+
 lm-sensors (1:2.9.2-5) unstable; urgency=low
 
   * Also recommends linux-image-2.6 as an alternative to kernel-image-2.6, as

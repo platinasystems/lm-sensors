@@ -11,7 +11,7 @@ Architecture: any
 Section: utils
 Depends: makedev (>= 2.3.1-45) | devfsd,  ucf (>= 0.28), sysvinit (>= 2.85-19), sed (>= 4.0.5-1), ${misc:Depends}, ${shlibs:Depends}, ${perl:Depends}
 Recommends: linux-image-2.6 | kernel-image-2.6 | lm-sensors-mod-2.9.2
-Suggests: linux-image-2.6 | kernel-image-2.6 | lm-sensors-source, inux-image-2.6 | kernel-image-2.6 | i2c-source, sensord, read-edid
+Suggests: linux-image-2.6 | kernel-image-2.6 | lm-sensors-source, linux-image-2.6 | kernel-image-2.6 | i2c-source, sensord, read-edid
 Description: utilities to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
  to access information from temperature, voltage, and fan speed sensors. It
