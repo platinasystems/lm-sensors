@@ -1,3 +1,10 @@
+lm-sensors (1:2.9.2-7) unstable; urgency=low
+
+  * Added a note about sensors limits in /usr/share/doc/sensord/README.Debian
+    (closes: bug#336613).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 21 Dec 2005 01:26:25 +0100
+
 lm-sensors (1:2.9.2-6) unstable; urgency=low
 
   * Fixed Suggests line: s/ inux/linux/g (closes: bug#340614).
