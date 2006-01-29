@@ -1,3 +1,9 @@
+lm-sensors (1:2.9.2-8) unstable; urgency=low
+
+  * Fixed udev detection (closes: bug#350404). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 29 Jan 2006 23:07:25 +0100
+
 lm-sensors (1:2.9.2-7) unstable; urgency=low
 
   * Added a note about sensors limits in /usr/share/doc/sensord/README.Debian
