@@ -3,7 +3,7 @@ Package: lm-sensors-_KVERS_
 Architecture: i386
 Provides: lm-sensors-mod-2.9.1
 Depends: kernel-image-_KVERS_, i2c-_KVERS_ (>= 1:2.9.1)
-Conflicts: libsensors3 (<< 2.8.6-8), i2c-_KVERS_ (<< 2.9.0-13)
+Conflicts: libsensors3 (<< 2.8.6-8)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors
  Lm-sensors is a hardware health monitoring package for Linux. It allows you
