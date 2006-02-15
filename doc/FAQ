@@ -8,7 +8,6 @@ lm_sensors
 4 Problems
 5 How to Ask for Help
 6 How to Contribute
-7 Version 1 Specific Questions
 Appendix A Revision History of This Document
 
 
@@ -118,6 +117,7 @@ lm_sensors
   5.6 What if it just works like a charm?
   5.7 How do I update a ticket?
   5.8 How do I follow up on a ticket?
+  5.9 Why did you decide not to support undocumented chips?
 6 How to Contribute
   6.1 How to write a driver
   6.2 How to get CVS access
@@ -127,12 +127,6 @@ lm_sensors
   6.6 How to submit a patch
   6.7 How to REALLY help
   6.8 How to get release announcements
-  6.9 How to block spam on the project mailing list
-7 Version 1 Specific Questions
-  7.1 My manufacturer swears that my mainboard has an SMBus, but your code reports that it can't find it.  What's wrong?
-  7.2 The modules won't load, saying 'SMBus not detected'.
-  7.3 I try to read `/proc/sensors', and I get a "No sensor data yet (try again in a few moments)" message. Why?
-  7.4 On my Dell, a LM80 is detected, but all readings are 0!
 Appendix A Revision History of This Document
 
 
@@ -1237,10 +1231,10 @@ For IBM systems, see `README.thinkpad'.
 ============================
 
 Not all drivers have been ported to 2.6. If your favorite driver is not
-in 2.6, the reason is that nobody has ported it.  Please don't bother
-asking us why it is not in 2.6.  If you would like to port the driver,
-see the file Documentation/i2c/porting-clients in the 2.6 kernel tree
-for help, then send us the ported driver when you are done.
+in 2.6, the reason is that nobody has ported it, or the ported code did
+not get a proper review yet.  If you would like to port the driver, see
+the file Documentation/i2c/porting-clients in the 2.6 kernel tree for
+help, then send us the ported driver when you are done.
 
 4.33.1 i2c-viapro and via686a
 -----------------------------
@@ -1378,6 +1372,78 @@ follow-up information, email us instead. Thanks.
 Follow up by emailing us and reference your ticket number in the
 subject.
 
+5.9 Why did you decide not to support undocumented chips?
+=========================================================
+
+There are several reasons why we are generally not interested in writing
+drivers for undocumented chips:
+
+   * Writing a driver without a datasheet is much harder, as you have to
+     guess most things. Remember that, most of the time, we write
+     drivers for fun and for free, so there is no reason we would write
+     a driver in conditions that promise more pain than fun.
+
+   * If we hit a problem, we are certain never to get any support from
+     the chip manufacturer. This means that we may spend days on code
+     which will finally never work.
+
+   * There are several chips out there which are fully documented and
+     lack a driver. This is natural for us to give these the priority
+     when we finally have some spare time to spend on driver coding.
+
+   * Hardware monitoring chips are not toys. Misprogramming them can
+     result in data loss or hardware breakage. This is obviously more
+     likely to happen with undocumented chips. This is a responsability
+     we do not want to endorse (the GPL is pretty clear than we are not
+     legally liable, but still).
+
+   There are also several reasons why we do not want to support such
+drivers, even if they were written by other people:
+
+   * Problems are much more likely to happen with such drivers.  This
+     means increased needs of support. User support if very
+     time-consuming and we are usually short of time.
+
+   * Support should be done by the driver author (as only him/her knows
+     the driver and chip) but in the reality of facts, people will
+     always ask us for help if the driver is part of our package.
+     Redirecting all user requests to the driver's author manually is
+     boring.
+
+   * The lack of datasheet usually results in an original driver which
+     works relatively fine for its author, but will happen not to work
+     completely for other users. This means that the driver will need
+     many more additions and fixes than other drivers do, resulting in
+     an increased maitainance workload, which we can hardly afford. Of
+     course this too should be handled by the original driver author,
+     but we never know whether he/she will actually do the work.
+
+   Lastly, there are other considerations, some of which are
+deliberately political:
+
+   * We do not want to trick hardware buyers into thinking that a chip
+     is fully supported under Linux when in fact it is only partly
+     supported by a driver which was written without a datasheet.
+     Clearly stating that such chips are not supported makes it much
+     easier for anyone who really needs fully working hardware
+     monitoring under Linux to avoid motherboards with these partly
+     supported chips.
+
+   * Drivers written without a datasheet are a pain for developers and
+     users, but are a complete win for the manufacturers of these chips:
+     they don't have to write the driver, they don't have to help us,
+     they don't have to support the users, and they still sell their
+     hardware. We do not want to encourage such a selfish behavior.
+
+   That being said, authors of such drivers can still submit their code
+to the Linux kernel folks for inclusion into Linux 2.6. Their driver
+may be accepted there, under conditions.
+
+   If such a driver is ever accepted into the Linux 2.6 tree, and
+someone provides a patch to libsensors and/or sensors to add support
+for this driver, we will apply it. This generic code is unlikely to
+cause trouble.
+
 6 How to Contribute
 *******************
 
@@ -1471,78 +1537,13 @@ register on our freshmeat project page
 `http://freshmeat.net/projects/lm_sensors' to 'subscribe to new
 releases' and then freshmeat will email you announcement.
 
-6.9 How to block spam on the project mailing list
-=================================================
-
-Sorry, we know the spam is a hassle.  It would be nice to have a
-moderator who can screen everything, but that takes too much time and
-delays emails.  Right now there is a procmail script which tags likely
-spam and puts in a X-SBClass: header.  If it is followed by 'Spam', then
-it is almost certainly spam, if it is followed by 'Blocked', then it
-scores high as being potential spam.  You should be able to set some
-rules in your mail client to throw those emails into a seperate folder.
-It's not bullet proof (some legit mails get tagged wrong, and vice
-versa), but it seems to be about 95% accurate in our experience.
-
-7 Version 1 Specific Questions
-******************************
-
-Note: Version 1 is very very old and is not recommended.
-
-7.1 My manufacturer swears that my mainboard has an SMBus, but your code reports that it can't find it.  What's wrong?
-======================================================================================================================
-
-Currently, our code only assumes that an SMBus exists if it originates
-from the Intel PIIX4 (82371AB).  If your computer doesn't have one, or
-if your SMBus originates from a different SMBus 'host', then you are
-out of luck. :'( Our experience is, though, that most machines have a
-PIIX4, and that it is where the SMBus is hosted.
-
-   Regarding the VIA chip set(s):
-
-   Right now, the SMBus code depends on the Intel PIIX4 chip to handle
-SMBus transactions.  The VIA chip set is NOT supported at this time
-because it forces much of the SMBus protocol to be implemented by
-software.
-
-   To implement the SMBus correctly with the VIA chip, it needs to be
-written at a low level to be quick.  A more attractive alternative is to
-use the Bios SMBus interface (not always available nor standard).
-
-   Version 2 supports the VIA chipset, and will support other chipsets.
-Version 1 never will.
-
-7.2 The modules won't load, saying 'SMBus not detected'.
-========================================================
-
-This should no longer be an issue in 1.4.10 and later; it will continue
-loading, but it won't support SMBus-connected devices, of course.
-
-7.3 I try to read `/proc/sensors', and I get a "No sensor data yet (try again in a few moments)" message. Why?
-==============================================================================================================
-
-It takes about 1.5 seconds for the LM78 to update all its sensor
-values.  If we would try to read it before it finished that, you would
-get old garbage instead. So you have to wait 1.5 seconds after the
-module is inserted before you can access `/proc/sensors'.
-
-   Module versions 1.3.7 and later let the process sleep if it tries to
-access sensor data right after insertion time, and do not display this
-message anymore.
-
-7.4 On my Dell, a LM80 is detected, but all readings are 0!
-===========================================================
-
-This is a bug we have only observed on Dell computers. There is
-probably a problem with the way the SMBus is accessed; but it is not yet
-clear whether the problem is in our code or with the Dells.
-
-   There are very probably no sensor chips at all on your computer; but
-until somebody contacts Dell about this and tells us the results, we
-can not be sure.
-
 Appendix A Revision History of This Document
 ********************************************
+
+   * Rev 2.18 (JD) Removed version 1 specifics part, 2005-12-17
+
+   * Rev 2.17 (JD) Added 5.9 (why we don't support undocumented chips),
+     removed 6.9 (doesn't apply to the new mailing list), 2005-10-05
 
    * Rev 2.16 (JD) Added 4.33.2, 2005-09-06
 

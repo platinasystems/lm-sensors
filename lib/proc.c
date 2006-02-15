@@ -17,23 +17,21 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* for open() */
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
+#include <sys/sysctl.h>
 #include <stddef.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/sysctl.h>
+#include <limits.h>
+#include <dirent.h>
+
 #include "kernel/include/sensors.h"
 #include "data.h"
 #include "error.h"
 #include "access.h"
 #include "general.h"
-#include <limits.h>
-#include <dirent.h>
+#include "sysfs.h"
 
 /* OK, this proves one thing: if there are too many chips detected, we get in
    trouble. The limit is around 4096/sizeof(struct sensors_chip_data), which
@@ -45,193 +43,19 @@
 
 static char buf[BUF_LEN];
 
-sensors_proc_chips_entry *sensors_proc_chips;
-int sensors_proc_chips_count, sensors_proc_chips_max;
-
-sensors_bus *sensors_proc_bus;
-int sensors_proc_bus_count, sensors_proc_bus_max;
-
-static int sensors_get_chip_id(sensors_chip_name name);
-
-int foundsysfs=0;
-char sysfsmount[NAME_MAX];
-
-#define add_proc_chips(el) sensors_add_array_el(el,\
-                                       &sensors_proc_chips,\
-                                       &sensors_proc_chips_count,\
-                                       &sensors_proc_chips_max,\
-                                       sizeof(struct sensors_proc_chips_entry))
-
-#define add_proc_bus(el) sensors_add_array_el(el,\
-                                       &sensors_proc_bus,\
-                                       &sensors_proc_bus_count,\
-                                       &sensors_proc_bus_max,\
-                                       sizeof(struct sensors_bus))
-
 static int getsysname(const sensors_chip_feature *feature, char *sysname,
 	int *sysmag, char *altsysname);
-
-/* return value: <0 on error, 0 if chip is ignored, 1 if chip is added
-   Warning: name is overwritten */
-static int sensors_read_one_sysfs_chip(char *name, char *dirname, char *id)
-{
-	FILE *f;
-	char x[51];
-	int len;
-	sensors_proc_chips_entry entry;
-
-	if ((f = fopen(name, "r")) == NULL)
-		return -SENSORS_ERR_PROC;
-		
-	if (fscanf(f, "%50[a-zA-z0-9_ ]%n", x, &len) != 1) {
-		fclose(f);
-		return -SENSORS_ERR_CHIP_NAME;
-	}
-	fclose(f);
-
-	/* We don't care about subclients */
-	if (len >= 10 && !strcmp(x + len - 10, " subclient"))
-		return 0;
-
-	/* also, ignore eeproms for all 2.6.x kernels */
-	if (!strcmp(x, "eeprom"))
-		return 0;
-
-	/* Fill in the entry fields */
-	entry.name.prefix = strdup(x);
-	if (entry.name.prefix == NULL)
-		return -SENSORS_ERR_PARSE; /* No better error :( */
-	entry.name.busname = strdup(dirname);
-	if (entry.name.prefix == NULL)
-		return -SENSORS_ERR_PARSE; /* No better error :( */
-	sscanf(id, "%d-%x", &entry.name.bus, &entry.name.addr);
-
-	/* Find out if ISA or not */
-	sprintf(name, "%s/class/i2c-adapter/i2c-%d/device/name",
-		sysfsmount, entry.name.bus);
-	if ((f = fopen(name, "r")) != NULL) {
-		if (fgets(x, 5, f) != NULL
-		 && !strncmp(x, "ISA ", 4))
-			entry.name.bus = SENSORS_CHIP_NAME_BUS_ISA;
-		fclose(f);
-	}
-
-	add_proc_chips(&entry);
-	
-	return 1;
-}
 
 /* This reads /proc/sys/dev/sensors/chips into memory */
 int sensors_read_proc_chips(void)
 {
-	struct dirent *de;
-	DIR *dir;
-	FILE *f;
-	char sysfs[NAME_MAX], n[NAME_MAX];
-	char dirname[NAME_MAX];
-	int res;
+  int res;
 
-	int name[3] = { CTL_DEV, DEV_SENSORS, SENSORS_CHIPS };
-	int buflen = BUF_LEN;
-	char *bufptr = buf;
-	sensors_proc_chips_entry entry;
-	int lineno;
-
-	/* First figure out where sysfs was mounted */
-	if ((f = fopen("/proc/mounts", "r")) == NULL)
-		goto proc;
-	while (fgets(n, NAME_MAX, f)) {
-		char *fstype = dirname; /* alias to keep the code readable */
-
-		if (sscanf(n, "%*[^ ] %[^ ] %[^ ] %*s\n", sysfsmount, fstype)
-				== 2 && !strcasecmp(fstype, "sysfs")) {
-			foundsysfs++;
-			break;
-		}
-	}
-	fclose(f);
-	if (!foundsysfs) {
-		memset(sysfsmount, '\0', sizeof(sysfsmount));
-		goto proc;
-	}
-
-	/* Try /sys/class/hwmon first (Linux 2.6.14 and up) */
-	strncpy(sysfs, sysfsmount, sizeof(sysfs) - 1);
-	sysfs[sizeof(sysfs) - 1] = '\0';
-	strncat(sysfs, "/class/hwmon", sizeof(sysfs) - strlen(sysfs) - 1);
-
-	dir = opendir(sysfs);
-	if (! dir)
-		goto oldsys;
-
-	while ((de = readdir(dir)) != NULL) {
-		char lnk[NAME_MAX];
-		char *id;
-
-		if (de->d_name[0] == '.')
-			continue;
-
-		sprintf(n, "%s/%s", sysfs, de->d_name);
-		strcpy(dirname, n);
-		strcat(n, "/device");
-		if ((res = readlink(n, lnk, NAME_MAX)) < 0)
-			continue;
-		lnk[res] = '\0';
-
-		if (lnk[0] == '/') /* absolute link (unlikely) */
-			strcpy(n, lnk);
-		else if (strncmp(lnk, "../", 3)) /* simple relative link */
-			sprintf(n, "%s/%s/%s", sysfs, de->d_name, lnk);
-		else { /* relative link with ../s, can be simplified */
-			char *p_lnk = lnk + 3;
-			int l = strlen(sysfs) - 1;
-			while (!strncmp(p_lnk, "../", 3)) {
-				p_lnk += 3;
-				while (l && sysfs[--l] != '/') ;
-			}
-			strncpy(n, sysfs, ++l);
-			strcpy(n + l, p_lnk); 
-		}
-		strcpy(dirname, n);
-		id = rindex(n, '/');
-		id++;
-		strcat(n, "/name");
-
-		sensors_read_one_sysfs_chip(n, dirname, id);
-	}
-	closedir(dir);
-	return 0;
-
-oldsys:
-	/* Fall back to /sys/bus/i2c (Linux 2.5 to 2.6.13) */
-	strncpy(sysfs, sysfsmount, sizeof(sysfs) - 1);
-	sysfs[sizeof(sysfs) - 1] = '\0';
-	strncat(sysfs, "/bus/i2c/devices", sizeof(sysfs) - strlen(sysfs) - 1);
-
-	dir = opendir(sysfs);
-	if (! dir)
-		goto proc;
-
-	while ((de = readdir(dir)) != NULL) {
-		if (!strcmp(de->d_name, "."))
-			continue;
-		if (!strcmp(de->d_name, ".."))
-			continue;
-/*
-		if (de->d_type != DT_DIR && de->d_type != DT_LNK)
-			continue;
-*/
-
-		sprintf(n, "%s/%s", sysfs, de->d_name);
-		strcpy(dirname, n);
-		strcat(n, "/name");
-
-		sensors_read_one_sysfs_chip(n, dirname, de->d_name);
-	}
-	closedir(dir);
-	return 0;
-
-proc:
+  int name[3] = { CTL_DEV, DEV_SENSORS, SENSORS_CHIPS };
+  size_t buflen = BUF_LEN;
+  char *bufptr = buf;
+  sensors_proc_chips_entry entry;
+  int lineno;
 
   if (sysctl(name, 3, bufptr, &buflen, NULL, 0))
     return -SENSORS_ERR_PROC;
@@ -245,7 +69,7 @@ proc:
       return res;
     }
     entry.sysctl = ((struct i2c_chips_data *) bufptr)->sysctl_id;
-    add_proc_chips(&entry);
+    sensors_add_proc_chips(&entry);
     bufptr += sizeof(struct i2c_chips_data);
     buflen -= sizeof(struct i2c_chips_data);
     lineno++;
@@ -255,65 +79,11 @@ proc:
 
 int sensors_read_proc_bus(void)
 {
-	struct dirent *de;
-	DIR *dir;
-	FILE *f;
-	char line[255];
-	char *border;
-	sensors_bus entry;
-	int lineno;
-	char sysfs[NAME_MAX], n[NAME_MAX];
-	char dirname[NAME_MAX];
-
-	if(foundsysfs) {
-		strcpy(sysfs, sysfsmount);
-		strcat(sysfs, "/class/i2c-adapter");
-		/* Then read from it */
-		dir = opendir(sysfs);
-		if (! dir)
-			goto proc;
-
-		while ((de = readdir(dir)) != NULL) {
-			if (!strcmp(de->d_name, "."))
-				continue;
-			if (!strcmp(de->d_name, ".."))
-				continue;
-
-			strcpy(n, sysfs);
-			strcat(n, "/");
-			strcat(n, de->d_name);
-			strcpy(dirname, n);
-			strcat(n, "/device/name");
-
-			if ((f = fopen(n, "r")) != NULL) {
-				char	x[120];
-				fgets(x, 120, f);
-				fclose(f);
-				if((border = index(x, '\n')) != NULL)
-					*border = 0;
-				entry.adapter=strdup(x);
-				if(!strncmp(x, "ISA ", 4)) {
-					entry.number = SENSORS_CHIP_NAME_BUS_ISA;
-					entry.algorithm = strdup("ISA bus algorithm");
-				} else if(!sscanf(de->d_name, "i2c-%d", &entry.number)) {
-					entry.number = SENSORS_CHIP_NAME_BUS_DUMMY;
-					entry.algorithm = strdup("Dummy bus algorithm");
-				} else
-					entry.algorithm = strdup("Unavailable from sysfs");
-				if (entry.algorithm == NULL)
-					goto FAT_ERROR_SYS;
-				add_proc_bus(&entry);
-			}
-		}
-		closedir(dir);
-		return 0;
-FAT_ERROR_SYS:
-		sensors_fatal_error("sensors_read_proc_bus", "Allocating entry");
-		closedir(dir);
-		return -SENSORS_ERR_PROC;
-	}
-
-proc:
+  FILE *f;
+  char line[255];
+  char *border;
+  sensors_bus entry;
+  int lineno;
 
   f = fopen("/proc/bus/i2c","r");
   if (!f)
@@ -341,7 +111,7 @@ proc:
       goto ERROR;
     sensors_strip_of_spaces(entry.algorithm);
     sensors_strip_of_spaces(entry.adapter);
-    add_proc_bus(&entry);
+    sensors_add_proc_bus(&entry);
     lineno++;
   }
   fclose(f);
@@ -356,7 +126,7 @@ ERROR:
     
 
 /* This returns the first detected chip which matches the name */
-int sensors_get_chip_id(sensors_chip_name name)
+static int sensors_get_chip_id(sensors_chip_name name)
 {
   int i;
   for (i = 0; i < sensors_proc_chips_count; i++)
@@ -367,61 +137,36 @@ int sensors_get_chip_id(sensors_chip_name name)
   
 /* This reads a feature /proc or /sys file.
    Sysfs uses a one-value-per file system...
-   except for eeprom, which puts the entire eeprom into one file.
 */
 int sensors_read_proc(sensors_chip_name name, int feature, double *value)
 {
 	int sysctl_name[4] = { CTL_DEV, DEV_SENSORS };
 	const sensors_chip_feature *the_feature;
-	int buflen = BUF_LEN;
-	int mag, eepromoffset, fd, ret=0;
+	size_t buflen = BUF_LEN;
+	int mag;
 
-	if(!foundsysfs)
+	if (!sensors_found_sysfs)
 		if ((sysctl_name[2] = sensors_get_chip_id(name)) < 0)
 			return sysctl_name[2];
 	if (! (the_feature = sensors_lookup_feature_nr(name.prefix,feature)))
 		return -SENSORS_ERR_NO_ENTRY;
-	if(foundsysfs) {
+	if (sensors_found_sysfs) {
 		char n[NAME_MAX], altn[NAME_MAX];
 		FILE *f;
 		strcpy(n, name.busname);
 		strcat(n, "/");
-		/* total hack for eeprom */
-		if (! strcmp(name.prefix, "eeprom")){
-			strcat(n, "eeprom");
-			/* we use unbuffered I/O to benefit from eeprom driver
-			   optimization */
-			if ((fd = open(n, O_RDONLY)) >= 0) {
-				eepromoffset =
-				  (the_feature->offset / sizeof(long))  +
-				  (16 * (the_feature->sysctl - EEPROM_SYSCTL1));
-				if (lseek(fd, eepromoffset, SEEK_SET) < 0
-				 || read(fd, &ret, 1) != 1) {
-					close(fd);
-					return -SENSORS_ERR_PROC;
-				}
-				close(fd);
-				*value = ret;
-				return 0;
-			} else
-				return -SENSORS_ERR_PROC;
-		} else {
-			strcpy(altn, n);
-			/* use rindex to append sysname to n */
-			getsysname(the_feature, rindex(n, '\0'), &mag, rindex(altn, '\0'));
-			if ((f = fopen(n, "r")) != NULL
-			 || (f = fopen(altn, "r")) != NULL) {
-				fscanf(f, "%lf", value);
-				fclose(f);
-				for (; mag > 0; mag --)
-					*value /= 10.0;
-		//		fprintf(stderr, "Feature %s value %lf scale %d offset %d\n",
-		//			the_feature->name, *value,
-		//			the_feature->scaling, the_feature->offset);
-				return 0;
-			} else
-				return -SENSORS_ERR_PROC;
-		}
+		strcpy(altn, n);
+		/* use rindex to append sysname to n */
+		getsysname(the_feature, rindex(n, '\0'), &mag, rindex(altn, '\0'));
+		if ((f = fopen(n, "r")) != NULL
+		 || (f = fopen(altn, "r")) != NULL) {
+			fscanf(f, "%lf", value);
+			fclose(f);
+			for (; mag > 0; mag --)
+				*value /= 10.0;
+			return 0;
+		} else
+			return -SENSORS_ERR_PROC;
 	} else {
 		sysctl_name[3] = the_feature->sysctl;
 		if (sysctl(sysctl_name, 4, buf, &buflen, NULL, 0))
@@ -439,15 +184,15 @@ int sensors_write_proc(sensors_chip_name name, int feature, double value)
 {
 	int sysctl_name[4] = { CTL_DEV, DEV_SENSORS };
 	const sensors_chip_feature *the_feature;
-	int buflen = BUF_LEN;
+	size_t buflen = BUF_LEN;
 	int mag;
  
-	if(!foundsysfs)
+	if (!sensors_found_sysfs)
 		if ((sysctl_name[2] = sensors_get_chip_id(name)) < 0)
 			return sysctl_name[2];
 	if (! (the_feature = sensors_lookup_feature_nr(name.prefix,feature)))
 		return -SENSORS_ERR_NO_ENTRY;
-	if(foundsysfs) {
+	if (sensors_found_sysfs) {
 		char n[NAME_MAX], altn[NAME_MAX];
 		FILE *f;
 		strcpy(n, name.busname);
@@ -494,6 +239,38 @@ int sensors_write_proc(sensors_chip_name name, int feature, double value)
 #define INMAG 3
 #define TEMPMAG 3
 
+/* The following are used in getsysname() below */
+struct match {
+	const char * name, * sysname;
+	const int sysmag;
+	const char * altsysname;
+};
+
+static const struct match matches[] = {
+	{ "beeps", "beep_mask", 0 },
+	{ "pwm", "fan1_pwm", 0 },
+	{ "vid", "cpu0_vid", INMAG, "in0_ref" },
+	{ "remote_temp", "temp2_input", TEMPMAG },
+	{ "remote_temp_hyst", "temp2_max_hyst", TEMPMAG },
+	{ "remote_temp_low", "temp2_min", TEMPMAG },
+	{ "remote_temp_over", "temp2_max", TEMPMAG },
+	{ "temp", "temp1_input", TEMPMAG },
+	{ "temp_hyst", "temp1_max_hyst", TEMPMAG },
+	{ "temp_low", "temp1_min", TEMPMAG },
+	{ "temp_over", "temp1_max", TEMPMAG },
+	{ "temp_high", "temp1_max", TEMPMAG },
+	{ "temp_crit", "temp1_crit", TEMPMAG },
+	{ "pwm1", "pwm1", 0, "fan1_pwm" },
+	{ "pwm2", "pwm2", 0, "fan2_pwm" },
+	{ "pwm3", "pwm3", 0, "fan3_pwm" },
+	{ "pwm4", "pwm4", 0, "fan4_pwm" },
+	{ "pwm1_enable", "pwm1_enable", 0, "fan1_pwm_enable" },
+	{ "pwm2_enable", "pwm2_enable", 0, "fan2_pwm_enable" },
+	{ "pwm3_enable", "pwm3_enable", 0, "fan3_pwm_enable" },
+	{ "pwm4_enable", "pwm4_enable", 0, "fan4_pwm_enable" },
+	{ NULL, NULL }
+};
+
 /*
 	Returns the sysfs name and magnitude for a given feature.
 	First looks for a sysfs name and magnitude in the feature structure.
@@ -522,7 +299,7 @@ int sensors_write_proc(sensors_chip_name name, int feature, double value)
 		temp%d_state -> temp%d_status
 		temp%d -> temp%d_input
 		sensor%d -> temp%d_type
-	AND all conversions listed in the matches[] structure below.
+	AND all conversions listed in the matches[] structure above.
 
 	If that fails, returns old /proc feature name and magnitude.
 
@@ -536,40 +313,7 @@ static int getsysname(const sensors_chip_feature *feature, char *sysname,
 	char last;
 	char check; /* used to verify end of string */
 	int num;
-	
-	struct match {
-		const char * name, * sysname;
-		const int sysmag;
-		const char * altsysname;
-	};
-
-	struct match *m;
-
-	struct match matches[] = {
-		{ "beeps", "beep_mask", 0 },
-		{ "pwm", "fan1_pwm", 0 },
-		{ "vid", "cpu0_vid", INMAG, "in0_ref" },
-		{ "remote_temp", "temp2_input", TEMPMAG },
-		{ "remote_temp_hyst", "temp2_max_hyst", TEMPMAG },
-		{ "remote_temp_low", "temp2_min", TEMPMAG },
-		{ "remote_temp_over", "temp2_max", TEMPMAG },
-		{ "temp", "temp1_input", TEMPMAG },
-		{ "temp_hyst", "temp1_max_hyst", TEMPMAG },
-		{ "temp_low", "temp1_min", TEMPMAG },
-		{ "temp_over", "temp1_max", TEMPMAG },
-		{ "temp_high", "temp1_max", TEMPMAG },
-		{ "temp_crit", "temp1_crit", TEMPMAG },
-		{ "pwm1", "pwm1", 0, "fan1_pwm" },
-		{ "pwm2", "pwm2", 0, "fan2_pwm" },
-		{ "pwm3", "pwm3", 0, "fan3_pwm" },
-		{ "pwm4", "pwm4", 0, "fan4_pwm" },
-		{ "pwm1_enable", "pwm1_enable", 0, "fan1_pwm_enable" },
-		{ "pwm2_enable", "pwm2_enable", 0, "fan2_pwm_enable" },
-		{ "pwm3_enable", "pwm3_enable", 0, "fan3_pwm_enable" },
-		{ "pwm4_enable", "pwm4_enable", 0, "fan4_pwm_enable" },
-		{ NULL, NULL }
-	};
-
+	const struct match *m;
 
 /* default to a non-existent alternate name (should rarely be tried) */
 	strcpy(altsysname, "_");

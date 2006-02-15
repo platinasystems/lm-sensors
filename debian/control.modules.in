@@ -1,14 +1,14 @@
 Source: lm-sensors
 Section: misc
 Priority: extra
-Build-Depends: debhelper (>= 4.0.0), bison, flex | flex-old, i2c-source (>= 1:2.9.0)
+Build-Depends: debhelper (>= 4.0.0), bison, flex | flex-old, i2c-source (>= 1:2.10.0)
 Maintainer: Aurelien Jarno <aurel32@debian.org>
-Standards-Version: 3.6.1
+Standards-Version: 3.6.2
 
 Package: lm-sensors-_KVERS_
 Architecture: any
-Provides: lm-sensors-mod-2.9.2
-Depends: kernel-image-_KVERS_, i2c-_KVERS_ (>= 1:2.9.1)
+Provides: lm-sensors-mod-2.10
+Depends: kernel-image-_KVERS_, i2c-_KVERS_ (>= 1:2.10.0)
 Conflicts: libsensors3 (<< 2.8.6-8), i2c-_KVERS_ (<< 2.9.0-13)
 Recommends: lm-sensors (>= 2.8.6-9)
 Description: kernel drivers to read temperature/voltage/fan sensors

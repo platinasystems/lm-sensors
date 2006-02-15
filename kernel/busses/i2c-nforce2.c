@@ -28,6 +28,7 @@
     nForce3 Pro150 MCP		00D4
     nForce3 250Gb MCP		00E4
     nForce4 MCP			0052
+    nForce4 MCP-04		0034
 
     This driver supports the 2 SMBuses that are included in the MCP of the
     nForce2/3/4 chipsets.
@@ -71,6 +72,10 @@ MODULE_DESCRIPTION("nForce2 SMBus driver");
 
 #ifndef PCI_DEVICE_ID_NVIDIA_NFORCE4_SMBUS
 #define PCI_DEVICE_ID_NVIDIA_NFORCE4_SMBUS	0x0052
+#endif
+
+#ifndef PCI_DEVICE_ID_NVIDIA_NFORCE_MPC04_SMBUS
+#define PCI_DEVICE_ID_NVIDIA_NFORCE_MPC04_SMBUS	0x0034
 #endif
 
 
@@ -118,11 +123,7 @@ struct nforce2_smbus {
 #define NVIDIA_SMB_PRTCL_I2C_BLOCK_DATA		0x4a
 #define NVIDIA_SMB_PRTCL_PEC			0x80
 
-
-/* Other settings */
-#define MAX_TIMEOUT 256
-
-
+static struct pci_driver nforce2_driver;
 
 static s32 nforce2_access(struct i2c_adapter *adap, u16 addr,
 		       unsigned short flags, char read_write,
@@ -149,7 +150,6 @@ s32 nforce2_access(struct i2c_adapter * adap, u16 addr, unsigned short flags,
 	struct nforce2_smbus *smbus = adap->algo_data;
 	unsigned char protocol, pec, temp;
 	unsigned char len = 0; /* to keep the compiler quiet */
-	int timeout = 0;
 	int i;
 
 	protocol = (read_write == I2C_SMBUS_READ) ? NVIDIA_SMB_PRTCL_READ : NVIDIA_SMB_PRTCL_WRITE;
@@ -208,35 +208,9 @@ s32 nforce2_access(struct i2c_adapter * adap, u16 addr, unsigned short flags,
 		case I2C_SMBUS_PROC_CALL:
 			printk(KERN_WARNING "i2c-nforce2.o: I2C_SMBUS_PROC_CALL not supported!\n");
 			return -1;
-			/*
-			outb_p(command, NVIDIA_SMB_CMD);
-			outb_p(data->word, NVIDIA_SMB_DATA);
-			outb_p(data->word >> 8, NVIDIA_SMB_DATA + 1);
-			protocol = NVIDIA_SMB_PRTCL_PROC_CALL | pec;
-			read_write = I2C_SMBUS_READ;
-			break;
-			 */
 
 		case I2C_SMBUS_BLOCK_PROC_CALL:
 			printk(KERN_WARNING "i2c-nforce2.o: I2C_SMBUS_BLOCK_PROC_CALL not supported!\n");
-			return -1;
-			/*
-			protocol |= pec;
-			len = min_t(u8, data->block[0], 31);
-			outb_p(command, NVIDIA_SMB_CMD);
-			outb_p(len, NVIDIA_SMB_BCNT);
-			for (i = 0; i < len; i++)
-				outb_p(data->block[i + 1], NVIDIA_SMB_DATA + i);
-			protocol = NVIDIA_SMB_PRTCL_BLOCK_PROC_CALL | pec;
-			read_write = I2C_SMBUS_READ;
-			break;
-			*/
-
-		case I2C_SMBUS_WORD_DATA_PEC:
-		case I2C_SMBUS_BLOCK_DATA_PEC:
-		case I2C_SMBUS_PROC_CALL_PEC:
-		case I2C_SMBUS_BLOCK_PROC_CALL_PEC:
-			printk(KERN_WARNING "i2c-nforce2.c: Unexpected software PEC transaction %d\n.", size);
 			return -1;
 
 		default:
@@ -249,12 +223,6 @@ s32 nforce2_access(struct i2c_adapter * adap, u16 addr, unsigned short flags,
 
 	temp = inb_p(NVIDIA_SMB_STS);
 
-#if 0
-	do {
-		i2c_delay(1);
-		temp = inb_p(NVIDIA_SMB_STS);
-	} while (((temp & NVIDIA_SMB_STS_DONE) == 0) && (timeout++ < MAX_TIMEOUT));
-#endif
 	if (~temp & NVIDIA_SMB_STS_DONE) {
 		udelay(500);
 		temp = inb_p(NVIDIA_SMB_STS);
@@ -264,8 +232,11 @@ s32 nforce2_access(struct i2c_adapter * adap, u16 addr, unsigned short flags,
 		temp = inb_p(NVIDIA_SMB_STS);
 	}
 
-	if ((timeout >= MAX_TIMEOUT) || (~temp & NVIDIA_SMB_STS_DONE) || (temp & NVIDIA_SMB_STS_STATUS))
+	if ((~temp & NVIDIA_SMB_STS_DONE) || (temp & NVIDIA_SMB_STS_STATUS)) {
+		printk(KERN_DEBUG "i2c-nforce2.o: SMBus Timeout! (0x%02x)\n",
+		       temp);
 		return -1;
+	}
 
 	if (read_write == I2C_SMBUS_WRITE)
 		return 0;
@@ -330,6 +301,8 @@ static struct pci_device_id nforce2_ids[] = {
 	       	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE4_SMBUS,
 	       	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE_MPC04_SMBUS,
+	       	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 },
 	{ 0 }
 };
 
@@ -347,7 +320,7 @@ static int __devinit nforce2_probe_smb (struct pci_dev *dev, int reg, struct nfo
 	smbus->base = iobase & 0xfffc;
 	smbus->size = 8;
 
-	if (!request_region(smbus->base, smbus->size, "nForce2 SMBus")) {
+	if (!request_region(smbus->base, smbus->size, nforce2_driver.name)) {
 		printk (KERN_ERR "i2c-nforce2.o: Error requesting region %02x .. %02X for %s\n", smbus->base, smbus->base+smbus->size-1, name);
 		return -1;
 	}
@@ -376,8 +349,7 @@ static int __devinit nforce2_probe(struct pci_dev *dev, const struct pci_device_
 	int res1, res2;
 
 	/* we support 2 SMBus adapters */
-	if (!(smbuses = (void *)kmalloc(2*sizeof(struct nforce2_smbus),
-				       	GFP_KERNEL)))
+	if (!(smbuses = kmalloc(2*sizeof(struct nforce2_smbus), GFP_KERNEL)))
 		return -ENOMEM;
 	memset (smbuses, 0, 2*sizeof(struct nforce2_smbus));
 	pci_set_drvdata(dev, smbuses);

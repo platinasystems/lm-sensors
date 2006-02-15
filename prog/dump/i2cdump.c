@@ -28,21 +28,6 @@
 #include "i2c-dev.h"
 #include "version.h"
 
-/*
-   We don't use this #define but it was put into i2c.h at the same time as
-   i2c_smbus_read_i2c_block_data() was implemented (i2c 2.6.3),
-   so we use it as a version check.
-*/
-#ifdef I2C_FUNC_SMBUS_READ_I2C_BLOCK_2
-#define USE_I2C_BLOCK 1
-#else
-#define USE_I2C_BLOCK 0
-#endif
-
-#ifdef I2C_FUNC_SMBUS_BLOCK_DATA_PEC
-#define HAVE_PEC 1
-#endif
-
 void help(void)
 {
 	fprintf(stderr, "Syntax: i2cdump [-y] I2CBUS ADDRESS [MODE] [BANK "
@@ -184,7 +169,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	file = open_i2c_dev(i2cbus, filename);
+	file = open_i2c_dev(i2cbus, filename, 0);
 	if (file < 0) {
 		exit(1);
 	}
@@ -198,86 +183,35 @@ int main(int argc, char *argv[])
 
 	switch(size) {
 	case I2C_SMBUS_BYTE:
-#ifdef HAVE_PEC
-		if (pec) {
-			if (!(funcs & I2C_FUNC_SMBUS_READ_BYTE_PEC)) {
-				fprintf(stderr, "Error: Adapter for i2c bus "
-				        "%d does not have read w/ PEC "
-				        "capability\n", i2cbus);
-				exit(1);
-			}
-		} else
-#endif
-		{
-			if (!(funcs & I2C_FUNC_SMBUS_READ_BYTE)) {
-				fprintf(stderr, "Error: Adapter for i2c bus "
-				        "%d does not have read capability\n",
-				        i2cbus);
-				exit(1);
-			}
+		if (!((funcs & I2C_FUNC_SMBUS_BYTE) == I2C_FUNC_SMBUS_BYTE)) {
+			fprintf(stderr, "Error: Adapter for i2c bus %d does "
+				"not have byte capability\n", i2cbus);
+			exit(1);
 		}
 		break;
 
 	case I2C_SMBUS_BYTE_DATA:
-#ifdef HAVE_PEC
-		if (pec) {
-			if (!(funcs & I2C_FUNC_SMBUS_READ_BYTE_DATA_PEC)) {
-				fprintf(stderr, "Error: Adapter for i2c bus "
-				        "%d does not have byte read w/ PEC "
-				        "capability\n", i2cbus);
-				exit(1);
-			}
-		} else
-#endif
-		{
-			if (!(funcs & I2C_FUNC_SMBUS_READ_BYTE_DATA)) {
-				fprintf(stderr, "Error: Adapter for i2c bus "
-				        "%d does not have byte read "
-				        "capability\n", i2cbus);
-				exit(1);
-			}
+		if (!(funcs & I2C_FUNC_SMBUS_READ_BYTE_DATA)) {
+			fprintf(stderr, "Error: Adapter for i2c bus %d does "
+				"not have byte read capability\n", i2cbus);
+			exit(1);
 		}
 		break;
 
 	case I2C_SMBUS_WORD_DATA:
-#ifdef HAVE_PEC
-		if (pec) {
-			if (!(funcs & I2C_FUNC_SMBUS_READ_WORD_DATA_PEC)) {
-				fprintf(stderr, "Error: Adapter for i2c bus "
-				        "%d does not have word read w/ PEC "
-					"capability\n", i2cbus);
-				exit(1);
-			}
-		} else
-#endif
-		{
-			if (!(funcs & I2C_FUNC_SMBUS_READ_WORD_DATA)) {
-				fprintf(stderr, "Error: Adapter for i2c bus "
-				        "%d does not have word read "
-				        "capability\n", i2cbus);
-				exit(1);
-			}
+		if (!(funcs & I2C_FUNC_SMBUS_READ_WORD_DATA)) {
+			fprintf(stderr, "Error: Adapter for i2c bus %d does "
+				"not have word read capability\n", i2cbus);
+			exit(1);
 		}
 		break;
 
 	case I2C_SMBUS_BLOCK_DATA:
-#ifdef HAVE_PEC
-		if (pec) {
-			if (!(funcs & I2C_FUNC_SMBUS_READ_BLOCK_DATA_PEC)) {
-				fprintf(stderr, "Error: Adapter for i2c bus "
-				        "%d does not have smbus block read "
-					"w/ PEC capability\n", i2cbus);
-				exit(1);
-			}
-		} else
-#endif
-		{
-			if (!(funcs & I2C_FUNC_SMBUS_READ_BLOCK_DATA)) {
-				fprintf(stderr, "Error: Adapter for i2c bus "
-				        "%d does not have smbus block read "
-				        "capability\n", i2cbus);
-				exit(1);
-			}
+		if (!(funcs & I2C_FUNC_SMBUS_READ_BLOCK_DATA)) {
+			fprintf(stderr, "Error: Adapter for i2c bus %d does "
+				"not have smbus block read capability\n",
+				i2cbus);
+			exit(1);
 		}
 		break;
 
@@ -300,16 +234,15 @@ int main(int argc, char *argv[])
 	}
 
 	if (pec) {
-#ifdef HAVE_PEC
 		if (ioctl(file, I2C_PEC, 1) < 0) {
 			fprintf(stderr, "Error: Could not set PEC: %s\n",
 			        strerror(errno));
 			exit(1);
 		}
-#else
-		fprintf(stderr, "Error: PEC not supported in your kernel\n");
-		exit(1);
-#endif
+		if (!(funcs & (I2C_FUNC_SMBUS_HWPEC_CALC | I2C_FUNC_I2C))) {
+			fprintf(stderr, "Warning: Adapter for i2c bus %d does "
+			        "not seem to actually support PEC\n", i2cbus);
+		}
 	}
 
 	if (!yes) {
@@ -361,18 +294,12 @@ int main(int argc, char *argv[])
 				res = i2c_smbus_read_block_data(file, bank,
 				      cblock);
 			} else {
-#if USE_I2C_BLOCK
 				for (res = 0; res < 256; res += i) {
 					i = i2c_smbus_read_i2c_block_data(file,
 						res, cblock + res);
 					if (i <= 0)
 						break;
 				}
-#else
-				fprintf(stderr, "Error: I2C block read "
-				        "unsupported in i2c-core\n");
-				exit(1);
-#endif
 			}
 			if (res <= 0) {
 				fprintf(stderr, "Error: Block read failed, "

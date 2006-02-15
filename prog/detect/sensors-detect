@@ -47,7 +47,7 @@ $ENV{PATH} = '/usr/local/sbin:'.$ENV{PATH}
 
 use vars qw(@pci_adapters @chip_ids @superio_ids $revision);
 
-$revision = '$Revision: 1.393 $ ($Date: 2005/08/30 18:51:18 $)';
+$revision = '$Revision: 1.413 $ ($Date: 2006/01/19 20:28:00 $)';
 $revision =~ s/\$\w+: (.*?) \$/$1/g;
 
 # This is the list of SMBus or I2C adapters we recognize by their PCI
@@ -57,9 +57,8 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
 # Function) and procid (string as appears in /proc/pci; see linux/driver/pci,
 # either pci.c or oldproc.c). If no driver is written yet, set the 
 # driver (Driver Name) field to "to-be-written".
-# The match (Match Description) field should
-# contain a function which returns zero if its two parameter matches
-# the text as it would appear in /proc/bus/i2c.
+# The match (Match Description) field should contain a regular expression
+# matching the adapter name as it would appear in /proc/bus/i2c or /sys.
 @pci_adapters = ( 
      { 
        vendid => 0x8086,
@@ -67,7 +66,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82371AB PIIX4 ACPI",
        driver => "i2c-piix4",
-       match => sub { $_[0] =~ /^SMBus PIIX4 adapter at / },
+       match => qr/^SMBus PIIX4 adapter at /,
      } , 
      { 
        vendid => 0x8086,
@@ -75,7 +74,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82443MX Mobile",
        driver => "i2c-piix4",
-       match => sub { $_[0] =~ /^SMBus PIIX4 adapter at / },
+       match => qr/^SMBus PIIX4 adapter at /,
      } , 
      { 
        vendid => 0x8086,
@@ -83,7 +82,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82801AA ICH",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x8086,
@@ -91,7 +90,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82801AB ICH0",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x8086,
@@ -99,7 +98,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82801BA ICH2",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x8086,
@@ -107,7 +106,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82801CA/CAM ICH3",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x8086,
@@ -115,7 +114,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82801DB ICH4",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x8086,
@@ -123,7 +122,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82801EB ICH5",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x8086,
@@ -131,7 +130,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 6300ESB",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x8086,
@@ -139,7 +138,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel Enterprise Southbridge - ESB2",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      },
      {
        vendid => 0x8086,
@@ -147,7 +146,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel 82801FB ICH6",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x8086,
@@ -155,7 +154,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "Intel ICH7",
        driver => "i2c-i801",
-       match => sub { $_[0] =~ /^SMBus I801 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus I801 adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x1106,
@@ -163,7 +162,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "VIA Technologies VT82C586B Apollo ACPI",
        driver => "i2c-via",
-       match => sub { $_[0] =~ /^VIA i2c/ },
+       match => qr/^VIA i2c/,
      } ,
      { 
        vendid => 0x1106,
@@ -171,7 +170,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "VIA Technologies VT82C596 Apollo ACPI",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
      } ,
      { 
        vendid => 0x1106,
@@ -179,7 +178,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "VIA Technologies VT82C596B ACPI",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
      } ,
      { 
        vendid => 0x1106,
@@ -187,7 +186,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 4,
        procid => "VIA Technologies VT82C686 Apollo ACPI",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
      } ,
      { 
        vendid => 0x1106,
@@ -195,7 +194,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "VIA Technologies VT8233 VLink South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
      } ,
      { 
        vendid => 0x1106,
@@ -203,7 +202,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "VIA Technologies VT8233A South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
      } ,
      { 
        vendid => 0x1106,
@@ -211,7 +210,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "VIA Technologies VT8233A/8235 South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
      } ,
      {
        vendid => 0x1106,
@@ -219,7 +218,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "VIA Technologies VT8237 South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
      } ,
      { 
        vendid => 0x1106,
@@ -227,7 +226,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 4,
        procid => "VIA Technologies VT8231 South Bridge",
        driver => "i2c-viapro",
-       match => sub { $_[0] =~ /^SMBus V(IA|ia) Pro adapter at/ },
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
      } ,
      {
        vendid => 0x1039,
@@ -235,7 +234,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Silicon Integrated Systems SIS5581/5582/5597/5598 (To be written - Do not use 5595 drivers)",
        driver => "to-be-written",
-       match => sub { 0 },
      } ,
      {
        vendid => 0x1039,
@@ -243,7 +241,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Silicon Integrated Systems SIS5598 (To be written - Do not use 5595 drivers)",
        driver => "to-be-written",
-       match => sub { 0 },
      } ,
      {
        vendid => 0x1039,
@@ -251,7 +248,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Silicon Integrated Systems SIS540 (To be written - Do not use 5595 drivers)",
        driver => "to-be-written",
-       match => sub { 0 },
      } ,
      {
        vendid => 0x1039,
@@ -259,7 +255,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Silicon Integrated Systems SIS630",
        driver => "i2c-sis630",
-       match => sub { $_[0] =~ /^SMBus SIS630 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus SIS630 adapter at [0-9a-f]{4}/,
      } ,
      {
        vendid => 0x1039,
@@ -267,7 +263,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Silicon Integrated Systems SIS730",
        driver => "i2c-sis630",
-       match => sub { $_[0] =~ /^SMBus SIS630 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus SIS630 adapter at [0-9a-f]{4}/,
      } ,
 #
 # Both Ali chips below have same PCI ID. Can't be helped. Only one should load.
@@ -278,7 +274,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Acer Labs 1533/1543",
        driver => "i2c-ali15x3",
-       match => sub { $_[0] =~ /^SMBus ALI15X3 adapter at/ },
+       match => qr/^SMBus ALI15X3 adapter at/,
      },
      {
        vendid => 0x10b9,
@@ -286,7 +282,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Acer Labs 1535",
        driver => "i2c-ali1535",
-       match => sub { $_[0] =~ /^SMBus ALI1535 adapter at/ },
+       match => qr/^SMBus ALI1535 adapter at/,
      },
      {
        vendid => 0x10b9,
@@ -294,7 +290,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Acer Labs 1563",
        driver => "i2c-ali1563",
-       match => sub { $_[0] =~ /^SMBus ALi 1563 Adapter @/ },
+       match => qr/^SMBus ALi 1563 Adapter @/,
      },
      { 
        vendid => 0x106b,
@@ -302,7 +298,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Apple Computer Inc. Hydra Mac I/O",
        driver => "i2c-hydra",
-       match => sub { $_[0] =~ /^Hydra i2c/ },
+       match => qr/^Hydra i2c/,
      },
      { 
        vendid => 0x1022,
@@ -310,7 +306,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "AMD-756 Athlon ACPI",
        driver => "i2c-amd756",
-       match => sub { $_[0] =~ /^SMBus AMD756 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus AMD756 adapter at [0-9a-f]{4}/,
      },
      { 
        vendid => 0x1022,
@@ -318,7 +314,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "AMD-766 Athlon ACPI",
        driver => "i2c-amd756",
-       match => sub { $_[0] =~ /^SMBus AMD766 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus AMD766 adapter at [0-9a-f]{4}/,
      },
      { 
        vendid => 0x1022,
@@ -326,7 +322,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "AMD-768 System Management",
        driver => "i2c-amd756",
-       match => sub { $_[0] =~ /^SMBus AMD768 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus AMD768 adapter at [0-9a-f]{4}/,
      },
      { 
        vendid => 0x1022,
@@ -334,7 +330,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 3,
        procid => "AMD-8111 ACPI",
        driver => "i2c-amd756",
-       match => sub { $_[0] =~ /^SMBus AMD8111 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus AMD8111 adapter at [0-9a-f]{4}/,
      },
      { 
        vendid => 0x1022,
@@ -342,7 +338,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 2,
        procid => "AMD-8111 SMBus 2.0",
        driver => "i2c-amd8111",
-       match => sub { $_[0] =~ /^SMBus2 AMD8111 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus2 AMD8111 adapter at [0-9a-f]{4}/,
      },
      {
        vendid => 0x102b,
@@ -350,7 +346,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA 2064W [Millennium]",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -358,7 +354,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA 1064SG [Mystique]",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -366,7 +362,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA 2164W [Millennium II]",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -374,7 +370,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA 1064SG [Mystique] AGP",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -382,7 +378,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA 2164W [Millennium II] AGP",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -390,7 +386,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA G100 [Productiva]",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -398,7 +394,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA G100 [Productiva] AGP",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -406,7 +402,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA G200",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -414,7 +410,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA G200 AGP",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^DDC:fb[0-9]{1,2}/ },
+       match  => qr/^DDC:fb[0-9]{1,2}/,
      },
      {
        vendid => 0x102b,
@@ -422,7 +418,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "MGA G400 AGP",
        driver => "i2c-matroxfb",
-       match  => sub { $_[0] =~ /^(DDC,MAVEN):fb[0-9]{1,2}/ },
+       match  => qr/^(DDC,MAVEN):fb[0-9]{1,2}/,
      },
      {
        vendid => 0x121a,
@@ -430,7 +426,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "3Dfx Voodoo3",
        driver => "i2c-voodoo3",
-       match  => sub { $_[0] =~ /Banshee adapter/ },
+       match  => qr/^(I2C|DDC) Voodoo3\/Banshee adapter/,
      },
      {
        vendid => 0x121a,
@@ -438,7 +434,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func   => 0,
        procid => "3Dfx Voodoo Banshee",
        driver => "i2c-voodoo3",
-       match  => sub { $_[0] =~ /Banshee adapter/ },
+       match  => qr/^(I2C|DDC) Voodoo3\/Banshee adapter/,
      },
      { 
        vendid => 0x8086,
@@ -446,7 +442,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Intel 82810 GMCH",
        driver => "i2c-i810",
-       match => sub { $_[0] =~ /^I810/ },
+       match => qr/^I810/,
      } , 
      { 
        vendid => 0x8086,
@@ -454,7 +450,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Intel 82810-DC100 GMCH",
        driver => "i2c-i810",
-       match => sub { $_[0] =~ /^I810/ },
+       match => qr/^I810/ ,
      } , 
      { 
        vendid => 0x8086,
@@ -462,7 +458,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Intel 82810E GMCH",
        driver => "i2c-i810",
-       match => sub { $_[0] =~ /^I810/ },
+       match => qr/^I810/,
      } , 
      { 
        vendid => 0x8086,
@@ -470,15 +466,23 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Intel 82815 GMCH",
        driver => "i2c-i810",
-       match => sub { $_[0] =~ /^I810/ },
+       match => qr/^I810/,
      } , 
+     {
+       vendid => 0x8086,
+       devid  => 0x2562,
+       func => 0,
+       procid => "Intel 82845G GMCH",
+       driver => "i2c-i810",
+       match => qr/^I810/,
+     },
      { 
        vendid => 0x12d2,
        devid  => 0x0018,
        func => 0,
        procid => "RIVA 128",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -486,7 +490,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "RIVA TNT",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -494,7 +498,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "RIVA TNT2",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -502,7 +506,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "RIVA UTNT2",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -510,7 +514,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "RIVA VTNT2",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -518,7 +522,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "RIVA UVTNT2",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -526,7 +530,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "RIVA ITNT2",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -534,7 +538,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce SDR",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -542,7 +546,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce DDR",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -550,7 +554,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Quadro",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -558,7 +562,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce2 GTS",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -566,7 +570,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce2 MX",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -574,7 +578,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce2 MX2",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -582,7 +586,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Quadro2 MXR",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -590,7 +594,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce2 GTS2",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -598,7 +602,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce2 Ultra",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -606,7 +610,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "Quadro2 Pro",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      } , 
      { 
        vendid => 0x10de,
@@ -614,7 +618,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce FX 5600",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      },
      {
        vendid => 0x10de,
@@ -622,7 +626,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce FX 5900 Ultra",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      },
      {
        vendid => 0x10de,
@@ -630,7 +634,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce FX 5900",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      },
      {
        vendid => 0x10de,
@@ -638,7 +642,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce FX 5900 XT",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      },
      {
        vendid => 0x10de,
@@ -646,7 +650,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "GeForce FX 5950 Ultra",
        driver => "rivatv",
-       match => sub { $_[0] =~ /^NVIDIA display/ },
+       match => qr/^NVIDIA display/,
      },
      {
        vendid => 0x10de,
@@ -654,7 +658,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 1,
        procid => "nVidia nForce SMBus",
        driver => "i2c-amd756",
-       match => sub { $_[0] =~ /^SMBus nVidia nForce adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus nVidia nForce adapter at [0-9a-f]{4}/,
      } , 
      { 
        vendid => 0x10de,
@@ -662,7 +666,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 1,
        procid => "nVidia Corporation nForce2 SMBus (MCP)",
        driver => "i2c-nforce2",
-       match => sub { $_[0] =~ /^SMBus nForce2 adapter at / },
+       match => qr/^SMBus nForce2 adapter at /,
      }, 
      {
        vendid => 0x10de,
@@ -670,7 +674,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 1,
        procid => "nVidia Corporation nForce2 Ultra 400 SMBus (MCP)",
        driver => "i2c-nforce2",
-       match => sub { $_[0] =~ /^SMBus nForce2 adapter at / },
+       match => qr/^SMBus nForce2 adapter at /,
      }, 
      {
        vendid => 0x10de,
@@ -678,7 +682,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 1,
        procid => "nVidia Corporation nForce3 Pro150 SMBus (MCP)",
        driver => "i2c-nforce2",
-       match => sub { $_[0] =~ /^SMBus nForce2 adapter at / },
+       match => qr/^SMBus nForce2 adapter at /,
      }, 
      {
        vendid => 0x10de,
@@ -686,7 +690,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 1,
        procid => "nVidia Corporation nForce3 250Gb SMBus (MCP)",
        driver => "i2c-nforce2",
-       match => sub { $_[0] =~ /^SMBus nForce2 adapter at / },
+       match => qr/^SMBus nForce2 adapter at /,
      }, 
      {
        vendid => 0x10de,
@@ -694,7 +698,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 1,
        procid => "nVidia Corporation nForce4 SMBus (MCP)",
        driver => "i2c-nforce2",
-       match => sub { $_[0] =~ /^SMBus nForce2 adapter at / },
+       match => qr/^SMBus nForce2 adapter at /,
      }, 
      {
        vendid => 0x1166,
@@ -702,7 +706,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "ServerWorks OSB4 South Bridge",
        driver => "i2c-piix4",
-       match => sub { $_[0] =~ /^SMBus PIIX4 adapter at / },
+       match => qr/^SMBus PIIX4 adapter at /,
      } , 
      { 
        vendid => 0x1055,
@@ -710,7 +714,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "SMSC Victory66 South Bridge",
        driver => "i2c-piix4",
-       match => sub { $_[0] =~ /^SMBus PIIX4 adapter at / },
+       match => qr/^SMBus PIIX4 adapter at /,
      } , 
      { 
        vendid => 0x1166,
@@ -718,7 +722,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "ServerWorks CSB5 South Bridge",
        driver => "i2c-piix4",
-       match => sub { $_[0] =~ /^SMBus PIIX4 adapter at / },
+       match => qr/^SMBus PIIX4 adapter at /,
      } , 
      { 
        vendid => 0x1166,
@@ -726,7 +730,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "ServerWorks CSB6 South Bridge",
        driver => "i2c-piix4",
-       match => sub { $_[0] =~ /^SMBus PIIX4 adapter at / },
+       match => qr/^SMBus PIIX4 adapter at /,
      } , 
      { 
        vendid => 0x1283,
@@ -734,7 +738,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "ITE 8172G MIPS/SH4 Support Chip",
        driver => "i2c-adap-ite",
-       match => sub { $_[0] =~ /^ITE IIC adapter/ },
+       match => qr/^ITE IIC adapter/,
      } , 
      { 
        vendid => 0x5333,
@@ -742,7 +746,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 Savage 3D",
        driver => "to-be-written",
-       match => sub { 0 },
      } , 
      { 
        vendid => 0x5333,
@@ -750,7 +753,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 Savage 3D MV",
        driver => "to-be-written",
-       match => sub { 0 },
      } , 
      { 
        vendid => 0x5333,
@@ -758,7 +760,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 Savage 4",
        driver => "i2c-savage4",
-       match => sub { $_[0] =~ /Savage4 adapter/ },
+       match => qr/^I2C Savage4 adapter/,
      } , 
      { 
        vendid => 0x5333,
@@ -766,7 +768,7 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 Savage 2000",
        driver => "i2c-savage4",
-       match => sub { $_[0] =~ /Savage4 adapter/ },
+       match => qr/^I2C Savage4 adapter/,
      } , 
      { 
        vendid => 0x5333,
@@ -774,7 +776,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 ProSavage PM",
        driver => "to-be-written",
-       match => sub { $_[0] =~ /^dontmatchthis/ },
      } , 
      { 
        vendid => 0x5333,
@@ -782,7 +783,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 ProSavage KM",
        driver => "to-be-written",
-       match => sub { 0 },
      } , 
      { 
        vendid => 0x5333,
@@ -790,7 +790,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 Savage MX MV",
        driver => "to-be-written",
-       match => sub { 0 },
      } , 
      { 
        vendid => 0x5333,
@@ -798,7 +797,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 Savage MX",
        driver => "to-be-written",
-       match => sub { 0 },
      } , 
      { 
        vendid => 0x5333,
@@ -806,7 +804,6 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 Savage IX MV",
        driver => "to-be-written",
-       match => sub { 0 },
      } , 
      { 
        vendid => 0x5333,
@@ -814,31 +811,27 @@ $revision =~ s/\$\w+: (.*?) \$/$1/g;
        func => 0,
        procid => "S3 Savage IX",
        driver => "to-be-written",
-       match => sub { 0 },
      } , 
      { 
        vendid => 0x1002,
        devid  => 0x4353,
        func => 0,
        procid => "ATI Technologies Inc ATI SMBus",
-       driver => "to-be-written",
-       match => sub { 0 },
+       driver => "to-be-tested",
      } , 
      { 
        vendid => 0x1002,
        devid  => 0x4363,
        func => 0,
        procid => "ATI Technologies Inc ATI SMBus",
-       driver => "to-be-written",
-       match => sub { 0 },
+       driver => "to-be-tested",
      } , 
      { 
        vendid => 0x1002,
        devid  => 0x4372,
        func => 0,
        procid => "ATI Technologies Inc ATI SMBus",
-       driver => "to-be-written",
-       match => sub { 0 },
+       driver => "to-be-tested",
      } , 
 );
 
@@ -855,7 +848,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        func => 0,
        procid => "Silicon Integrated Systems SIS5595",
        driver => "i2c-sis5595",
-       match => sub {  $_[0] =~ /^SMBus SIS5595 adapter at [0-9a-f]{4}/ },
+       match => qr/^SMBus SIS5595 adapter at [0-9a-f]{4}/,
      } ,
 );
 
@@ -866,7 +859,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        func => 0,
        procid => "Silicon Integrated Systems SIS5595",
        driver => "i2c-sis645",
-       match => sub {  $_[0] =~ /^SiS645 SMBus adapter at [0-9a-f]{4}/ },
+       match => qr/^SiS645 SMBus adapter at [0-9a-f]{4}/,
      } ,
      {
        vendid => 0x1039,
@@ -874,7 +867,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        func => 1,
        procid => "Silicon Integrated Systems SMBus Controller",
        driver => "i2c-sis645",
-       match => sub { $_[0] =~ /^SiS645 SMBus adapter at 0x[0-9a-f]{4}/ },
+       match => qr/^SiS645 SMBus adapter at 0x[0-9a-f]{4}/,
      } ,
      {
        vendid => 0x1039,
@@ -882,7 +875,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        func => 0,
        procid => "Silicon Integrated Systems 85C503/5513 (LPC Bridge)",
        driver => "i2c-sis645",
-       match => sub { $_[0] =~ /^SiS645 SMBus adapter at 0x[0-9a-f]{4}/ },
+       match => qr/^SiS645 SMBus adapter at 0x[0-9a-f]{4}/,
      } ,
 );
 
@@ -893,7 +886,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        func => 1,
        procid => "Silicon Integrated Systems SMBus Controller",
        driver => "i2c-sis96x",
-       match => sub { $_[0] =~ /^SiS96x SMBus adapter at 0x[0-9a-f]{4}/ },
+       match => qr/^SiS96x SMBus adapter at 0x[0-9a-f]{4}/,
      } ,
 );
 
@@ -913,7 +906,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
             smartbatt_chgr_detect adt7467_detect lm92_detect max1619_detect
             lm93_detect lm77_detect lm63_detect pca9556_detect
             w83791sd_detect vt1211_i2c_detect vt1211_alias_detect
-            smsc47m192_detect);
+            smsc47m192_detect ite_overclock_detect);
 
 # This is a list of all recognized chips. 
 # Each entry must have the following fields:
@@ -1012,10 +1005,16 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
        i2c_detect => sub { lm85_detect 0x5c, @_},
      },
      {
-       name => "Analog Devices ADT7467",
+       name => "Analog Devices ADT7467 or ADT7468",
        driver => "to-be-written",
        i2c_addrs => [0x2e],
        i2c_detect => sub { adt7467_detect 0, @_},
+     },
+     {
+       name => "Analog Devices ADT7476",
+       driver => "to-be-written",
+       i2c_addrs => [0x2c..0x2e],
+       i2c_detect => sub { adt7467_detect 1, @_},
      },
      {
        name => "National Semiconductor LM87",
@@ -1142,12 +1141,6 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
        driver => "w83l785ts",
        i2c_addrs => [0x2e], 
        i2c_detect => sub { w83l785ts_detect 0, @_},
-     } ,
-     {
-       name => "Winbond W83697HF",
-       driver => "w83781d",
-       isa_addrs => [0x290],
-       isa_detect => sub { w83781d_isa_detect 5, @_ },
      } ,
      {
        name => "Genesys Logic GL518SM Revision 0x00",
@@ -1308,7 +1301,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
      {
        name => "Analog Devices ADM1032",
        driver => "lm90",
-       i2c_addrs => [0x4c],
+       i2c_addrs => [0x4c..0x4d],
        i2c_detect => sub { lm90_detect 3, @_ },
      },
      {
@@ -1319,7 +1312,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
      },
      {
        name => "Maxim MAX6659",
-       driver => "to-be-written",
+       driver => "lm90",
        i2c_addrs => [0x4d..0x4e], # 0x4c is handled above
        i2c_detect => sub { lm90_detect 4, @_ },
      },
@@ -1350,7 +1343,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
      {
        name => "Analog Devices ADT7461",
        driver => "lm90",
-       i2c_addrs => [0x4c],
+       i2c_addrs => [0x4c..0x4d],
        i2c_detect => sub { lm90_detect 5, @_ },
      },
      {
@@ -1429,6 +1422,12 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
        isa_detect => sub { ite_isa_detect 1, @_ },
      } ,
      {
+       name => "ITE IT8201R/IT8203R/IT8206R/IT8266R overclocking controller",
+       driver => "not-a-sensor",
+       i2c_addrs => [0x4e],
+       i2c_detect => sub { ite_overclock_detect @_ },
+     },
+     {
        name => "SPD EEPROM",
        driver => "eeprom",
        i2c_addrs => [0x50..0x57],
@@ -1478,7 +1477,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
        i2c_detect => sub { m5879_detect @_},
      },
      {
-       name => "SMSC LPC47M15x or LPC47M192",
+       name => "SMSC LPC47M15x, LPC47M192 or LPC47M997",
        driver => "to-be-written",
        i2c_addrs => [0x2c..0x2d],
        i2c_detect => sub { smsc47m192_detect @_ },
@@ -1736,7 +1735,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
 	logdev => 0x0a,
       },
       {
-	name => "SMSC 47M15x/192 Super IO Fan Sensors",
+	name => "SMSC 47M15x/192/997 Super IO Fan Sensors",
 	driver => "smsc47m1",
 	devid => 0x60,
 	logdev => 0x0a,
@@ -1762,6 +1761,12 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
         name => "SMSC LPC47B397-NC Super IO",
         driver => "smsc47b397",
         devid => 0x6f,
+        logdev => 0x08,
+      },
+      {
+        name => "SMSC SCH5307-NS Super IO",
+        driver => "smsc47b397",
+        devid => 0x81,
         logdev => 0x08,
       },
     ],
@@ -1802,8 +1807,7 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
       },
       {
 	name => "Winbond W83687THF Super IO Sensors",
-	driver => "to-be-written", # w83627hf
-	# A datasheet would be needed to confirm this
+	driver => "w83627hf",
 	devid => 0x85,
 	logdev => 0x0b,
       },
@@ -1823,6 +1827,12 @@ use subs qw(mtp008_detect lm78_detect lm78_isa_detect lm78_alias_detect
 	name => "Winbond W83L517D Super IO",
 	driver => "not-a-sensor",
 	devid => 0x61,
+      },
+      {
+	name => "Fintek F71805F/FG Super IO Sensors",
+	driver => "f71805f",
+	devid => 0x0406,
+	logdev => 0x04,
       },
     ],
   },
@@ -2010,6 +2020,7 @@ sub initialize_conf
     }
     close INPUTFILE;
   }
+  
   if (!$use_udev) {
     # Try some known default udev db locations, just in case
     if (-e '/dev/.udev.tdb' || -e '/dev/.udev'
@@ -2139,6 +2150,7 @@ sub adapter_pci_detection_sis_96x
           (exists $pci_list{"1039:0650"}) ||
           (exists $pci_list{"1039:0651"}) ||
           (exists $pci_list{"1039:0655"}) ||
+          (exists $pci_list{"1039:0661"}) ||
           (exists $pci_list{"1039:0735"}) ||
           (exists $pci_list{"1039:0745"}) ||
           (exists $pci_list{"1039:0746"})) {
@@ -2173,16 +2185,20 @@ sub adapter_pci_detection
   # Generic detection loop
   while ( ($key, $device) = each %pci_list) {
     foreach $try (@pci_adapters) {
-      if ((defined($device->{vendid}) and 
-           $try->{vendid} == $device->{vendid} and
-           $try->{devid} == $device->{devid} and
-           $try->{func} == $device->{func}) or
-          (! defined($device->{vendid}) and
-           $device->{desc} =~ /$try->{procid}/ and
-           $try->{func} == $device->{func})) {
+      if ($try->{vendid} == $device->{vendid} &&
+          $try->{devid} == $device->{devid} &&
+          $try->{func} == $device->{func}) {
         printf "Use driver `%s' for device %02x:%02x.%x: %s\n",
-               $try->{driver}?$try->{driver}:"<To Be Written>",
+               $try->{driver},
                $device->{bus},$device->{slot},$device->{func},$try->{procid};
+        if ($try->{driver} eq "to-be-tested") {
+          print "\nWe are currently looking for testers for this adapter!\n".
+                "Please see http://secure.netroedge.com/~lm78/newdrivers.html\n".
+                "and/or contact us if you want to help.\n\n";
+          print "Continue... ";
+          <STDIN>;
+          print "\n";
+        }
         push @res,$try->{driver};
       }
     }
@@ -2196,12 +2212,12 @@ sub adapter_pci_detection
 }
 
 # $_[0]: Adapter description as found in /proc/bus/i2c
-# $_[1]: Algorithm description as found in /proc/bus/i2c
 sub find_adapter_driver
 {
   my $adapter;
   for $adapter (@pci_adapters) {
-    return $adapter->{driver} if &{$adapter->{match}} ($_[0],$_[1]);
+    return $adapter->{driver}
+      if (exists $adapter->{match} && $_[0] =~ $adapter->{match});
   }
   return "UNKNOWN";
 }
@@ -2397,8 +2413,6 @@ use vars qw(@chips_detected);
 # A hash
 #   with field 'i2c_adap' containing an adapter string as appearing
 #        in /proc/bus/i2c (if this is an I2C detection)
-#  with field 'i2c_algo' containing an algorithm string as appearing
-#       in /proc/bus/i2c (if this is an I2C detection)
 #  with field 'i2c_devnr', contianing the /dev/i2c-* number of this
 #       adapter (if this is an I2C detection)
 #  with field 'i2c_driver', containing the driver name for this adapter
@@ -2627,13 +2641,11 @@ sub add_isa_to_chips_detected
 
 # $_[0]: The number of the adapter to scan
 # $_[1]: The name of the adapter, as appearing in /proc/bus/i2c
-# $_[2]: The name of the algorithm, as appearing in /proc/bus/i2c
-# $_[3]: The driver of the adapter
-# @_[4..]: Addresses not to scan
+# $_[2]: The driver of the adapter
+# @_[3]: Addresses not to scan (array reference)
 sub scan_adapter
 {
-  my ( $adapter_nr,$adapter_name,$algorithm_name,$adapter_driver, 
-       $not_to_scan) = @_;
+  my ($adapter_nr, $adapter_name, $adapter_driver, $not_to_scan) = @_;
   my ($chip, $addr, $conf,@chips,$new_hash,$other_addr);
 
   # As we modify it, we need a copy
@@ -2675,7 +2687,6 @@ sub scan_adapter
                         i2c_addr => $addr,
                         chipname => $chip->{name},
                         i2c_adap => $adapter_name,
-                        i2c_algo => $algorithm_name,
                         i2c_driver => $adapter_driver,
                         i2c_devnr => $adapter_nr,
                       };
@@ -2786,7 +2797,7 @@ sub scan_superio
         $val = ($val << 8) | inb($datareg);
       }
       if (($val & ($chip->{devid_mask} || 0xffff)) != $chip->{devid}) {
-	printf "  Failed! (0x%02x)\n", $val;
+	printf "  Failed! (0x%0*x)\n", $chip->{devid}>0xff ? 4 : 2, $val;
 	next;
       }
       print "  Success...";
@@ -3140,19 +3151,18 @@ sub lm92_detect
 #   0xAC: Configuration
 # Detection is weak. We check if bit 4 (NVB) is clear, because it is
 # unlikely to be set (would mean that EEPROM is currently being accessed).
-# Temperature checkings will hopefully prevent LM75 chips from being
-# detected as a DS1621.
+# Temperature checkings will hopefully prevent LM75 or other chips from
+# being detected as a DS1621.
 sub ds1621_detect
 {
   my $i;
   my ($file,$addr) = @_;
   my $temp = i2c_smbus_read_word_data($file,0xAA);
-  return if ($temp & 0x7F00);
-  $temp = i2c_smbus_read_word_data($file,0xA1);
-  return if ($temp & 0x7F00);
-  $temp = i2c_smbus_read_word_data($file,0xA2);
-  return if ($temp & 0x7F00);
+  my $high = i2c_smbus_read_word_data($file,0xA1);
+  my $low = i2c_smbus_read_word_data($file,0xA2);
+  return if ($temp | $high | $low) & 0x7F00;
   my $conf = i2c_smbus_read_byte_data($file,0xAC);
+  return if ($temp == 0 && $high == 0 && $low == 0 && $conf == 0);
   return 3 if ($conf & 0x10) == 0x00;
   return;
 }
@@ -3453,11 +3463,11 @@ sub adm1031_detect
 }
 
 # $_[0]: Chip to detect
-#   (0 = ADT7467)
+#   (0 = ADT7467/ADT7468, 1 = ADT7674)
 # $_[1]: A reference to the file descriptor to access this chip.
 #        We may assume an i2c_set_slave_addr was already done.
 # $_[2]: Address
-# Returns: undef if not detected, 5 if detected.
+# Returns: undef if not detected, 5 or 7 if detected.
 # Registers used:
 #   0x3d: Chip ID
 #   0x3e: Manufacturer ID
@@ -3473,6 +3483,14 @@ sub adt7467_detect
     return if $mid != 0x41;     # Analog Devices
     return if $cid != 0x68;     # ADT7467
     return if ($drev & 0xf0) != 0x70;
+    return 7 if ($drev == 0x71 || $drev == 0x72);
+    return 5;
+  }
+  if ($chip == 1) {
+    return if $mid != 0x41;     # Analog Devices
+    return if $cid != 0x76;     # ADT7476
+    return if ($drev & 0xf0) != 0x60;
+    return 7 if ($drev == 0x69);
     return 5;
   }
   return
@@ -3659,7 +3677,7 @@ sub w83781d_alias_detect
 }
 
 # $_[0]: Chip to detect (0 = W83781D, 1 = W83782D, 3 = W83627HF,
-#                        5 = W83697HF, 9 = W83627EHF)
+#                        9 = W83627EHF)
 # $_[1]: Address
 # Returns: undef if not detected, (8) if detected.
 sub w83781d_isa_detect
@@ -3687,7 +3705,6 @@ sub w83781d_isa_detect
   return if $chip == 0 and  $reg1 != 0x10;
   return if $chip == 1 and  $reg1 != 0x30;
   return if $chip == 3 and  $reg1 != 0x20;
-  return if $chip == 5 and  $reg1 != 0x60;
   return if $chip == 9 and  $reg1 != 0x88; # Datasheet says 0xA1
                                            # but seems to be wrong
   return 8;
@@ -4089,6 +4106,26 @@ sub via8231_isa_detect
   return if not $found;
 
   return 9;
+}
+
+# $_[0]: A reference to the file descriptor to access this chip.
+# $_[1]: Address (unused)
+# Returns: undef if not detected, 6 if detected.
+# Registers used:
+#   0x28: User ID
+#   0x29: User ID2
+#   0x2A: Version ID
+
+sub ite_overclock_detect
+{
+  my ($file, $addr) = @_;
+
+  my $uid1 = i2c_smbus_read_byte_data($file, 0x28);
+  my $uid2 = i2c_smbus_read_byte_data($file, 0x29);
+  return if $uid1 != 0x83
+         || $uid2 != 0x12;
+
+  return 6;
 }
 
 # $_[0]: Chip to detect (0 = IT8712F)
@@ -4789,11 +4826,7 @@ sub print_chips_report
     my $is_isa = exists $data->{isa_addr};
     print "  * ";
     if ($is_i2c) {
-      if ($data->{i2c_algo} eq "Algorithm unavailable") {
-        printf "Bus `%s'\n", $data->{i2c_adap};
-      } else {
-        printf "Bus `%s' (%s)\n", $data->{i2c_adap}, $data->{i2c_algo};
-      }
+      printf "Bus `%s'\n", $data->{i2c_adap};
       printf "    Busdriver `%s', I2C address 0x%02x", 
              $data->{i2c_driver}, $data->{i2c_addr};
       if (exists $data->{i2c_sub_addrs}) {
@@ -4813,8 +4846,8 @@ sub print_chips_report
                $data->{isa_addr};
       } else {
         print "ISA bus, undetermined address (Busdriver `i2c-isa')\n".
-              "Hint: Try forcing the chip address. Consult the documentation\n".
-              "of particular chip for details and address value.\n";
+              "    Hint: Try forcing the chip address. Consult the documentation\n".
+              "          of particular chip for details and address value.\n";
       }
     }
     printf "    Chip `%s' (confidence: %d)\n",
@@ -4851,11 +4884,10 @@ sub generate_modprobes
   open(local *INPUTFILE, "i2cdetect -l |") or die "Couldn't find i2cdetect program!!";
   local $_;
   while (<INPUTFILE>) {
-    my ($dev_nr,$type,$adap,$algo) = /^i2c-(\S+)\s+(\S+)\s+(.*?)\s*\t\s*(.*?)\s+$/;
+    my ($dev_nr, $type, $adap) = /^i2c-(\d+)\s+(\S+)\s+(.*?) *(\t|$)/;
     next if ($type eq "dummy");
-    $adapters[$dev_nr]->{driver} = find_adapter_driver($adap,$algo);
+    $adapters[$dev_nr]->{driver} = find_adapter_driver($adap);
     $adapters[$dev_nr]->{adapname} = $adap;
-    $adapters[$dev_nr]->{algoname} = $algo;
   }
   close INPUTFILE;
 
@@ -5030,6 +5062,7 @@ sub main
     print "We will now try to load each adapter module in turn.\n";
     foreach $adapter (@adapters) {
       next if $adapter eq "DISABLED";
+      next if $adapter eq "to-be-tested";
       if (exists($modules_list{$adapter})) {
         print "Module `$adapter' already loaded.\n";
       } else {
@@ -5094,7 +5127,7 @@ sub main
   open(local *INPUTFILE, "i2cdetect -l |") or die "Couldn't find i2cdetect program!!";
   local $_;
   while (<INPUTFILE>) {
-    my ($dev_nr,$type,$adap,$algo) = /^i2c-(\S+)\s+(\S+)\s+(.*?)\s*\t\s*(.*?)\s+$/;
+    my ($dev_nr, $type, $adap) = /^i2c-(\d+)\s+(\S+)\s+(.*?) *(\t|$)/;
     next if ($type eq "dummy");
     print "\n";
     print "Next adapter: $adap\n";
@@ -5112,7 +5145,7 @@ sub main
       chop $inp2;
       @not_to_scan = parse_not_to_scan 0,0x7f,$inp2;
     }
-    scan_adapter $dev_nr, $adap, $algo, find_adapter_driver($adap,$algo),
+    scan_adapter $dev_nr, $adap, find_adapter_driver($adap),
                  \@not_to_scan   unless $inp =~ /^\s*[Nn]/;
   }
 
@@ -5191,17 +5224,9 @@ sub main
   }
 
   print "\n\n",
-        " I will now generate the commands needed to load the I2C modules.\n",
-        " Sometimes, a chip is available both through the ISA bus and an ",
-        "I2C bus.\n",
-        " ISA bus access is faster, but you need to load an additional driver ",
-        "module\n",
-        " for it. If you have the choice, do you want to use the ISA bus or ",
-        "the\n",
-        " I2C/SMBus (ISA/smbus)? ";
-  my $use_isa = not <STDIN> =~ /\s*[Ss]/;
+        "I will now generate the commands needed to load the I2C modules.\n";
      
-  my ($modprobes,$configfile) = generate_modprobes $use_isa;
+  my ($modprobes, $configfile) = generate_modprobes 1;	# 1 == prefer ISA
   print "\nTo make the sensors modules behave correctly, add these lines to\n",
         "/etc/modules:\n\n";
         "$modules_conf:\n\n";

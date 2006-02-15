@@ -6,7 +6,7 @@
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or 
+    the Free Software Foundation; either version 2 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -21,30 +21,28 @@
 
 /* Supports ADM9240, DS1780, and LM81. See doc/chips/adm9240 for details */
 
-/* 
+/*
 	A couple notes about the ADM9240:
 
 * It claims to be 'LM7x' register compatible.  This must be in reference
-  to only the LM78, because it is missing stuff to emulate LM75's as well. 
+  to only the LM78, because it is missing stuff to emulate LM75's as well.
   (like the Winbond W83781 does)
- 
-* This driver was written from rev. 0 of the PDF, but it seems well 
+
+* This driver was written from rev. 0 of the PDF, but it seems well
   written and complete (unlike the W83781 which is horrible and has
-  supposidly gone through a few revisions.. rev 0 of that one must
+  supposedly gone through a few revisions.. rev 0 of that one must
   have been in crayon on construction paper...)
-  
+
 * All analog inputs can range from 0 to 2.5, eventhough some inputs are
-  marked as being 5V, 12V, etc.  I don't have any real voltages going 
-  into my prototype, so I'm not sure that things are computed right, 
+  marked as being 5V, 12V, etc.  I don't have any real voltages going
+  into my prototype, so I'm not sure that things are computed right,
   but at least the limits seem to be working OK.
-  
+
 * Another curiousity is that the fan_div seems to be read-only.  I.e.,
   any written value to it doesn't seem to make any difference.  The
   fan_div seems to be 'stuck' at 2 (which isn't a bad value in most cases).
-  
-  
-  --Phil
 
+  --Phil
 */
 
 #include <linux/module.h>
@@ -186,8 +184,6 @@ static int adm9240_detect(struct i2c_adapter *adapter, int address,
 			  unsigned short flags, int kind);
 static int adm9240_detach_client(struct i2c_client *client);
 
-static int adm9240_read_value(struct i2c_client *client, u8 reg);
-static int adm9240_write_value(struct i2c_client *client, u8 reg, u8 value);
 static void adm9240_update_client(struct i2c_client *client);
 static void adm9240_init_client(struct i2c_client *client);
 
@@ -250,7 +246,7 @@ static struct i2c_driver adm9240_driver = {
 /* These files are created for each detected ADM9240. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
-   is done through one of the 'extra' fields which are initialized 
+   is done through one of the 'extra' fields which are initialized
    when a new copy is allocated. */
 static ctl_table adm9240_dir_table_template[] = {
 	{ADM9240_SYSCTL_IN0, "in0", NULL, 0, 0644, NULL, &i2c_proc_real,
@@ -321,17 +317,18 @@ static int adm9240_detect(struct i2c_adapter *adapter, int address,
 
 	if (kind < 0) {
 		if (
-		    ((adm9240_read_value
+		    ((i2c_smbus_read_byte_data
 		      (new_client, ADM9240_REG_CONFIG) & 0x80) != 0x00)
 		    ||
-		    (adm9240_read_value(new_client, ADM9240_REG_I2C_ADDR)
+		    (i2c_smbus_read_byte_data(new_client, ADM9240_REG_I2C_ADDR)
 		     != address))
 			goto ERROR1;
 	}
 
 	/* Determine the chip type. */
 	if (kind <= 0) {
-		i = adm9240_read_value(new_client, ADM9240_REG_COMPANY_ID);
+		i = i2c_smbus_read_byte_data(new_client,
+					     ADM9240_REG_COMPANY_ID);
 		if (i == 0x23)
 			kind = adm9240;
 		else if (i == 0xda)
@@ -340,10 +337,10 @@ static int adm9240_detect(struct i2c_adapter *adapter, int address,
 			kind = lm81;
 		else {
 			if (kind == 0)
-				printk
-				    ("adm9240.o: Ignoring 'force' parameter for unknown chip at "
-				     "adapter %d, address 0x%02x\n",
-				     i2c_adapter_id(adapter), address);
+				printk("adm9240.o: Ignoring 'force' "
+				       "parameter for unknown chip at "
+				       "adapter %d, address 0x%02x\n",
+				       i2c_adapter_id(adapter), address);
 			goto ERROR1;
 		}
 	}
@@ -365,7 +362,8 @@ static int adm9240_detect(struct i2c_adapter *adapter, int address,
 		goto ERROR1;
 	}
 
-	/* Fill in the remaining client fields and put it into the global list */
+	/* Fill in the remaining client fields and put it into the global
+	   list */
 	strcpy(new_client->name, client_name);
 	data->type = kind;
 	data->valid = 0;
@@ -409,8 +407,8 @@ static int adm9240_detach_client(struct i2c_client *client)
 				 sysctl_id);
 
 	if ((err = i2c_detach_client(client))) {
-		printk
-		    ("adm9240.o: Client deregistration failed, client not detached.\n");
+		printk("adm9240.o: Client deregistration failed, "
+		       "client not detached\n");
 		return err;
 	}
 
@@ -420,21 +418,11 @@ static int adm9240_detach_client(struct i2c_client *client)
 }
 
 
-static int adm9240_read_value(struct i2c_client *client, u8 reg)
-{
-	return i2c_smbus_read_byte_data(client, reg);
-}
-
-static int adm9240_write_value(struct i2c_client *client, u8 reg, u8 value)
-{
-	return i2c_smbus_write_byte_data(client, reg, value);
-}
-
 /* Called when we have found a new ADM9240. */
 static void adm9240_init_client(struct i2c_client *client)
 {
 	/* Start monitoring */
-	adm9240_write_value(client, ADM9240_REG_CONFIG, 0x01);
+	i2c_smbus_write_byte_data(client, ADM9240_REG_CONFIG, 0x01);
 }
 
 static void adm9240_update_client(struct i2c_client *client)
@@ -454,46 +442,47 @@ static void adm9240_update_client(struct i2c_client *client)
 #endif
 		for (i = 0; i <= 5; i++) {
 			data->in[i] =
-			    adm9240_read_value(client, ADM9240_REG_IN(i));
+			    i2c_smbus_read_byte_data(client,
+			    			     ADM9240_REG_IN(i));
 			data->in_min[i] =
-			    adm9240_read_value(client,
-					       ADM9240_REG_IN_MIN(i));
+			    i2c_smbus_read_byte_data(client,
+						     ADM9240_REG_IN_MIN(i));
 			data->in_max[i] =
-			    adm9240_read_value(client,
-					       ADM9240_REG_IN_MAX(i));
+			    i2c_smbus_read_byte_data(client,
+						     ADM9240_REG_IN_MAX(i));
 		}
 		data->fan[0] =
-		    adm9240_read_value(client, ADM9240_REG_FAN1);
+		    i2c_smbus_read_byte_data(client, ADM9240_REG_FAN1);
 		data->fan_min[0] =
-		    adm9240_read_value(client, ADM9240_REG_FAN1_MIN);
+		    i2c_smbus_read_byte_data(client, ADM9240_REG_FAN1_MIN);
 		data->fan[1] =
-		    adm9240_read_value(client, ADM9240_REG_FAN2);
+		    i2c_smbus_read_byte_data(client, ADM9240_REG_FAN2);
 		data->fan_min[1] =
-		    adm9240_read_value(client, ADM9240_REG_FAN2_MIN);
+		    i2c_smbus_read_byte_data(client, ADM9240_REG_FAN2_MIN);
 		data->temp =
-		    (adm9240_read_value(client, ADM9240_REG_TEMP) << 1) +
-		    ((adm9240_read_value
+		    (i2c_smbus_read_byte_data(client, ADM9240_REG_TEMP) << 1) +
+		    ((i2c_smbus_read_byte_data
 		      (client, ADM9240_REG_TEMP_CONFIG) & 0x80) >> 7);
 		data->temp_os_max =
-		    adm9240_read_value(client, ADM9240_REG_TOS);
+		    i2c_smbus_read_byte_data(client, ADM9240_REG_TOS);
 		data->temp_os_hyst =
-		    adm9240_read_value(client, ADM9240_REG_THYST);
+		    i2c_smbus_read_byte_data(client, ADM9240_REG_THYST);
 
-		i = adm9240_read_value(client, ADM9240_REG_VID_FAN_DIV);
+		i = i2c_smbus_read_byte_data(client, ADM9240_REG_VID_FAN_DIV);
 		data->fan_div[0] = (i >> 4) & 0x03;
 		data->fan_div[1] = (i >> 6) & 0x03;
 		data->vid = i & 0x0f;
 		data->vid |=
-		    (adm9240_read_value(client, ADM9240_REG_VID4) & 0x01)
+		    (i2c_smbus_read_byte_data(client, ADM9240_REG_VID4) & 0x01)
 		    << 4;
 
 		data->alarms =
-		    adm9240_read_value(client,
-				       ADM9240_REG_INT1_STAT) +
-		    (adm9240_read_value(client, ADM9240_REG_INT2_STAT) <<
+		    i2c_smbus_read_byte_data(client,
+					     ADM9240_REG_INT1_STAT) +
+		    (i2c_smbus_read_byte_data(client, ADM9240_REG_INT2_STAT) <<
 		     8);
 		data->analog_out =
-		    adm9240_read_value(client, ADM9240_REG_ANALOG_OUT);
+		    i2c_smbus_read_byte_data(client, ADM9240_REG_ANALOG_OUT);
 		data->last_updated = jiffies;
 		data->valid = 1;
 	}
@@ -539,14 +528,16 @@ void adm9240_in(struct i2c_client *client, int operation, int ctl_name,
 		if (*nrels_mag >= 1) {
 			data->in_min[nr] =
 			    IN_TO_REG((results[0] * 192) / scales[nr], nr);
-			adm9240_write_value(client, ADM9240_REG_IN_MIN(nr),
-					    data->in_min[nr]);
+			i2c_smbus_write_byte_data(client,
+						  ADM9240_REG_IN_MIN(nr),
+						  data->in_min[nr]);
 		}
 		if (*nrels_mag >= 2) {
 			data->in_max[nr] =
 			    IN_TO_REG((results[1] * 192) / scales[nr], nr);
-			adm9240_write_value(client, ADM9240_REG_IN_MAX(nr),
-					    data->in_max[nr]);
+			i2c_smbus_write_byte_data(client,
+						  ADM9240_REG_IN_MAX(nr),
+						  data->in_max[nr]);
 		}
 	}
 }
@@ -575,11 +566,10 @@ void adm9240_fan(struct i2c_client *client, int operation, int ctl_name,
 							   (data->
 							    fan_div[nr -
 								    1]));
-			adm9240_write_value(client,
-					    nr ==
-					    1 ? ADM9240_REG_FAN1_MIN :
-					    ADM9240_REG_FAN2_MIN,
-					    data->fan_min[nr - 1]);
+			i2c_smbus_write_byte_data(client, nr == 1 ?
+						  ADM9240_REG_FAN1_MIN :
+						  ADM9240_REG_FAN2_MIN,
+						  data->fan_min[nr - 1]);
 		}
 	}
 }
@@ -600,13 +590,13 @@ void adm9240_temp(struct i2c_client *client, int operation, int ctl_name,
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		if (*nrels_mag >= 1) {
 			data->temp_os_max = TEMP_LIMIT_TO_REG(results[0]);
-			adm9240_write_value(client, ADM9240_REG_TOS,
-					    data->temp_os_max);
+			i2c_smbus_write_byte_data(client, ADM9240_REG_TOS,
+						  data->temp_os_max);
 		}
 		if (*nrels_mag >= 2) {
 			data->temp_os_hyst = TEMP_LIMIT_TO_REG(results[1]);
-			adm9240_write_value(client, ADM9240_REG_THYST,
-					    data->temp_os_hyst);
+			i2c_smbus_write_byte_data(client, ADM9240_REG_THYST,
+						  data->temp_os_hyst);
 		}
 	}
 }
@@ -638,7 +628,8 @@ void adm9240_fan_div(struct i2c_client *client, int operation,
 		results[1] = DIV_FROM_REG(data->fan_div[1]);
 		*nrels_mag = 2;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
-		old = adm9240_read_value(client, ADM9240_REG_VID_FAN_DIV);
+		old = i2c_smbus_read_byte_data(client,
+					       ADM9240_REG_VID_FAN_DIV);
 		if (*nrels_mag >= 2) {
 			data->fan_div[1] = DIV_TO_REG(results[1]);
 			old = (old & 0x3f) | (data->fan_div[1] << 6);
@@ -646,8 +637,9 @@ void adm9240_fan_div(struct i2c_client *client, int operation,
 		if (*nrels_mag >= 1) {
 			data->fan_div[0] = DIV_TO_REG(results[0]);
 			old = (old & 0xcf) | (data->fan_div[0] << 4);
-			adm9240_write_value(client,
-					    ADM9240_REG_VID_FAN_DIV, old);
+			i2c_smbus_write_byte_data(client,
+						  ADM9240_REG_VID_FAN_DIV,
+						  old);
 		}
 	}
 }
@@ -666,8 +658,9 @@ void adm9240_analog_out(struct i2c_client *client, int operation,
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		if (*nrels_mag >= 1) {
 			data->analog_out = results[0];
-			adm9240_write_value(client, ADM9240_REG_ANALOG_OUT,
-					    data->analog_out);
+			i2c_smbus_write_byte_data(client,
+						  ADM9240_REG_ANALOG_OUT,
+						  data->analog_out);
 		}
 	}
 }
@@ -698,9 +691,8 @@ static void __exit sm_adm9240_exit(void)
 }
 
 
-
-MODULE_AUTHOR
-    ("Frodo Looijaard <frodol@dds.nl> and Philip Edelbrock <phil@netroedge.com>");
+MODULE_AUTHOR("Frodo Looijaard <frodol@dds.nl> "
+	      "and Philip Edelbrock <phil@netroedge.com>");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("ADM9240 driver");
 

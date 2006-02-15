@@ -26,7 +26,7 @@ KERNEL_BUILD_DIRS=$(foreach ver,$(MODULES_KERNEL_VERSIONS),$(wildcard /usr/src/k
 MODULES_KERNEL_SLASH_FLAVORS=$(KERNEL_BUILD_DIRS:/usr/src/kernel-build-%=%)
 MODULES_KERNEL_FLAVORS=$(subst /,-,$(MODULES_KERNEL_SLASH_FLAVORS))
 
-control:
+debian/control:
 	cp debian/control.base debian/control
 	for flavor in $(MODULES_KERNEL_FLAVORS); do \
 	sed -e "s/_KVERS_/$$flavor/g" \

@@ -1,36 +1,45 @@
 SUMMARY OF SUPPORTED CHIPS
 ==========================
 
-This is a summary of the sensor and non-sensor chips supported
-by this package. It lists the features of each supported chip.
+This is a summary of the sensor and non-sensor chips supported by this
+package. It lists the features of each supported chip. For further
+information on a particular driver, see the documentation in this
+directory.
 
-For further information on a particular chip, see the documentation
-in this directory. Data sheets are generally available on the
-manufacturer's web site.
+To determine what chips you have in your system, run 'sensors-detect'.
 
-To determine what chips you have in your system,
-run prog/detect/sensors-detect.
+If your sensor chip is not detected by sensors-detect, please contact us
+(see http://secure.netroedge.com/~lm78/author.html). Only contact us
+if you know for sure that your system includes a sensor chip (for
+example if you have technical documentation mentioning it, or if the
+BIOS setup screen presents monitoring values, or if you can get
+hardware monitoring to work using a different OS). Do *not* contact us
+if you have no proof that your system includes sensors. Such systems
+tend to be rare these days, but do still exist. This is especially true
+of laptops. If there are no sensors, there's nothing we can do.
 
-If your sensor chip is not detected by sensors-detect
-or supported by this package,
-please send mail to sensors@stimpy.netroedge.com.
+If you contact us, please include the following in your mail:
+ - The output of (as root) 'sensors-detect'. Make sure you unloaded
+   every chip driver beforehand (check that the sensors-detect script
+   does not complain that it couldn't probe some I2C addresses on any
+   given bus).
+ - Dumps of the chips that might be hardware monitoring chips. To get
+   these, follow the following steps:
+   1* Run 'i2cdetect -l'. This will list all available I2C (or SMBus)
+      busses on your system.
+   2* For each bus listed, run (as root) 'i2cdetect N' where N is the
+      bus number.
+   3* For each bus, if there is anything in the ranges 0x20-0x2f or
+      0x48-0x4f, dump the contents of that chip with (as root)
+      'i2cdump N 0xXX', where N is the bus number and XX is the
+      responsive address. Chips in other address ranges are way less
+      likely to be hardware monitoring chips. In particular, do not
+      send dumps of addresses 0x08, 0x0c, 0x10, 0x30-0x37, 0x42, 0x44,
+      0x50-0x5f, 0x61 and 0x69. These are *not* hadware monitoring
+      chips.
+ - The part numbers of the chips on your motherboard you think are the
+   sensor chips.
 
-Please include the following in your mail:
-	- The output of (as root) 'prog/detect/sensors-detect'
-	- The output of (as root) 'prog/detect/i2cdetect 1'
-	      (assuming your smbus adapter is on bus 1 -
-	      run 'i2cdetect' with no arguments to list the busses).
-	- The output of (as root) 'prog/dump/i2cdump X 0xXX'
-	      X = the bus number
-	      XX = the address of each chip you see in the output
-	      of i2cdetect. (run once for each chip)
-	- Part numbers of chips on your motherboard you think are
-	      the sensor chips (look at your motherboard)
-
-See also ../FAQ for assistance.
-
-
------------------------------------------------------------------------------
 -----------------------------------------------------------------------------
 
 SUPPORTED SENSOR CHIPS
@@ -88,6 +97,9 @@ ds1621
 	  (the following chip is detected as a ds1621)
 	ds1625		1	-	-	-	yes	no
 
+f71805f
+	f71805f		9	3	3	-	no	yes
+
 fscher
 	fscher		3	3	3	-	yes	no
 
@@ -137,6 +149,10 @@ lm85
 	lm85		3	5	4	3 pwm	yes	no
 	adm1027		3	5	4	3 pwm	yes	no
 	adt7463		3	5	4	3 pwm	yes	no
+	emc6d100	3	8	4	3 pwm	yes	no
+	(emc6d101 is reported as emc6d100)
+	emc6d101	3	8	4	3 pwm	yes	no
+	emc6d102	3	8	4	3 pwm	yes	no
 
 lm87
 	lm87		2-3	6-8	0-2	1 pwm	yes	no
@@ -194,12 +210,14 @@ smartbatt
 	smartbatt	1	1	-	-	yes	no
 
 smsc47m1
+	(all are reported as a "smsc47m1")
 	smsc47b27x	-	-	2	2	no	yes (LPC)
 	smsc47m10x	-	-	2	2	no	yes (LPC)
 	smsc47m13x	-	-	2	2	no	yes (LPC)
 	smsc47m14x	-	-	2	2	no	yes (LPC)
 	smsc47m15x	-	-	2	2	no	yes (LPC)
 	smsc47m192	-	-	2	2	no	yes (LPC)
+	smsc47m997	-	-	2	2	no	yes (LPC)
 
 thmc50
 	adm1022		3	2	-	1 dac	yes	no
@@ -217,8 +235,9 @@ vt8231
 
 w83627hf
 	w83627hf	3	9	3	2 pwm	no	yes (LPC)
-	w83627thf	3	7	3	3 pwm	no	yes (LPC)
+	w83627thf	3	7	3	3 dac	no	yes (LPC)
 	w83637hf	3	7	2	3 pwm	no	yes (LPC)
+	w83687thf	3	7	3	3 pw/da	no	yes (LPC)
 	w83697hf	2	8	2	2 pwm	no	yes (LPC)
 
 w83781d
@@ -228,7 +247,6 @@ w83781d
 	w83783s		1-2	5-6	3	2 pwm	yes	no
 	w83791d		3	10	5	5 pwm	yes	no
 	w83627hf	3	9	3	2 pwm	yes	yes (LPC)
-	w83697hf	2	6	2	2 pwm	no	yes
 
 w83l785ts
 	w83l785ts	1	-	-	-	yes	no
@@ -289,7 +307,6 @@ smbus-arp
 
 
 -----------------------------------------------------------------------------
------------------------------------------------------------------------------
 
 COMPANY ID LIST
 ---------------
@@ -308,17 +325,19 @@ This may help identify a chip after doing a 'i2cdump [bus] [address]'.
 0x4D	Maxim
 0x54	On Semi
 0x5C	SMSC
+0x5D 	SMSC
 0x55	SMSC
 0x5CA3	Winbond (at 0x4F)
 0x90	ITE (at 0x58)
-0xA1	Philips
+0xA1	Philips (at 0x05 too)
 0xA3	Winbond (at 0x4F)
 0xAC	Myson (at 0x58)
 0xC3	Asus (at 0x4F)
 0xDA	Dallas
+0x54    Microchip (at 0x7)
 
 [A-Z]{3} at 0x00-0x02: Fujitsu-Siemens
 
 
 ------------------
-Copyright (c) 2001-2004 The lm_sensors group
+Copyright (c) 2001-2005 The lm_sensors group
