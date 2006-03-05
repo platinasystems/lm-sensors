@@ -1,3 +1,9 @@
+lm-sensors (1:2.10.0-2) unstable; urgency=low
+
+  * Rebuild against libsysfs2.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun,  5 Mar 2006 13:58:25 +0100
+
 lm-sensors (1:2.10.0-1) unstable; urgency=low
 
   * New upstream version.
