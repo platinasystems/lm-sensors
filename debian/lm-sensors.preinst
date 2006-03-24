@@ -25,6 +25,9 @@ case "$1" in
         if [ -d "/etc/blacklist.d/" ] ; then
 		rmdir --ignore-fail-on-non-empty /etc/blacklist.d/
 	fi
+	if [ -h "/etc/rcS.d/S36lm-sensors" ] ; then
+		rm /etc/rcS.d/S36lm-sensors
+	fi
     ;;
 
     abort-upgrade)

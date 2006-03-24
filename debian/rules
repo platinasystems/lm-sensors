@@ -217,7 +217,7 @@ binary-arch: build-arch install-arch
 	dh_installmodules -s --name=i2c
 	dh_installdebconf -s
 	dh_installinit -psensord
-	dh_installinit -plm-sensors --no-start -- start 36 S .  # Should start after modutils (20) and mountall (35)
+	dh_installinit -plm-sensors --no-start -- start 47 S .  # Should start after modutils (20) and mountnfs (45)
 	dh_installman -s
 	dh_link -s
 	dh_strip -s

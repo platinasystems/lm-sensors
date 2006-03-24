@@ -1,3 +1,10 @@
+lm-sensors (1:2.10.0-3) unstable; urgency=low
+
+  * Move the startup script from position 35 to position 47, so that it
+    is called after mountnfs (closes: bug#356195).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Fri, 24 Mar 2006 22:50:44 +0100
+
 lm-sensors (1:2.10.0-2) unstable; urgency=low
 
   * Rebuild against libsysfs2.
