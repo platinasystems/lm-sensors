@@ -1,5 +1,5 @@
+# translation of lm-sensors_1_2.10.0-3_ru.po to Russian
 # Russian messages:
-# Ilgiz Kalmetev <translator@ilgiz.pp.ru>, 2003
 #
 #    Translators, if you are not familiar with the PO format, gettext
 #    documentation is worth reading, especially sections dedicated to
@@ -12,18 +12,21 @@
 #         or http://www.debian.org/intl/l10n/po-debconf/README-trans
 #
 #    Developers do not need to manually edit POT or PO files.
+# Ilgiz Kalmetev <translator@ilgiz.pp.ru>, 2003.
+# Yuri Kozlov <kozlov.y@gmail.com>, 2006.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: Plm-sensors_1_2.10.0-3\n"
 "Report-Msgid-Bugs-To: aurel32@debian.org\n"
 "POT-Creation-Date: 2005-09-07 16:05+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"PO-Revision-Date: 2006-04-05 22:19+0300\n"
+"Last-Translator: Yuri Kozlov <kozlov.y@gmail.com>\n"
+"Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=KOI8-R\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.9.1\n"
 
 #. Type: note
 #. Description
@@ -33,6 +36,8 @@ msgid ""
 "you don't have sensors modules installed. As a result, libsensors3 will not "
 "be functional on your system."
 msgstr ""
+"Кажется, ядро не собрано с поддержкой сенсоров и модули для сенсоров "
+"не установлены. По этому libsensors3 не заработает на вашей системе."
 
 #. Type: note
 #. Description
@@ -45,12 +50,19 @@ msgid ""
 "   kernel-patch-2.4-lm-sensors;\n"
 " - Build the modules yourself using i2c-source and lm-sensors-source."
 msgstr ""
+"Чтобы включить её вы можете:\n"
+" - установить пакеты i2c-2.4-xx-x-xxx и lm-sensors-2.4-xx-x-xxx\n"
+"   соответствующие установленному ядру, если используется ядро\n"
+"   из дистрибутива;\n"
+" - пропатчить ядро с помощью пакетов kernel-patch-2.4-i2c и\n"
+"   kernel-patch-2.4-lm-sensors;\n"
+" - собрать модули самостоятельно из i2c-source и lm-sensors-source."
 
 #. Type: note
 #. Description
 #: ../libsensors3.templates:17
 msgid "libsensors3 not functional"
-msgstr ""
+msgstr "libsensors3 не работает"
 
 #. Type: note
 #. Description
@@ -59,6 +71,8 @@ msgid ""
 "It appears that your kernel is not compiled with sensors support. As a "
 "result, libsensors3 will not be functional on your system."
 msgstr ""
+"Кажется, ядро не собрано с поддержкой сенсоров. Поэтому "
+"libsensors3 не заработает на вашей системе."
 
 #. Type: note
 #. Description
@@ -66,13 +80,13 @@ msgstr ""
 msgid ""
 "If you want to enable it, have a look at \"I2C Hardware Sensors Chip support"
 "\" in your kernel configuration."
-msgstr ""
+msgstr "Поддержка в конфигурации ядра настраивается в разделе \"I2C Hardware Sensors Chip support\"."
 
 #. Type: note
 #. Description
 #: ../libsensors3.templates:26
 msgid "libsensors3 needs kernel >= 2.6.5"
-msgstr ""
+msgstr "для libsensors3 требуется ядро версии >= 2.6.5"
 
 #. Type: note
 #. Description
@@ -82,6 +96,9 @@ msgid ""
 "2.8.6. This version of libsensors3 doesn't support kernels older than "
 "version 2.6.5 anymore."
 msgstr ""
+"Начиная с ядра версии 2.6.5 и libsensors версии 2.8.6. интерфейс /sys "
+"был изменён. Данная версия libsensors3 больше не поддерживает работу "
+"с ядрами версии старее чем 2.6.5."
 
 #. Type: note
 #. Description
@@ -90,9 +107,12 @@ msgid ""
 "It appears that your are running a kernel older than version 2.6.5. As a "
 "result libsensors3 will not be functional on your system."
 msgstr ""
+"Кажется, что работающее ядро имеет версию старее чем 2.6.5. "
+"Поэтому libsensors3 не заработает на вашей системе."
 
 #. Type: note
 #. Description
 #: ../libsensors3.templates:26
 msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
-msgstr ""
+msgstr "(Заметим, что libsensors3 совместим с ядрами версий 2.4)."
+

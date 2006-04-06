@@ -1,3 +1,10 @@
+lm-sensors (1:2.10.0-4) unstable; urgency=low
+
+  * Update Russian debconf translation, thanks to Yuri Kozlov (closes:
+    bug#360962). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu,  6 Apr 2006 17:23:14 +0200
+
 lm-sensors (1:2.10.0-3) unstable; urgency=low
 
   * Move the startup script from position 35 to position 47, so that it
