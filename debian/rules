@@ -5,7 +5,6 @@
 #export DH_VERBOSE=1
 
 # Kernel versions to automatically build
-MODULES_KERNEL_VERSIONS=2.4.27-2
 PATCH_KERNEL_VERSIONS=2.4.27
 KPATCHESFILE=$(CURDIR)/debian/kernel-patch-2.4-lm-sensors.kpatches
 
@@ -19,20 +18,6 @@ MA_DIR ?= /usr/share/modass
 -include $(MA_DIR)/include/common-rules.make
 # location of i2c-headers
 I2C_DIR ?= /usr/src
-
-# Some magic
-LMSENSORSVERSION=$(shell dpkg-parsechangelog | grep ^Version: | cut -f 2 -d ' ' | cut -f 1 -d - | cut -f 2 -d ':' )
-KERNEL_BUILD_DIRS=$(foreach ver,$(MODULES_KERNEL_VERSIONS),$(wildcard /usr/src/kernel-build-$(ver)/*))
-MODULES_KERNEL_SLASH_FLAVORS=$(KERNEL_BUILD_DIRS:/usr/src/kernel-build-%=%)
-MODULES_KERNEL_FLAVORS=$(subst /,-,$(MODULES_KERNEL_SLASH_FLAVORS))
-
-debian/control:
-	cp debian/control.base debian/control
-	for flavor in $(MODULES_KERNEL_FLAVORS); do \
-	sed -e "s/_KVERS_/$$flavor/g" \
-		debian/control.per-mod >> debian/control; \
-        done
-
 
 clean:
 	dh_testdir
@@ -103,26 +88,6 @@ build-arch-stamp:
 		PROG_EXTRA=sensord \
 		EXLDFLAGS=""
 
-	# binary modules
-ifeq ($(DEB_HOST_ARCH),i386)
-	mkdir -p debian/build
-	tar xzf /usr/src/i2c.tar.gz -C debian/build
-	ln -s kernel $(CURDIR)/debian/build/modules/i2c/linux
-	for flavor in $(MODULES_KERNEL_FLAVORS); do \
-		mkdir -p debian/build/lm-sensors-$$flavor ; \
-		find . -path ./debian -prune -o -print | cpio -admp debian/build/lm-sensors-$$flavor ; \
-		$(MAKE) -C debian/build/lm-sensors-$$flavor all-kernel-chips all-kernel-busses \
-			CC=gcc-3.3 \
-			LINUX=/usr/src/kernel-headers-$$flavor \
-			I2C_HEADERS=$(CURDIR)/debian/build/modules/i2c \
-			MODPREF=/lib/modules/$$flavor ; \
-		$(MAKE) -C debian/build/lm-sensors-$$flavor/prog/hotplug -f Makefile.p4b \
-			CC=gcc-3.3 \
-			LINUX=/usr/src/kernel-headers-$$flavor ; \
-		cp debian/lm-sensors-_KVERS_.README.Debian.modules.in debian/lm-sensors-$$flavor.README.Debian ; \
-	done
-endif
-	
 	touch build-arch-stamp
 
 
@@ -174,19 +139,6 @@ install-arch-stamp: build-arch-stamp
 	fi
 
 	dh_install -s --sourcedir=debian/tmp
-
-	# binary modules
-ifeq ($(DEB_HOST_ARCH),i386)
-	for flavor in $(MODULES_KERNEL_FLAVORS); do \
-		$(MAKE) -C debian/build/lm-sensors-$$flavor install-kernel-chips install-kernel-busses \
-			CC=gcc-3.3 \
-			DESTDIR=$(CURDIR)/debian/lm-sensors-$$flavor \
-			LINUX=/usr/src/kernel-headers-$$flavor \
-			I2C_HEADERS=$(CURDIR)/debian/build/modules/i2c \
-			MODPREF=/lib/modules/$$flavor ; \
-		install -m 0644 debian/build/lm-sensors-$$flavor/prog/hotplug/p4b_smbus.o debian/lm-sensors-$$flavor/lib/modules/$$flavor/kernel/drivers/i2c/busses/ ; \
-	done
-endif
 
 	touch install-arch-stamp
 
