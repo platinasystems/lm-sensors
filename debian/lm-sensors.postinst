@@ -7,14 +7,6 @@ set -e
 
 case "$1" in
     configure)
-	# Create the device node, if we're not in a devfs world.
-	if [ ! -c /dev/.devfsd ]; then
-	    # create /dev/i2c*
-	    if [ ! -c /dev/i2c-0 ]; then
-	        (cd /dev && /sbin/MAKEDEV i2c) || true
-	    fi	
-	fi
-	
 	ucf --debconf-ok --three-way /usr/share/lm-sensors/sensors.conf.eg /etc/sensors.conf
     ;;
 

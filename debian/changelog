@@ -1,3 +1,10 @@
+lm-sensors (1:2.10.0-6) unstable; urgency=low
+
+  * Change the dependency from makedev | devfsd to makedev | udev.
+  * Bumped Standards-version to 3.7.2 (No changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 29 May 2006 00:16:50 +0200
+
 lm-sensors (1:2.10.0-5) unstable; urgency=low
 
   * 2.4 kernels are deprecated, stop building the modules on i386.

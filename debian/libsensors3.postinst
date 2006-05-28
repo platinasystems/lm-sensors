@@ -13,6 +13,12 @@ db_version 2.0
 
 case "$1" in
     configure)
+	# Create the device node if MAKEDEV exists
+	if [ -x /sbin/MAKEDEV ] ; then
+		if [ ! -c /dev/i2c-0 ]; then
+			(cd /dev && /sbin/MAKEDEV i2c) || true
+		fi
+	fi
     ;;
     abort-upgrade|abort-remove|abort-deconfigure)
     ;;
