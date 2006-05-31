@@ -1,3 +1,9 @@
+lm-sensors (1:2.10.0-7) unstable; urgency=low
+
+  * Fixed a typo in mkpatch.pl: s/71085/71805/ (Closes: bug#369506).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 31 May 2006 06:42:33 +0200
+
 lm-sensors (1:2.10.0-6) unstable; urgency=low
 
   * Change the dependency from makedev | devfsd to makedev | udev.
