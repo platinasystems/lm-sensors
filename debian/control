@@ -2,7 +2,6 @@ Source: lm-sensors
 Section: utils
 Priority: extra
 Build-Depends: bison, flex, librrd2-dev, libsysfs-dev (>= 2.0.0), debhelper (>= 4.1.16)
-Build-Depends-Indep: debhelper (>> 4.0.0), dh-kpatches (>= 0.99.27), perl, bzip2, kernel-patch-2.4-i2c (>= 2.10.0), kernel-source-2.4.27
 Maintainer: Aurelien Jarno <aurel32@debian.org>
 Standards-Version: 3.7.2
 
@@ -74,42 +73,6 @@ Description: hardware sensor information logging daemon
  For 2.4 kernels, this requires either installing prebuild modules or
  building them using the lm-sensors-source package. For 2.6 kernels,
  use the modules that are already in the kernel tree.
- .
-  Homepage: http://www.lm-sensors.nu
-
-Package: kernel-patch-2.4-lm-sensors
-Architecture: all
-Section: devel
-Depends: ${kpatch:Depends}, ${misc:Depends}, kernel-patch-2.4-i2c (>= 2.10.0)
-Suggests: kernel-package, kernel-source-2.4
-Description: drivers to read temperature/voltage/fan sensors
- Lm-sensors is a hardware health monitoring package for Linux. It allows you
- to access information from temperature, voltage, and fan speed sensors. It
- works with most newer systems.
- .
- This patch contains the latest available lm-sensors drivers for 2.4 kernels.
- .
- WARNING: This package is only useful for 2.4 kernels. For 2.6 kernels,
- use the modules that are already in the kernel tree.
- .
-  Homepage: http://www.lm-sensors.nu
-
-Package: lm-sensors-source
-Section: misc
-Architecture: all
-Depends: i2c-source (>= 1:2.10.0), debhelper (>= 4.0), module-assistant, bison, flex | flex-old, gcc-3.3
-Description: kernel drivers to read temperature/voltage/fan sensors (source)
- Lm-sensors is a hardware health monitoring package for Linux. It allows you
- to access information from temperature, voltage, and fan speed sensors. It
- works with most newer systems.
- .
- This package contains the source for kernel modules that are necessary to
- access the data. You will also need to install the i2c-source package and
- build modules from that.
- .
- The 2.4 kernel sources must be installed to compile these modules. This
- package won't build modules for 2.6 kernels. Instead use the modules that
- are already in the kernel tree.
  .
   Homepage: http://www.lm-sensors.nu
 

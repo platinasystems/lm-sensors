@@ -2293,6 +2293,49 @@ chip "lm85c-*" "adm1027-*" "adt7463-*" "lm85-*" "lm85b-*"
    set temp3_min 10
    set temp3_max 35
 
+# Those /sys files have been added in 2.6.19+ kernels and are
+# disabled by default. Comment those lines if you have such a kernel.
+   ignore in5
+   ignore in6
+   ignore in7
+   ignore fan1_tach_mode
+   ignore zone1_limit
+   ignore zone1_hyst
+   ignore zone1_range
+   ignore zone1_critical
+   ignore zone1_smooth
+   ignore zone2_limit
+   ignore zone2_hyst
+   ignore zone2_range
+   ignore zone2_critical
+   ignore zone2_smooth
+   ignore zone3_limit
+   ignore zone3_hyst
+   ignore zone3_range
+   ignore zone3_critical
+   ignore zone3_smooth
+   ignore pwm1_spinup
+   ignore pwm1_min
+   ignore pwm1_freq
+   ignore pwm1_min_ctl
+   ignore pwm1_invert
+   ignore pwm1_zone
+   ignore pwm1_spinup_ctl
+   ignore pwm2_spinup
+   ignore pwm2_min
+   ignore pwm2_freq
+   ignore pwm2_min_ctl
+   ignore pwm2_invert
+   ignore pwm2_zone
+   ignore pwm2_spinup_ctl
+   ignore pwm3_spinup
+   ignore pwm3_min
+   ignore pwm3_freq
+   ignore pwm3_min_ctl
+   ignore pwm3_invert
+   ignore pwm3_zone
+   ignore pwm3_spinup_ctl
+
 chip "pc87366-*"
 
 # Voltage inputs

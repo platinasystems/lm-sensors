@@ -1,3 +1,12 @@
+lm-sensors (1:2.10.0-8) unstable; urgency=medium
+
+  * 2.4 kernels are deprecated, stop building lm-sensors-source and
+    kernel-patch-2.4-lm-sensors (Closes: bug#385279).
+  * Disable lm85 /sys entries that while be introduced in 2.6.19+ 
+    kernels (Closes: #372740).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 30 Aug 2006 12:05:15 +0200
+
 lm-sensors (1:2.10.0-7) unstable; urgency=low
 
   * Fixed a typo in mkpatch.pl: s/71085/71805/ (Closes: bug#369506).
