@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lm-sensors debconf\n"
 "Report-Msgid-Bugs-To: aurel32@debian.org\n"
-"POT-Creation-Date: 2005-09-07 16:05+0200\n"
+"POT-Creation-Date: 2006-09-05 16:24+0200\n"
 "PO-Revision-Date: 2006-02-09 15:37+0100\n"
 "Last-Translator: Claus Hindsgaul <claus.hindsgaul@gmail.com>\n"
 "Language-Team: Danish <dansk@klid.dk>\n"
@@ -18,43 +18,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:3
-msgid ""
-"It appears that your kernel is not compiled with sensors support and that "
-"you don't have sensors modules installed. As a result, libsensors3 will not "
-"be functional on your system."
-msgstr ""
-"Det lader til at din kerne ikke er oversat med sensorunderstøttelse , og "
-"at du ikke har installeret sensormoduler. Derfor vil libsensors3 ikke fungere "
-"på dit system."
-
-#. Type: note
-#. Description
-#: ../libsensors3.templates:3
-msgid ""
-"If you want to enable it, you can:\n"
-" - Install the i2c-2.4-xx-x-xxx and lm-sensors-2.4-xx-x-xxx packages\n"
-"   corresponding to your kernel if you are using a prebuilt kernel;\n"
-" - Patch your kernel using the packages kernel-patch-2.4-i2c and\n"
-"   kernel-patch-2.4-lm-sensors;\n"
-" - Build the modules yourself using i2c-source and lm-sensors-source."
-msgstr ""
-"Hvis du vil aktivere den, kan du:\n"
-" - INstallere de af pakkerne i2c-2.4-xx-x-xxx og lm-sensors-2.4-xx-x-xxx,\n"
-"   der svarer til din kerne, hvis du benytter en forlavet kerne;\n"
-" - Patch di kerne med pakkerne kernel-patch-2.4-i2c og\n"
-"   kernel-patch-2.4-lm-sensors;\n"
-" - Byg selv modulerne med i2c-source og lm-sensors-source."
-
-#. Type: note
-#. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid "libsensors3 not functional"
 msgstr "libsensors3 virker ikke"
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid ""
 "It appears that your kernel is not compiled with sensors support. As a "
 "result, libsensors3 will not be functional on your system."
@@ -64,45 +34,38 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid ""
 "If you want to enable it, have a look at \"I2C Hardware Sensors Chip support"
 "\" in your kernel configuration."
 msgstr ""
-"Hvis du vil aktivere den, så se under \"I2C Hardware Sensors Chip support"
-"\" i din kerneopsætning."
+"Hvis du vil aktivere den, så se under \"I2C Hardware Sensors Chip support\" "
+"i din kerneopsætning."
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid "libsensors3 needs kernel >= 2.6.5"
 msgstr "libsensors3 kræver kerne >= 2.6.5"
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid ""
 "The /sys interface changed in kernel version 2.6.5 and libsensors version "
 "2.8.6. This version of libsensors3 doesn't support kernels older than "
 "version 2.6.5 anymore."
 msgstr ""
 "/sys-grænsefladen blev ændret i kerneversion 2.6.5, og libsensors version "
-"2.8.6. Denne udgave af libsensors3 understøtter ikke længere kerner, der "
-"er ældre end version 2.6.5."
+"2.8.6. Denne udgave af libsensors3 understøtter ikke længere kerner, der er "
+"ældre end version 2.6.5."
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid ""
 "It appears that your are running a kernel older than version 2.6.5. As a "
 "result libsensors3 will not be functional on your system."
 msgstr ""
 "Det lader til at du kører en kerne, der er ældre end version 2.6.5. Derfor "
 "vil libsensors3 ikke fungere på dit system."
-
-#. Type: note
-#. Description
-#: ../libsensors3.templates:26
-msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
-msgstr "(Bemærk at libsensors3 stadig er kompatibel med 2.4-kerner)."
-

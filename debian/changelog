@@ -1,3 +1,12 @@
+lm-sensors (1:2.10.0-9) unstable; urgency=low
+
+  * Remove the dependency on sysvinit (Closes: bug#386133).
+  * Add to libsensors3.README.Debian that 2.4 kernels are deprecated.
+  * Drop the recommends on linux-image-2.6 | lm-sensors-source as users
+    are supposed to use 2.6 kernels.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue,  5 Sep 2006 16:21:03 +0200
+
 lm-sensors (1:2.10.0-8) unstable; urgency=medium
 
   * 2.4 kernels are deprecated, stop building lm-sensors-source and

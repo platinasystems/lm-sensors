@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lm-sensors 1/2.9.1-1\n"
 "Report-Msgid-Bugs-To: aurel32@debian.org\n"
-"POT-Creation-Date: 2005-09-07 16:05+0200\n"
+"POT-Creation-Date: 2006-09-05 16:24+0200\n"
 "PO-Revision-Date: 2005-06-08 23:26+0930\n"
 "Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
 "Language-Team: Vietnamese <gnomevi-list@lists.sourceforge.net>\n"
@@ -17,45 +17,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:3
-msgid ""
-"It appears that your kernel is not compiled with sensors support and that "
-"you don't have sensors modules installed. As a result, libsensors3 will not "
-"be functional on your system."
-msgstr ""
-"Hình như hạt nhân bạn không được biên dịch với cách hỗ trợ máy nhạy, và cũng "
-"như bạn chưa cài đặt mô-đun máy nhạy nào. Vì vậy, libsensors3 không thể chức "
-"năng trong hệ thống bạn."
-
-#. Type: note
-#. Description
-#: ../libsensors3.templates:3
-msgid ""
-"If you want to enable it, you can:\n"
-" - Install the i2c-2.4-xx-x-xxx and lm-sensors-2.4-xx-x-xxx packages\n"
-"   corresponding to your kernel if you are using a prebuilt kernel;\n"
-" - Patch your kernel using the packages kernel-patch-2.4-i2c and\n"
-"   kernel-patch-2.4-lm-sensors;\n"
-" - Build the modules yourself using i2c-source and lm-sensors-source."
-msgstr ""
-"Nếu bạn muốn hiệu lực libsensors3 thì bạn có thểL\n"
-" • Cài đặt hai gói tin «i2c-2.4-xx-x-xxx» và\n"
-"\t«lm-sensors-2.4-xx-x-xxx» tương ứng với hạt nhân,\n"
-"\tnếu bạn đang sử dụng một hạt nhân có sẵn;\n"
-" • Đáp vá hạt nhân dùng những gói tin «kernel-patch-2.4-i2c»\n"
-"\tvà «kernel-patch-2.4-lm-sensors»\n"
-" • Tự xây dụng những mô-đun, dùng «i2c-source» và\n"
-"\t«lm-sensors-source»."
-
-#. Type: note
-#. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid "libsensors3 not functional"
 msgstr "libsensors3 không chức năng được."
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid ""
 "It appears that your kernel is not compiled with sensors support. As a "
 "result, libsensors3 will not be functional on your system."
@@ -65,7 +33,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid ""
 "If you want to enable it, have a look at \"I2C Hardware Sensors Chip support"
 "\" in your kernel configuration."
@@ -75,13 +43,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid "libsensors3 needs kernel >= 2.6.5"
 msgstr "libsensors3 cần hạt nhân ≥ 2.6.5."
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid ""
 "The /sys interface changed in kernel version 2.6.5 and libsensors version "
 "2.8.6. This version of libsensors3 doesn't support kernels older than "
@@ -93,7 +61,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid ""
 "It appears that your are running a kernel older than version 2.6.5. As a "
 "result libsensors3 will not be functional on your system."
@@ -101,8 +69,3 @@ msgstr ""
 "Hình như bạn đang chạy một hạt nhân cũ hơn phiên bản 2.6.5. Vì vậy "
 "libsensors3 sẽ không thể chức năng trong hệ thống bạn."
 
-#. Type: note
-#. Description
-#: ../libsensors3.templates:26
-msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
-msgstr "(Ghi chú rằng libsensors3 vẫn còn tương thích với hạt nhân 2.4.)"

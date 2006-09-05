@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: aurel32@debian.org\n"
-"POT-Creation-Date: 2005-09-07 16:05+0200\n"
+"POT-Creation-Date: 2006-09-05 16:24+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,34 +18,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:3
-msgid ""
-"It appears that your kernel is not compiled with sensors support and that "
-"you don't have sensors modules installed. As a result, libsensors3 will not "
-"be functional on your system."
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../libsensors3.templates:3
-msgid ""
-"If you want to enable it, you can:\n"
-" - Install the i2c-2.4-xx-x-xxx and lm-sensors-2.4-xx-x-xxx packages\n"
-"   corresponding to your kernel if you are using a prebuilt kernel;\n"
-" - Patch your kernel using the packages kernel-patch-2.4-i2c and\n"
-"   kernel-patch-2.4-lm-sensors;\n"
-" - Build the modules yourself using i2c-source and lm-sensors-source."
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid "libsensors3 not functional"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid ""
 "It appears that your kernel is not compiled with sensors support. As a "
 "result, libsensors3 will not be functional on your system."
@@ -53,7 +32,7 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:17
+#: ../libsensors3.templates:1001
 msgid ""
 "If you want to enable it, have a look at \"I2C Hardware Sensors Chip support"
 "\" in your kernel configuration."
@@ -61,13 +40,13 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid "libsensors3 needs kernel >= 2.6.5"
 msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid ""
 "The /sys interface changed in kernel version 2.6.5 and libsensors version "
 "2.8.6. This version of libsensors3 doesn't support kernels older than "
@@ -76,14 +55,8 @@ msgstr ""
 
 #. Type: note
 #. Description
-#: ../libsensors3.templates:26
+#: ../libsensors3.templates:2001
 msgid ""
 "It appears that your are running a kernel older than version 2.6.5. As a "
 "result libsensors3 will not be functional on your system."
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../libsensors3.templates:26
-msgid "(Note that libsensors3 is still compatible with 2.4 kernels)."
 msgstr ""

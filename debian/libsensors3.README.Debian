@@ -9,27 +9,9 @@ bus, and drivers to support specific sensor devices.
 2.4 kernels
 -----------
 
-The i2c modules can come from either the separate i2c-2.4-xx-x-xxx 
-packages, the i2c-source package or the kernel-patch-2.4-i2c package. The
-patches package tends to be somewhat newer, and have more features and 
-bugfixes. If you do that, you must enable "I2C /proc support" in your 
-kernel configuration. Note that it is not necessary to load the 
-corresponding module (i2c-proc) manually, it would be loaded automatically
-by modprobe when you load a sensor module.
-
-The lm-sensors modules are not distributed with the Linux kernel, but
-source is distributed separately in the lm-sensors-source package. They are
-also available in prebuilt packages lm-sensors-2.4-xx-x-xxx or in the 
-kernel-patch-2.4-lm-sensors package.
-
-If you want to use the lm-sensors-source package in combination with the 
-Debian kernel-package package; instructions for building the modules are 
-in /usr/share/doc/lm-sensors-source/README.Debian in the lm-sensors-source 
-package.
-
-Once you have the modules built, you need to probe for the sensors 
-available on your system. You can use the sensors-detect program to do 
-this.
+2.4 kernels are not supported any more. If you still want to use a 2.4 
+kernel, you have to patch your kernel. Have a look at the documentation
+on http://www.lm-sensors.org/
 
 
 2.6 kernels
