@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
 #include <sysfs/libsysfs.h>
 #include "data.h"
 #include "error.h"
@@ -45,6 +46,7 @@ int sensors_init_sysfs(void)
 /* returns: 0 if successful, !0 otherwise */
 static int sensors_read_one_sysfs_chip(struct sysfs_device *dev)
 {
+	int domain, bus, slot, fn;
 	struct sysfs_attribute *attr, *bus_attr;
 	char bus_path[SYSFS_PATH_MAX];
 	sensors_proc_chips_entry entry;
@@ -89,6 +91,10 @@ static int sensors_read_one_sysfs_chip(struct sysfs_device *dev)
 	} else if (sscanf(dev->name, "%*[a-z0-9_].%d", &entry.name.addr) == 1) {
 		/* must be new ISA (platform driver) */
 		entry.name.bus = SENSORS_CHIP_NAME_BUS_ISA;
+	} else if (sscanf(dev->name, "%x:%x:%x.%x", &domain, &bus, &slot, &fn) == 4) {
+		/* PCI */
+		entry.name.addr = (domain << 16) + (bus << 8) + (slot << 3) + fn;
+		entry.name.bus = SENSORS_CHIP_NAME_BUS_PCI;
 	} else
 		return -SENSORS_ERR_PARSE;
 
@@ -106,12 +112,14 @@ static int sensors_read_sysfs_chips_compat(void)
 	int ret = 0;
 
 	if (!(bus = sysfs_open_bus("i2c"))) {
-		ret = -SENSORS_ERR_PROC;
+		if (errno && errno != ENOENT)
+			ret = -SENSORS_ERR_PROC;
 		goto exit0;
 	}
 
 	if (!(devs = sysfs_get_bus_devices(bus))) {
-		ret = -SENSORS_ERR_PROC;
+		if (errno && errno != ENOENT)
+			ret = -SENSORS_ERR_PROC;
 		goto exit1;
 	}
 
@@ -141,7 +149,8 @@ int sensors_read_sysfs_chips(void)
 	}
 
 	if (!(clsdevs = sysfs_get_class_devices(cls))) {
-		ret = -SENSORS_ERR_PROC;
+		if (errno && errno != ENOENT)
+			ret = -SENSORS_ERR_PROC;
 		goto exit;
 	}
 
@@ -171,12 +180,14 @@ int sensors_read_sysfs_bus(void)
 	int ret = 0;
 
 	if (!(cls = sysfs_open_class("i2c-adapter"))) {
-		ret = -SENSORS_ERR_PROC;
+		if (errno && errno != ENOENT)
+			ret = -SENSORS_ERR_PROC;
 		goto exit0;
 	}
 
 	if (!(clsdevs = sysfs_get_class_devices(cls))) {
-		ret = -SENSORS_ERR_PROC;
+		if (errno && errno != ENOENT)
+			ret = -SENSORS_ERR_PROC;
 		goto exit1;
 	}
 
@@ -189,7 +200,8 @@ int sensors_read_sysfs_bus(void)
 		if (!(attr = sysfs_get_device_attr(dev, "name")))
 			continue;
 
-		entry.adapter = strdup(attr->value);
+		/* NB: attr->value[attr->len-1] == '\n'; chop that off */
+		entry.adapter = strndup(attr->value, attr->len - 1);
 		if (!entry.adapter)
 			sensors_fatal_error(__FUNCTION__, "out of memory");
 

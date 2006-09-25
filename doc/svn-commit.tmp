@@ -1,0 +1,6 @@
+Rename checklist to release_checklist for clarity.
+
+--This line, and those below, will be ignored--
+
+D    developers/checklist
+A    developers/release_checklist

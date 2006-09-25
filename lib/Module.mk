@@ -33,7 +33,7 @@ LIBMAN5FILES := $(MODULE_DIR)/sensors.conf.5
 # the public header files - in this case they are error.h, sensors.h,
 # chips.h.
 LIBMAINVER := 3
-LIBMINORVER := 1.0
+LIBMINORVER := 1.1
 LIBVER := $(LIBMAINVER).$(LIBMINORVER)
 
 # The static lib name, the shared lib name, and the internal ('so') name of
@@ -160,6 +160,8 @@ user_install :: install-lib
 user_uninstall::
 	$(RM) $(REMOVELIBST) $(REMOVELIBSH) $(REMOVELNSO) $(REMOVELNBS) 
 	$(RM) $(REMOVELIBHF) $(REMOVEMAN3) $(REMOVEMAN5)
+# Remove directory if empty, ignore failure
+	$(RMDIR) $(DESTDIR)$(LIBINCLUDEDIR) 2> /dev/null || true
 
 clean-lib:
 	$(RM) $(LIB_DIR)/*.ld $(LIB_DIR)/*.ad

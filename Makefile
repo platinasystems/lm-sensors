@@ -18,8 +18,9 @@
 # Everything you may want to change is in the top of this file. Usually, you
 # can just use the defaults, fortunately.
 
-# You need a full complement of GNU utilities to run this Makefile succesfully;
-# most notably, you need bash, GNU make, flex (>= 2.5.1) and bison.
+# You need a full complement of GNU utilities to run this Makefile
+# successfully; most notably, you need bash, GNU make, flex (>= 2.5.1)
+# and bison.
 
 # If your /bin/sh is not bash, change the below definition so that make can
 # find bash. Or you can hope your sh-like shell understands all scripts.
@@ -47,18 +48,16 @@ LINUX_HEADERS := $(LINUX)/include
 I2C_HEADERS := /usr/local/include
 #I2C_HEADERS := $(LINUX_HEADERS)
 
-# Uncomment the third line on SMP systems if the magic invocation fails.
+ifneq ($(MAKECMDGOALS),user)
+ifneq ($(MAKECMDGOALS),user_install)
+ifneq ($(MAKECMDGOALS),user_uninstall)
 SMP := $(shell if grep -q '^[[:space:]]*\#define[[:space:]]*CONFIG_SMP[[:space:]]*1' $(LINUX_HEADERS)/linux/autoconf.h ; \
                then echo 1; else echo 0; fi)
-#SMP := 0
-#SMP := 1
-
-# Uncomment the second or third line if the magic invocation fails.
-# We need to know whether CONFIG_MODVERSIONS is defined.
 MODVER := $(shell if grep -q '^[[:space:]]*\#define[[:space:]]*CONFIG_MODVERSIONS[[:space:]]*1' $(LINUX_HEADERS)/linux/autoconf.h ; \
                   then echo 1; else echo 0; fi)
-#MODVER := 0
-#MODVER := 1
+endif
+endif
+endif
 
 # Uncomment the second line if you are a developer. This will enable many
 # additional warnings at compile-time
@@ -84,7 +83,8 @@ CC := gcc
 # This is the main modules directory into which the modules will be installed.
 # The magic invocation will return something like this:
 #   /lib/modules/2.4.29
-MODPREF := /lib/modules/$(shell $(CC) -I$(LINUX_HEADERS) -E etc/config.c | grep uts_release |cut -f 2 -d'"')
+KERNELVERSION := $(shell $(CC) -I$(LINUX_HEADERS) -E etc/config.c | grep uts_release | cut -f 2 -d'"')
+MODPREF := /lib/modules/$(KERNELVERSION)
 
 # When building userspace for use with 2.4.x series kernels, we turn off
 # sysfs support by default.  You can override this (e.g. if you want
@@ -280,7 +280,7 @@ LIBCPPFLAGS := $(LIBCPPFLAGS) -DSYSFS_SUPPORT
 endif
 LIBCFLAGS := -fpic $(ALL_CFLAGS)
 
-.PHONY: all clean install version package dep
+.PHONY: all user clean install user_install uninstall user_uninstall version package
 
 # Make all the default rule
 all::
@@ -306,9 +306,6 @@ endif
 MANPAGES := $(LIBMAN3FILES) $(LIBMAN5FILES) $(PROGDETECTMAN8FILES) $(PROGDUMPMAN8FILES) \
             $(PROGSENSORSMAN1FILES) $(PROGPWMMAN8FILES) prog/sensord/sensord.8
 
-# Making the dependency files - done automatically!
-dep : 
-
 user ::
 user_install::
 	@echo "*** Important note:"
@@ -321,7 +318,9 @@ user_install::
 all :: user
 install :: all user_install
 ifeq ($(DESTDIR),)
-	-/sbin/depmod -a
+	-if [ -r $(MODPREF)/build/System.map -a -x /sbin/depmod ] ; then \
+	  /sbin/depmod -a -F $(MODPREF)/build/System.map $(KERNELVERSION) ; \
+	fi
 else
 	@echo "*** This is a \`staged' install using \"$(DESTDIR)\" as prefix."
 	@echo "***"
@@ -394,7 +393,6 @@ help:
 	@echo '  user_uninstall: remove userspace programs'
 	@echo '  clean: cleanup'
 	@echo '  package: create a distribution package'
-	@echo 'Note: make dep is automatic'
 
 $(LINUX)/.config:
 	@echo
@@ -420,7 +418,7 @@ manhtml:
 	cp $(MANPAGES) html
 	cd html ; \
 	export LOGNAME=sensors ; \
-	export HOSTNAME=stimpy.netroedge.com ; \
+	export HOSTNAME=www.lm-sensors.org ; \
 	man2html *.[1-8] ; \
 	$(RM) *.[1-8]
 
@@ -428,7 +426,7 @@ manhtml:
 
 .SUFFIXES:
 
-# We need to create dependency files. Tricky. We sed rule puts dir/file.d and
+# We need to create dependency files. Tricky. The sed rule puts dir/file.d and
 # dir/file.c in front of the dependency file rule.
 
 # .o files are used for modules

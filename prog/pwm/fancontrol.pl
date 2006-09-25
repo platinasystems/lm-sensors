@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-# $Id: fancontrol.pl,v 1.6 2005/06/23 21:07:10 khali Exp $
+# $Id: fancontrol.pl 3025 2005-06-23 21:07:10Z khali $
 #
 # Perl script for temperature dependent fan speed control.
 #

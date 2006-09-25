@@ -1,3 +1,12 @@
+lm-sensors (1:2.10.1-1) unstable; urgency=low
+
+  * New upstream version.
+  * Dropped debconf notes. I just hope the users won't report too much bugs
+    as experience has shown that a lot of users are not capable of reading
+    /usr/share/doc/.../README.Debian (closes: bug#388522, bug#388918).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 26 Sep 2006 00:30:08 +0200
+
 lm-sensors (1:2.10.0-9) unstable; urgency=low
 
   * Remove the dependency on sysvinit (Closes: bug#386133).

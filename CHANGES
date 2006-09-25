@@ -1,6 +1,109 @@
 lm_sensors CHANGES file
 -----------------------
 
+2.10.1 (20060924)
+  File doc/developers/checklist renamed to dev/developers/release_checklist
+          with clarifications and updates for new SVN server.
+  File README.package: Delete.
+  File doc/busses/i2c-piix4: Update (2.6 backport)
+  File doc/developers/sysfs-interface: Update
+  File etc/sensors.conf.eg: Add an smsc47m192 section
+                            Comment out all set statements
+                            Add an it8716 section
+                            Add a w83793 section
+                            Adjust the vt1211 section to match the new driver
+                             interface
+  Library: Fix device scan when no i2c support is present
+           Add support for W83627EHF voltage inputs and alarms
+           Add support for the smsc47m192 driver
+           Fix all memory leaks (yeah!)
+           Fix no sensors being reported as an error
+           Add support for the IT8716F and IT8718F chips
+           Add support for the W83793 chip (Yuan Mu)
+           Map the 2.6 adm1026's fan8 to fan0
+           Missing sysfs busses and classes are not errors
+           Change vt1211 temp3-7 magnitude from 1 to 3
+  Makefile: Don't grep autoconf.h on user-space targets
+            Fix depmod on non-running kernel version
+            Remove empty include directories on make user_uninstall
+  Module i2c-ali1535: Drop redundant semaphore (2.6 backport)
+  Module i2c-amd756-s4882: Improve static semaphore initialization
+                           (2.6 backport)
+  Module i2c-i801: Disable PEC mode after every transaction (2.6 backport)
+                   Add ICH8 support (2.6 backport)
+                   Fix block transaction poll loops (2.6 backport)
+                   Remove PCI function check (2.6 backport)
+                   Cleanups (2.6 backport)
+  Module i2c-nforce2: Add nForce4 MCP51, MCP55 support (2.6 backport)
+  Module i2c-piix4: Add ServerWorks HT-1000 support (2.6 backport)
+                    Add ATI IXP200, IXP300, IXP400 support (2.6 backport)
+                    Drop the fix_hstcfg parameter (2.6 backport)
+  Module i2c-viapro: Fix compilation with kernels < 2.4.21
+                     Add VT8237A and VT8251
+  Module lm83: Add LM82 support (2.6 backport)
+  Module vt1211: The VT1211 has no in6
+                 Rework the voltage and temperature conversions and the
+                  temperature input order to match the Linux 2.6 driver
+  Module w83781d: Use real-time alarm registers when possible (2.6 backport)
+                  Add specific alarm and beep defines for the W83791D
+  Module w83792d: Fix PWM range (2.6 backport)
+  Program decode-dimms.pl: Decode depending on the memory type
+                           Decode the manufacturing date to an ISO8601 date
+                           Add the memory size computation and provide brief
+                            timing characteritics for SDRAM/DDR/DDR2 memory
+                           Add memory size computation for Rambus memory
+                           Various output cleanups and fixes
+  Program decode-edid.pl: Add /usr/sbin or /usr/local/sbin to $PATH if needed
+  Program decode-vaio.pl: Detect and skip false positives
+  Program i2cdetect: Add a mode to print adapter functionalities
+  Program i2cdump: Restore bank after bank switching
+                   Add new mode W (read word on even register addresses)
+  Program mkpatch: Fix typo breaking f71805f
+                   Turn warnings on (-w), and fix them
+                   Print a usage message on missing command line parameters
+  Program pwmconfig: Use mktemp instead of tempfile
+  Program sensors: No error messages on missing w83792d fan4-7 (Yuan Mu)
+                   Add smsc47m192 support
+                   Add abituguru support (Hans de Goede)
+                   Fix memory leak when printing an unknown chip
+                   Add it8716 and it8718 support
+                   Make each it87 fan and fan div optional
+                   Print missing w83791d values
+                   Add w83793 support (Yuan Mu)
+                   The adt7463 may not have in4 (#2119)
+                   Hide more vt1211 missing input errors
+                   Clearer error messages when no sensors found
+  Program sensors-detect: Add ServerWorks HT-1000 SMBus detection
+                          Add ATI IXP200/300/400 SMBus detection
+                          Prevent warning on 64-bit PCI addresses
+                          Add Fintek F75363SG, F75111R/RG/N, F75121R,
+                           F75122R/RG, F75373S/SG, F75375S/SP, F75383S/M,
+                           F75384S/M, F75387SG/RG and F81218D detection
+                          Add Winbond W83793R/G and W83627DHG detection
+                          Handle the W83791D driver difference between kernels
+                          Add nForce4 MCP04, MCP51 and MCP55 detection
+                          Add AMD Geode devices detection
+                          Add ITE IT8716F and IT8718F detection
+                          Add NatSemi/Winbond PC87427 detection
+                          Get driver information for busy addresses from
+                           sysfs (2.6 only)
+                          Drop the ISA IT87xxF detection
+                          Check i2c adapter functionalities before probing
+                          Add Intel ICH8 SMBus detection
+                          Add AMD K8 thermal sensors detection
+                          Simplify detection of SiS5595, VIA686 and VT8231
+                          Add Analog Devices ADM1033, ADM1034, ADT7462,
+                           ADT7466, ADT7470, ADT7473 and ADT7475 detection
+                          Check for root user at startup
+                          Attempt to be slightly more user-friendly
+                          Add VT8237A and VT8251
+                          Remove detection of nVidia graphics adapters
+                          Use sysfs for PCI device enumeration
+                          Add generic PCI SMBus adapter detection
+                          Add generic Super-I/O logical device detection
+                          Add SMSC LPC47M172/182 detection
+
+
 2.10.0 (20060214)
   File doc/lm_sensors-FAQ.texi: Remove version 1 specifics part
   File doc/busses/i2c-viapro: Update (2.6 backport)
@@ -61,6 +164,7 @@ lm_sensors CHANGES file
   Module w83792d: Bug fixes and code cleanups (Yuan Mu, 2.6 backport)
                   Fix fan control mode (PWM/DC) reporting
                   Fix fan div auto-adjust (Yuan Mu)
+                  Fix the subclient handling
   Module w83l785ts: Minor cleanup (2.6 backport)
   Module vt1211: Restore temp1
   Modules vt1211, vt8231: Change default VRM to 9.1

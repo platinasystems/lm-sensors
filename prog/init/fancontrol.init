@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: fancontrol.init,v 1.1 2004/06/23 19:36:49 khali Exp $
+# $Id: fancontrol.init 2607 2004-06-23 19:36:49Z khali $
 #
 # fancontrol
 #

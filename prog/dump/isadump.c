@@ -200,8 +200,8 @@ int main(int argc, char *argv[])
 			help();
 			exit(1);
 		}
-		if ((bank < 0) || (bank > 15)) {
-			fprintf(stderr, "Error: bank out of range (0-15)!\n");
+		if ((bank < 0) || (bank > 31)) {
+			fprintf(stderr, "Error: bank out of range (0-31)!\n");
 			help();
 			exit(1);
 		}
@@ -248,8 +248,8 @@ int main(int argc, char *argv[])
 
 		fprintf(stderr, "Continue? [Y/n] ");
 		fflush(stderr);
-		fgets(s, 2, stdin);
-		if (s[0] != '\n' && s[0] != 'y' && s[0] != 'Y') {
+		if (!fgets(s, 2, stdin)
+		 || (s[0] != '\n' && s[0] != 'y' && s[0] != 'Y')) {
 			fprintf(stderr, "Aborting on user request.\n");
 			exit(0);
 		}
