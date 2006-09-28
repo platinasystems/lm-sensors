@@ -1,3 +1,9 @@
+lm-sensors (1:2.10.1-2) unstable; urgency=low
+
+  * libsensors3: don't source debconf from postinst (closes: bug#390034).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Fri, 29 Sep 2006 01:46:58 +0200
+
 lm-sensors (1:2.10.1-1) unstable; urgency=low
 
   * New upstream version.
