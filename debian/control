@@ -23,7 +23,7 @@ Description: utilities to read temperature/voltage/fan sensors
  building them using the lm-sensors-source package. For 2.6 kernels,
  use the modules that are already in the kernel tree.
  .
-  Homepage: http://www.lm-sensors.nu
+  Homepage: http://www.lm-sensors.org
 
 Package: libsensors3
 Architecture: any
@@ -38,7 +38,7 @@ Description: library to read temperature/voltage/fan sensors
  .
  This package contains a shared library for querying lm-sensors.
  .
-  Homepage: http://www.lm-sensors.nu
+  Homepage: http://www.lm-sensors.org
 
 Package: libsensors-dev
 Architecture: any
@@ -53,7 +53,7 @@ Description: lm-sensors development kit
  This package contains the static library and header files used in
  development.
  .
-  Homepage: http://www.lm-sensors.nu
+  Homepage: http://www.lm-sensors.org
 
 Package: sensord
 Architecture: any
@@ -73,5 +73,5 @@ Description: hardware sensor information logging daemon
  building them using the lm-sensors-source package. For 2.6 kernels,
  use the modules that are already in the kernel tree.
  .
-  Homepage: http://www.lm-sensors.nu
+  Homepage: http://www.lm-sensors.org
 
