@@ -1,5 +1,15 @@
 #!/bin/sh
 
+### BEGIN INIT INFO
+# Provides:          sensord
+# Required-Start:    $local_fs $syslog lm-sensors
+# Required-Stop:     $local_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: lm-sensors daemon
+# Description:       hardware sensor information logging daemon
+### END INIT INFO
+
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 DAEMON=/usr/sbin/sensord
 # PIDFILE=/var/run/sensord.pid

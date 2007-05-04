@@ -41,20 +41,20 @@ struct adap_type {
 
 static struct adap_type adap_types[5] = {
 	{ .funcs	= "dummy",
-	  .algo		= "Dummy bus algorithm", },
+	  .algo		= "Dummy bus", },
 	{ .funcs	= "isa",
-	  .algo		= "ISA bus algorithm", },
+	  .algo		= "ISA bus", },
 	{ .funcs	= "i2c",
-	  .algo		= "Algorithm unavailable", },
+	  .algo		= "I2C adapter", },
 	{ .funcs	= "smbus",
-	  .algo		= "Non-I2C SMBus adapter", },
+	  .algo		= "SMBus adapter", },
 	{ .funcs	= "unknown",
-	  .algo		= "Algorithm unavailable", },
+	  .algo		= "N/A", },
 };
 
 static enum adt i2c_get_funcs(int i2cbus)
 {
-	long funcs;
+	unsigned long funcs;
 	int file;
 	char filename[20];
 	enum adt ret;

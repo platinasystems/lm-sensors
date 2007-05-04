@@ -187,6 +187,7 @@ endif
 SRCDIRS += kernel/include
 SRCDIRS += lib prog/detect prog/dump prog/eeprom prog/pwm \
            prog/sensors prog/xeon ${PROG_EXTRA:%=prog/%} etc
+SRCDIRS += lib/test
 
 # Some often-used commands with default options
 MKDIR := mkdir -p
@@ -278,7 +279,7 @@ LIBCPPFLAGS := $(ALL_CPPFLAGS)
 ifdef SYSFS_SUPPORT
 LIBCPPFLAGS := $(LIBCPPFLAGS) -DSYSFS_SUPPORT
 endif
-LIBCFLAGS := -fpic $(ALL_CFLAGS)
+LIBCFLAGS := -fpic -D_REENTRANT $(ALL_CFLAGS)
 
 .PHONY: all user clean install user_install uninstall user_uninstall version package
 
@@ -335,7 +336,7 @@ else
 endif
 
 clean::
-	$(RM) lm_sensors-*
+	$(RM) lm_sensors-* lex.backup
 
 user_uninstall::
 
@@ -475,5 +476,11 @@ manhtml:
 %c: %y
 	$(BISON) -p sensors_yy -d $< -o $@
 
+ifeq ($(DEBUG),1)
+FLEX_FLAGS := -Psensors_yy -t -b -Cfe -8
+else
+FLEX_FLAGS := -Psensors_yy -t -Cfe -8
+endif
+
 %.c: %.l
-	$(FLEX) -Psensors_yy -t $< > $@
+	$(FLEX) $(FLEX_FLAGS) $< > $@

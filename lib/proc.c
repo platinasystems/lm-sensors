@@ -94,8 +94,7 @@ int sensors_read_proc_bus(void)
       line[strlen(line)-1] = '\0';
     if (! (border = rindex(line,'\t')))
       goto ERROR;
-    if (! (entry.algorithm = strdup(border+1)))
-      goto FAT_ERROR;
+    /* Skip algorithm name */
     *border='\0';
     if (! (border = rindex(line,'\t')))
       goto ERROR;
@@ -109,7 +108,6 @@ int sensors_read_proc_bus(void)
       goto ERROR;
     if (sensors_parse_i2cbus_name(line,&entry.number))
       goto ERROR;
-    sensors_strip_of_spaces(entry.algorithm);
     sensors_strip_of_spaces(entry.adapter);
     sensors_add_proc_bus(&entry);
     lineno++;
@@ -310,7 +308,7 @@ static const struct match matches[] = {
 static int getsysname(const sensors_chip_feature *feature, char *sysname,
 	int *sysmag, char *altsysname)
 {
-	const char * name = feature->name;
+	const char * name = feature->data.name;
 	char last;
 	char check; /* used to verify end of string */
 	int num;

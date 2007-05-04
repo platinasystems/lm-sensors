@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
+#include "util.h"
 #include "superio.h"
 
 
@@ -46,16 +46,6 @@
 #ifdef __powerpc__
 unsigned long isa_io_base = 0; /* XXX for now */
 #endif /* __powerpc__ */
-
-char hexchar(int i)
-{
-	if ((i >= 0) && (i <= 9))
-		return '0' + i;
-	else if (i <= 15)
-		return 'a' - 10 + i;
-	else
-		return 'X';
-}
 
 void help(void)
 {
@@ -230,8 +220,6 @@ int main(int argc, char *argv[])
 	}
 
 	if (!yes) {
-		char s[2];
-
 		fprintf(stderr, "WARNING! Running this program can cause "
 		        "system crashes, data loss and worse!\n");
 
@@ -248,8 +236,7 @@ int main(int argc, char *argv[])
 
 		fprintf(stderr, "Continue? [Y/n] ");
 		fflush(stderr);
-		if (!fgets(s, 2, stdin)
-		 || (s[0] != '\n' && s[0] != 'y' && s[0] != 'Y')) {
+		if (!user_ack(1)) {
 			fprintf(stderr, "Aborting on user request.\n");
 			exit(0);
 		}
@@ -301,13 +288,14 @@ int main(int argc, char *argv[])
 			superio_write_key(addrreg, enter_key);
 
 		for (j = 0; j < 16; j++) {
+			fflush(stdout);
 			if (flat) {
 				res = inb(addrreg + i + j);
 			} else {	
 				outb(i+j, addrreg);
 				res = inb(datareg);
 			}
-			printf("%c%c ", hexchar(res/16), hexchar(res%16));
+			printf("%02x ", res);
 		}
 		printf("\n");
 	}

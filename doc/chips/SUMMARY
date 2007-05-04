@@ -214,11 +214,14 @@ smsc47m1
 	(all are reported as a "smsc47m1")
 	smsc47b27x	-	-	2	2	no	yes (LPC)
 	smsc47m10x	-	-	2	2	no	yes (LPC)
+	smsc47m112	-	-	2	2	no	yes (LPC)
 	smsc47m13x	-	-	2	2	no	yes (LPC)
 	smsc47m14x	-	-	2	2	no	yes (LPC)
 	smsc47m15x	-	-	2	2	no	yes (LPC)
 	smsc47m192	-	-	2	2	no	yes (LPC)
 	smsc47m997	-	-	2	2	no	yes (LPC)
+	(reported as a "smsc47m2")
+	smsc47m292	-	-	3	3	no	yes (LPC)
 
 thmc50
 	adm1022		3	2	-	1 dac	yes	no
@@ -282,9 +285,6 @@ eeprom
 	Memory SPD (serial presence detect) eeproms - reads locations only
 	Xeon scratch eeproms - reads locations only
 
-icspll
-	supported clock chips - reads registers only
-
 ltc1710
 	ltc1710	two switches only
 
@@ -326,17 +326,18 @@ This may help identify a chip after doing a 'i2cdump [bus] [address]'.
 0x49	TI
 0x4D	Maxim
 0x54	On Semi
+0x54	Microchip (at 0x7)
 0x5C	SMSC
 0x5D 	SMSC
 0x55	SMSC
 0x5CA3	Winbond (at 0x4F)
+0x61	Andigilog
 0x90	ITE (at 0x58)
 0xA1	Philips (at 0x05 too)
 0xA3	Winbond (at 0x4F)
 0xAC	Myson (at 0x58)
 0xC3	Asus (at 0x4F)
 0xDA	Dallas
-0x54    Microchip (at 0x7)
 
 [A-Z]{3} at 0x00-0x02: Fujitsu-Siemens
 

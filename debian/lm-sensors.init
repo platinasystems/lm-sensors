@@ -1,4 +1,13 @@
 #!/bin/sh
+### BEGIN INIT INFO
+# Provides:          lm-sensors
+# Required-Start:    $local_fs
+# Required-Stop:
+# Default-Start:     S
+# Default-Stop:
+# Short-Description: lm-sensors
+# Description:       hardware health monitoring
+### END INIT INFO
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 PROGRAM=/usr/bin/sensors

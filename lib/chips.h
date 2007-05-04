@@ -184,6 +184,30 @@
 #define SENSORS_ADM1021_ALARMS 81 /* R */
 #define SENSORS_ADM1021_DIE_CODE 90 /* R */
 
+/* ADM1029 chips */
+
+#define SENSORS_ADM1029_PREFIX "adm1029"
+
+#define SENSORS_ADM1029_TEMP1		51
+#define SENSORS_ADM1029_TEMP1_MAX	52
+#define SENSORS_ADM1029_TEMP1_MIN	53
+
+#define SENSORS_ADM1029_TEMP2		61
+#define SENSORS_ADM1029_TEMP2_MAX	62
+#define SENSORS_ADM1029_TEMP2_MIN	63
+
+#define SENSORS_ADM1029_TEMP3		71
+#define SENSORS_ADM1029_TEMP3_MAX	72
+#define SENSORS_ADM1029_TEMP3_MIN	73
+
+#define SENSORS_ADM1029_FAN1		81
+#define SENSORS_ADM1029_FAN1_MIN	82
+#define SENSORS_ADM1029_FAN1_DIV	83
+
+#define SENSORS_ADM1029_FAN2		91
+#define SENSORS_ADM1029_FAN2_MIN	92
+#define SENSORS_ADM1029_FAN2_DIV	93
+
 
 /* ADM1030 and ADM1031 chips */
 
@@ -868,9 +892,11 @@
 #define SENSORS_W83L785TS_TEMP_OVER	52 /* R for now */
 
 
-/* Winbond W83627EHF Super-I/O chips */
+/* Winbond W83627EHF & W83627DHG Super-I/O chips */
+/* (W83627DHG is similar to W83627EHF but no in9) */
 
 #define SENSORS_W83627EHF_PREFIX	"w83627ehf"
+#define SENSORS_W83627DHG_PREFIX	"w83627dhg"
 
 #define SENSORS_W83627EHF_IN0		1 /* R */
 #define SENSORS_W83627EHF_IN1		2 /* R */
@@ -1808,13 +1834,17 @@
 #define SENSORS_VT1211_UCH 84 /* RW */
 
 #define SENSORS_SMSC47M1_PREFIX "smsc47m1"
+#define SENSORS_SMSC47M2_PREFIX "smsc47m2"
 
 #define SENSORS_SMSC47M1_FAN1 31 /* R */
 #define SENSORS_SMSC47M1_FAN2 32 /* R */
+#define SENSORS_SMSC47M1_FAN3 33 /* R */
 #define SENSORS_SMSC47M1_FAN1_MIN 41 /* RW */
 #define SENSORS_SMSC47M1_FAN2_MIN 42 /* RW */
+#define SENSORS_SMSC47M1_FAN3_MIN 43 /* RW */
 #define SENSORS_SMSC47M1_FAN1_DIV 75 /* RW */
 #define SENSORS_SMSC47M1_FAN2_DIV 76 /* RW */
+#define SENSORS_SMSC47M1_FAN3_DIV 77 /* RW */
 #define SENSORS_SMSC47M1_ALARMS 81 /* R */
 
 #define SENSORS_SMSC47M192_PREFIX "smsc47m192"
@@ -1932,6 +1962,14 @@
 
 #define SENSORS_PC87360_VID		240	/* R */
 #define SENSORS_PC87360_VRM		241	/* RW */
+
+#define SENSORS_PC87427_PREFIX "pc87427"
+
+/* fan n from 1 to 8 */
+#define SENSORS_PC87427_FAN(n)		(n)		/* R */
+#define SENSORS_PC87427_FAN_MIN(n)	(16 + (n))	/* RW */
+#define SENSORS_PC87427_FAN_ALARM(n)	(32 + (n))	/* R */
+#define SENSORS_PC87427_FAN_FAULT(n)	(48 + (n))	/* R */
 
 #define SENSORS_LM92_PREFIX "lm92"
 
@@ -2170,10 +2208,11 @@
 #define SENSORS_SMSC47B397_FAN3		0x13 /* R */
 #define SENSORS_SMSC47B397_FAN4		0x14 /* R */
 
-/* Fintek F71805F chip */
+/* Fintek F71805F/FG and F71872F/FG chips */
 #define SENSORS_F71805F_PREFIX		"f71805f"
+#define SENSORS_F71872F_PREFIX		"f71872f"
 
-/* in n from 0 to 8 */
+/* in n from 0 to 10 */
 #define SENSORS_F71805F_IN(n)		(1 + (n))
 #define SENSORS_F71805F_IN_MIN(n)	(16 + (n))
 #define SENSORS_F71805F_IN_MAX(n)	(31 + (n))
@@ -2215,5 +2254,12 @@
 #define SENSORS_K8TEMP_TEMP2	0x02 /* R */
 #define SENSORS_K8TEMP_TEMP3	0x03 /* R */
 #define SENSORS_K8TEMP_TEMP4	0x04 /* R */
+
+/* coretemp */
+
+#define SENSORS_CORETEMP_PREFIX "coretemp"
+#define SENSORS_CORETEMP_TEMP1			0x01 /* R */
+#define SENSORS_CORETEMP_TEMP1_CRIT		0x02 /* R */
+#define SENSORS_CORETEMP_TEMP1_CRIT_ALARM	0x03 /* R */
 
 #endif /* def LIB_SENSORS_CHIPS_H */

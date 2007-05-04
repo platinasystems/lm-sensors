@@ -1,6 +1,111 @@
 lm_sensors CHANGES file
 -----------------------
 
+2.10.3 (20070319)
+  Library: Do not skip i2c adapters with only a class device and no
+            physical device. This change is required to survive the
+            planned struct class_dev removal from future 2.6 kernels.
+           Add support for the SMSC LPC47M292 fans (prefix smsc47m2)
+           Recognize i2c-isa-based devices as such even after class_dev
+	    is gone
+           Compile with -D_REENTRANT
+           Fix support of Linux 2.6's max6650 driver
+           Fix max1619 support
+  Man page i2cdetect.8: Scanning range can be restricted
+  Module bmcsensors: Fix debugging messages
+  Module i2c-ali1563: Improve the status messages (2.6 backport)
+                      Fix device initialization (2.6 backport)
+  Module i2c-amd8111: Cleanups (2.6 backport)
+                      Fix initialization race (2.6 backport)
+  Module i2c-nforce2: Drop unused reference to pci_dev (2.6 backport)
+  Module i2c-piix4: Add ATI SB600 support (2.6 backport)
+  Module i2c-viapro: Add CX700 support (2.6 backport)
+  Module smsc47m1: Add SMSC LPC47M292 support
+                   Get rid of a useless semaphore (2.6 backport)
+  Programs i2cdetect, i2cdump, isadump: Flush output in real time
+  Program i2cdump: Cleaner output in SMBus block read mode
+  Program fancontrol.pl: Fix pwmN_enable access (#2190)
+  Program sensors: Add smsc47m2 support (fans)
+                   Fix -A option (hide adapter name) on error
+  Program sensors-detect: Only probe relevant I2C addresses
+                          Drop ARP-capable device detection
+                          Add Maxim MAX6655/MAX6656 detection
+                           (Olexiy Avramchenko)
+                          Add Maxim MAX1668, MAX1805, MAX1989 detection
+                          Add VIA CX700 detection
+                          Drop legacy W83627HF ISA detection
+                          Don't bufferize stdout during probes
+                          Speed up the LM75 and LM77 detection
+                          Clean up the EEPROM detection
+                          Add Dallas DS75 detection
+                          Add SMSC LPC47M292 detection
+                          Add nVidia MCP61 and MCP65 detection
+                          Fix ADM1028 detection
+                          Add Nat. Semi. PC8347L Super-I/O detection
+                          Add SMSC SCH5504 Super-I/O detection (no sensors)
+                          Make the LM78 and W83781D detection safer
+
+
+2.10.2 (20070115)
+  RPM: Obsolete, removed
+  File doc/fan-divisors: Update
+  File sensors_vid.h: Trim VID values to correct number of bits (2.6 backport)
+  Library: Add support for the pc87247 driver (fans only)
+           Probe for busses before chips
+           Drop support for algorithm names
+           Add support for coretemp driver   
+           Major update/optimization of config-file scanner
+           Add config-file scanner regression tests
+           Add f71872f support
+           Add w83627dhg support (David Holl, #2157)
+           Get the i2c adapter names from classdev.name
+           Add adm1029 support (Corentin Labbe)
+  Man page i2cdetect.8: Describe the output convention
+  Man page sensors.1: Update (option -c) and clean up
+  Module bmcsensors: Fix several warnings
+                     Fix fragile structure initialization
+  Module i2c-i801: Add ICH9 support
+  Module p4b_smbus: Add support for the ICH5
+  Module f71805f: Fix the device address decoding (2.6 backport)
+  Module icspll: Delete. It was useless and dangerous.
+  Program decode-dimms.pl: Remove spaces at end of lines
+  Program eepromer: Fix loads of warnings
+  Program i2cdetect: Make the output clearer
+  Program py-smbus: New! Python i2c-dev bindings (prog/py-smbus)
+  Program unhide_ICH_SMBus: New! Unhides the ICH SMBus for 2.6 kernels
+                            without need of recompilation.
+  Programs dump/*: More robust handling of user inputs
+  Programs pwmconfig, fancontrol: Handle write errors for bash 3.1
+                                  Add support for non-i2c drivers
+  Program fancontrol.pl: Disable debugging by default
+                         Add support for non-i2c drivers
+                         More tolerant config file parsing
+  Program sensord: Add pc87247 support (fans only)
+                   Add vt1211 support (#2150)
+                   Add w83627dhg support (David Holl, #2157)
+                   Add w83627ehf voltage support (Dave Platt)
+                   Add k8temp support (Dave Platt)
+  Program sensors: Add pc87247 support (fans only)
+                   Hide error on missing f71805f fan
+                   Handle option -c more efficiently
+                   Drop option -a (show algorithm names)
+                   Add f71872f support
+                   Add w83627dhg support (David Holl, #2157)
+                   Add adm1029 support (Corentin Labbe)
+                   Hide error on missing w83793 temp (Gong Jun)
+  Program sensors-detect: Add SMSC DME1737 detection
+                          Add Fintek F71882FG and EPoX EP1308 detection
+                          Add Intel Core thermal sensor detection
+                          Preallocate memory for I2C_FUNCS ioctl (#2138)
+                          Prevent misdetection of MAX6633/MAX6634/MAX6635
+                          Add Intel ICH9 detection
+                          Add Maxim MAX6648/MAX6692 detection
+                          Improve ADM1029 detection
+                          Add Andigilog chips detection
+                          Add Intel AMB FB-DIMM thermal sensor detection
+                          Add ATI SB600 detection
+
+
 2.10.1 (20060924)
   File doc/developers/checklist renamed to dev/developers/release_checklist
           with clarifications and updates for new SVN server.
