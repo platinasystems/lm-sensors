@@ -1554,13 +1554,6 @@ chip "it87-*" "it8712-*"
     # comment out if you have IT8712
     ignore  vid
 
-# Incubus Saturnus reports that the IT87 chip on Asus A7V8X-X seems
-# to report the VCORE voltage approximately 0.05V higher than the board's
-# BIOS does. Although it doesn't make much sense physically, uncommenting
-# the next line should bring the readings in line with the BIOS' ones in
-# this case.
-# compute in0 -0.05+@ , @+0.05
-
 # If 3.3V reads around 1.65V, uncomment the following line:
 #    compute in2   2*@ , @/2
 
@@ -1640,17 +1633,11 @@ chip "it87-*" "it8712-*"
 #    set   temp3_over  45
 #    set   temp3_low   15
 
-# The A7V8X-X has temperatures inverted, and needs a conversion for
-# CPU temp. Thanks to Preben Randhol for the formula.
+# The A7V8X-X and A7V600 have temperatures inverted, and needs a conversion
+# for CPU temp. Thanks to Preben Randhol for the formula.
 #   label temp1       "CPU Temp"
 #   label temp2       "M/B Temp"
 #   compute temp1     (-15.096+1.4893*@), (@+15.096)/1.4893
-
-# The A7V600 also has temperatures inverted, and needs a different
-# conversion for CPU temp. Thanks to Dariusz Jaszkowski for the formula.
-#   label temp1       "CPU Temp"
-#   label temp2       "M/B Temp"
-#   compute temp1     (@+128)/3, (3*@-128)
 
 # Fans
 #   set fan1_min 0
@@ -1961,7 +1948,7 @@ chip "max1619-*"
 #   set temp2_hyst  40
 
 
-chip "lm90-*" "adm1032-*" "lm86-*" "max6657-*" "adt7461-*"
+chip "lm90-*" "adm1032-*" "lm86-*" "max6657-*" "adt7461-*" "max6680-*"
 
    label temp1 "M/B Temp"
    label temp2 "CPU Temp"
@@ -2856,3 +2843,117 @@ chip "k8temp-*"
    label temp2 "Core0 Temp"
    label temp3 "Core1 Temp"
    label temp4 "Core1 Temp"
+
+
+#
+# Sample configuration for the SMSC DME1737 and ASUS A8000
+#
+chip "dme1737-*"
+
+# Voltage inputs
+   label in0   "V5stby"
+   label in1   "Vccp"
+   label in2   "V3.3"
+   label in3   "V5"
+   label in4   "V12"
+   label in5   "V3.3stby"
+   label in6   "Vbat"
+
+# Temperature inputs
+   label temp1   "RD1 Temp"
+   label temp2   "Int Temp"
+   label temp3   "CPU Temp"
+
+# Fan inputs
+   label fan1   "CPU_Fan"
+   label fan2   "Fan2"
+   label fan3   "Fan3"
+   label fan4   "Fan4"
+   label fan5   "Fan5"
+   label fan6   "Fan6"
+
+# PWM Outputs
+   label pwm1   "CPU_PWM"
+   label pwm2   "Fan2_PWM"
+   label pwm3   "Fan3_PWM"
+   label pwm5   "Fan5_PWM"
+   label pwm6   "Fan6_PWM"
+
+# Set voltage limits
+#   set in0_min   5.0 * 0.95
+#   set in0_max   5.0 * 1.05
+#   set in1_min   1.4 * 0.95
+#   set in1_max   1.4 * 1.05
+#   set in2_min   3.3 * 0.95
+#   set in2_max   3.3 * 1.05
+#   set in3_min   5.0 * 0.95
+#   set in3_max   5.0 * 1.05
+#   set in4_min  12.0 * 0.95
+#   set in4_max  12.0 * 1.05
+#   set in5_min   3.3 * 0.95
+#   set in5_max   3.3 * 1.05
+#   set in6_min   3.0 * 0.95
+#   set in6_max   3.0 * 1.05
+
+# Set Temp Limits
+#   set temp1_min 10
+#   set temp1_max 75
+#   set temp2_min 10
+#   set temp2_max 75
+#   set temp3_min 10
+#   set temp3_max 75
+
+# Set Fan limits
+#   set fan1_min 1000
+#   set fan2_min 1000
+#   set fan3_min 1000
+#   set fan4_min 1000
+#   set fan5_min 1000
+#   set fan6_min 1000
+
+
+#
+# sample configuration for the Fintek f71882fg and f71883fg
+#
+# The configuration below is for the Epox EP-9U1697 GLI board, which has a
+# Fintek f71883fg relabeled as Epox ep1308, this is the default config as this
+# driver is developed and tested on an Epox EP-9U1697 GLI board.
+#
+# Premade configurations for other boards can be found at:
+# http://www.lm-sensors.org/trac/wiki/Configurations/
+# If your motherboard isn't listed there and you create a configuration for it
+# please add it there.
+#
+chip "f71882fg-*"
+
+# Temperature
+    label temp1       "CPU"
+    label temp2       "System"
+    ignore temp3
+
+# Fans
+    label fan1        "CPU"
+    label fan2        "System"
+    label fan3        "Power"
+    label fan4        "Aux"
+
+# Voltage
+    label in0         "3.3V"
+    label in1         "Vcore"
+    label in2         "Vdimm"
+    label in3         "Vchip"
+    label in4         "+5V"
+    label in5         "12V"
+    label in6         "5VSB"
+    label in7         "3VSB"
+    label in8         "Battery"
+
+# never change the in0, in7 and in8 compute, these are hardwired in the chip!
+    compute in0       (@ * 2), (@ / 2) 
+    compute in2       (@ * 2), (@ / 2)
+    compute in3       (@ * 2), (@ / 2)
+    compute in4       (@ * 5.25), (@ / 5.25)
+    compute in5       (@ * 12.83), (@ / 12.83)
+    compute in6       (@ * 5.25), (@ / 5.25)
+    compute in7       (@ * 2), (@ / 2)
+    compute in8       (@ * 2), (@ / 2)

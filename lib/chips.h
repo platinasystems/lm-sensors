@@ -500,7 +500,7 @@
 #define SENSORS_LM85_ZONE3_RANGE           100  /* RW -- zone3_range  */
 #define SENSORS_LM85_ZONE3_SMOOTH          101  /* RW -- zone3_smooth  */
 
-/* LM86/LM89/LM90/LM99/ADM1032/MAX6657/ADT7461 chips */
+/* LM86/LM89/LM90/LM99/ADM1032/MAX6657/MAX6680/ADT7461 chips */
 
 #define SENSORS_LM90_PREFIX "lm90"
 #define SENSORS_ADM1032_PREFIX "adm1032"
@@ -508,6 +508,7 @@
 #define SENSORS_LM86_PREFIX "lm86"
 #define SENSORS_MAX6657_PREFIX "max6657"
 #define SENSORS_ADT7461_PREFIX "adt7461"
+#define SENSORS_MAX6680_PREFIX "max6680"
 
 #define SENSORS_LM90_LOCAL_TEMP 51 /* R */
 #define SENSORS_LM90_LOCAL_HIGH 52 /* RW */
@@ -970,6 +971,12 @@
 #define SENSORS_W83627EHF_TEMP1_HYST	81 /* RW */
 #define SENSORS_W83627EHF_TEMP2_HYST	82 /* RW */
 #define SENSORS_W83627EHF_TEMP3_HYST	83 /* RW */
+#define SENSORS_W83627EHF_TEMP1_TYPE	91 /* R  */
+#define SENSORS_W83627EHF_TEMP2_TYPE	92 /* R  */
+#define SENSORS_W83627EHF_TEMP3_TYPE	93 /* R  */
+#define SENSORS_W83627EHF_VID		245 /* R  */
+#define SENSORS_W83627EHF_VRM		249 /* R  */
+#define SENSORS_W83627EHF_ALARMS	250 /* R  */
 
 
 /* Analog Devices ADM9240 chips */
@@ -1621,9 +1628,13 @@
 #define SENSORS_IT87_FAN1 31 /* R */
 #define SENSORS_IT87_FAN2 32 /* R */
 #define SENSORS_IT87_FAN3 33 /* R */
+#define SENSORS_IT87_FAN4 34 /* R */
+#define SENSORS_IT87_FAN5 35 /* R */
 #define SENSORS_IT87_FAN1_MIN 41 /* RW */
 #define SENSORS_IT87_FAN2_MIN 42 /* RW */
 #define SENSORS_IT87_FAN3_MIN 43 /* RW */
+#define SENSORS_IT87_FAN4_MIN 44 /* RW */
+#define SENSORS_IT87_FAN5_MIN 45 /* RW */
 #define SENSORS_IT87_TEMP1 51 /* R */
 #define SENSORS_IT87_TEMP2 52 /* R */
 #define SENSORS_IT87_TEMP3 53 /* R */
@@ -2229,8 +2240,9 @@
 #define SENSORS_F71805F_ALARMS_FAN	201
 #define SENSORS_F71805F_ALARMS_TEMP	202
 
-/* Abit uGuru chip */
+/* Abit uGuru chips */
 #define SENSORS_ABITUGURU_PREFIX "abituguru"
+#define SENSORS_ABITUGURU3_PREFIX "abituguru3"
 
 /* in n from 0 to 10 */
 #define SENSORS_ABITUGURU_IN(n)			(0x01 + (n)) /* R */
@@ -2261,5 +2273,68 @@
 #define SENSORS_CORETEMP_TEMP1			0x01 /* R */
 #define SENSORS_CORETEMP_TEMP1_CRIT		0x02 /* R */
 #define SENSORS_CORETEMP_TEMP1_CRIT_ALARM	0x03 /* R */
+
+/* DME1737 */
+
+#define SENSORS_DME1737_PREFIX "dme1737"
+
+/* in n from 0 to 6 */
+#define SENSORS_DME1737_IN(n)			(0x01 + (n)) /* R */
+#define SENSORS_DME1737_IN_MIN(n)		(0x11 + (n)) /* RW */
+#define SENSORS_DME1737_IN_MAX(n)		(0x21 + (n)) /* RW */
+#define SENSORS_DME1737_IN_ALARM(n)		(0x31 + (n)) /* R */
+
+/* temp n from 1 to 3*/
+#define SENSORS_DME1737_TEMP(n)			(0x41 + (n)) /* R */
+#define SENSORS_DME1737_TEMP_MIN(n)		(0x51 + (n)) /* RW */
+#define SENSORS_DME1737_TEMP_MAX(n)		(0x61 + (n)) /* RW */
+#define SENSORS_DME1737_TEMP_ALARM(n)		(0x71 + (n)) /* R */
+#define SENSORS_DME1737_TEMP_FAULT(n)		(0x81 + (n)) /* R */
+
+/* fan n from 1 to 6 */
+#define SENSORS_DME1737_FAN(n)			(0x91 + (n)) /* R */
+#define SENSORS_DME1737_FAN_MIN(n)		(0xa1 + (n)) /* RW */
+#define SENSORS_DME1737_FAN_ALARM(n)		(0xb1 + (n)) /* R */
+
+/* pwm n from 1 to 3 and 5 to 6 */
+#define SENSORS_DME1737_PWM(n)			(0xc1 + (n)) /* RW */
+#define SENSORS_DME1737_PWM_ENABLE(n)		(0xd1 + (n)) /* RW */
+#define SENSORS_DME1737_PWM_FREQ(n)		(0xe1 + (n)) /* RW */
+
+#define SENSORS_DME1737_VID			(0xf0) /* R */
+#define SENSORS_DME1737_VRM			(0xf1) /* RW */
+
+/* applesmc */
+
+#define SENSORS_APPLESMC_PREFIX "applesmc"
+
+/* temp n from 0 to 11 */
+#define SENSORS_APPLESMC_TEMP(n)		(0x01 + (n)) /* R */
+
+/* fan n from 0 to 1 */
+#define SENSORS_APPLESMC_FAN(n)			(0x21 + (n)) /* R */
+#define SENSORS_APPLESMC_FAN_MIN(n)		(0x41 + (n)) /* R */
+#define SENSORS_APPLESMC_FAN_MAX(n)		(0x61 + (n)) /* R */
+#define SENSORS_APPLESMC_FAN_SAFE(n)		(0x81 + (n)) /* R */
+
+/* Fintek F71882FG and F71883FG chips */
+#define SENSORS_F71882FG_PREFIX		"f71882fg"
+
+/* in n from 0 to 8 */
+#define SENSORS_F71882FG_IN(n)			(1 + (n))
+#define SENSORS_F71882FG_IN_MAX(n)		(16 + (n))
+#define SENSORS_F71882FG_IN_ALARM(n)		(31 + (n))
+/* fan n from 1 to 4 */
+#define SENSORS_F71882FG_FAN(n)			(50 + (n))
+#define SENSORS_F71882FG_FAN_ALARM(n)		(60 + (n))
+/* temp n from 1 to 3 */
+#define SENSORS_F71882FG_TEMP(n)		(80 + (n))
+#define SENSORS_F71882FG_TEMP_MAX(n)		(90 + (n))
+#define SENSORS_F71882FG_TEMP_MAX_HYST(n)	(100 + (n))
+#define SENSORS_F71882FG_TEMP_CRIT(n)		(110 + (n))
+#define SENSORS_F71882FG_TEMP_CRIT_HYST(n)	(120 + (n))
+#define SENSORS_F71882FG_TEMP_ALARM(n)		(130 + (n))
+#define SENSORS_F71882FG_TEMP_FAULT(n)		(140 + (n))
+#define SENSORS_F71882FG_TEMP_TYPE(n)		(150 + (n))
 
 #endif /* def LIB_SENSORS_CHIPS_H */

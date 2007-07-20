@@ -18,11 +18,6 @@ Description: utilities to read temperature/voltage/fan sensors
  This package contains programs to help you set up and read data from
  lm-sensors.
  .
- You will need lm-sensors and i2c kernel modules to use this package.
- For 2.4 kernels, this requires either installing prebuild modules or
- building them using the lm-sensors-source package. For 2.6 kernels,
- use the modules that are already in the kernel tree.
- .
   Homepage: http://www.lm-sensors.org
 
 Package: libsensors3
@@ -42,7 +37,7 @@ Description: library to read temperature/voltage/fan sensors
 
 Package: libsensors-dev
 Architecture: any
-Depends: libsensors3 (= ${Source-Version}), ${misc:Depends}
+Depends: libsensors3 (= ${binary:Version}), ${misc:Depends}
 Conflicts: libsensors3 (<= 2.8.6-1)
 Section: libdevel
 Description: lm-sensors development kit
@@ -67,11 +62,6 @@ Description: hardware sensor information logging daemon
  .
  This package contains a daemon that logs hardware health status to the
  system log with optional warnings on potential system problems.
- .
- You will need lm-sensors and i2c kernel modules to use this package.
- For 2.4 kernels, this requires either installing prebuild modules or
- building them using the lm-sensors-source package. For 2.6 kernels,
- use the modules that are already in the kernel tree.
  .
   Homepage: http://www.lm-sensors.org
 

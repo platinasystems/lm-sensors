@@ -1,3 +1,13 @@
+lm-sensors (1:2.10.4-1) unstable; urgency=low
+
+  * New upstream release.
+  * Use dh_installmodules with -n (closes: bug#432413).
+  * Remove "ASUS rumors" from the default configuration files (closes:
+    bug#426128).
+  * Remove the 2.4 kernel part from the description (closes: bug#432969). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Fri, 20 Jul 2007 15:47:11 +0200
+
 lm-sensors (1:2.10.3-1) unstable; urgency=low
 
   * New upstream release.

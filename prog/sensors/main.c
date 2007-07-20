@@ -94,7 +94,7 @@ void print_version(void)
 
 /* This examines global var config_file, and leaves the name there too. 
    It also opens config_file. */
-void open_config_file(const char* config_file_name)
+static void open_config_file(const char* config_file_name)
 {
   if (!strcmp(config_file_name,"-")) {
     config_file = stdin;
@@ -109,7 +109,7 @@ void open_config_file(const char* config_file_name)
   }
 }
     
-void close_config_file(const char* config_file_name)
+static void close_config_file(const char* config_file_name)
 {
   if (fclose(config_file) == EOF) {
     fprintf(stderr,"Could not close config file\n");
@@ -324,7 +324,7 @@ struct match {
 	void (*fn) (const sensors_chip_name *name);
 };
 
-struct match matches[] = {
+static struct match matches[] = {
 	{ "ds1621", print_ds1621 },
 	{ "lm75", print_lm75 },
 	{ "adm1021", print_adm1021 },
@@ -382,8 +382,6 @@ struct match matches[] = {
 	{ "it8712", print_it87 },
 	{ "it8716", print_it87 },
 	{ "it8718", print_it87 },
-	{ "ddcmon", print_ddcmon },
-	{ "eeprom", print_eeprom },
 	{ "fscpos", print_fscpos },
 	{ "fscscy", print_fscscy },
 	{ "fscher", print_fscher },
@@ -409,6 +407,7 @@ struct match matches[] = {
 	{ "lm86", print_lm90 },
 	{ "max6657", print_lm90 },
 	{ "adt7461", print_lm90 },
+	{ "max6680", print_lm90 },
 	{ "lm63", print_lm63 },
 	{ "xeontemp", print_xeontemp },
 	{ "max6650", print_max6650 },
@@ -421,8 +420,12 @@ struct match matches[] = {
 	{ "f71805f", print_f71805f },
 	{ "f71872f", print_f71805f },
  	{ "abituguru", print_abituguru },
+ 	{ "abituguru3", print_abituguru3 },
  	{ "k8temp", print_k8temp },
  	{ "coretemp", print_coretemp },
+ 	{ "dme1737", print_dme1737 },
+	{ "applesmc", print_applesmc },
+	{ "f71882fg", print_f71882fg },
 	{ NULL, NULL }
 };
 
@@ -436,6 +439,11 @@ void do_a_print(sensors_chip_name name)
   }
 
   if(m->prefix==NULL && hide_unknown)
+    return;
+
+  /* Explicitly reject eeprom and ddcmon, we no longer support them
+     but libsensors may */
+  if (!strcmp(name.prefix, "eeprom") || !strcmp(name.prefix, "ddcmon"))
     return;
 
   printf("%s\n",sprintf_chip_name(name));

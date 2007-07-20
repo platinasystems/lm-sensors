@@ -47,7 +47,7 @@
 unsigned long isa_io_base = 0; /* XXX for now */
 #endif /* __powerpc__ */
 
-void help(void)
+static void help(void)
 {
 	fprintf(stderr,
 	        "Syntax for I2C-like access:\n"
@@ -56,7 +56,7 @@ void help(void)
 	        "  isadump [-y] -f ADDRESS [RANGE [BANK [BANKREG]]]\n");
 }
 
-int default_bankreg(int flat, int addrreg, int datareg)
+static int default_bankreg(int flat, int addrreg, int datareg)
 {
 	if (flat) {
 		return 0x09; /* Works for National Semiconductor
@@ -71,7 +71,7 @@ int default_bankreg(int flat, int addrreg, int datareg)
 	return 0x4e; /* Works for Winbond ISA chips, default */
 }
 
-int set_bank(int flat, int addrreg, int datareg, int bank, int bankreg)
+static int set_bank(int flat, int addrreg, int datareg, int bank, int bankreg)
 {
 	int oldbank;
 
@@ -293,6 +293,10 @@ int main(int argc, char *argv[])
 				res = inb(addrreg + i + j);
 			} else {	
 				outb(i+j, addrreg);
+				if (i+j == 0 && inb(addrreg) == 0x80) {
+					/* Bit 7 appears to be a busy flag */
+					range = 128;
+				}
 				res = inb(datareg);
 			}
 			printf("%02x ", res);
