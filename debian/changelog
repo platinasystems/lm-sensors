@@ -1,3 +1,10 @@
+lm-sensors (1:2.10.4-3) unstable; urgency=low
+
+  * Don't print an error message if the die-code entry does not exists. 
+    (closes: bug#443060). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 24 Sep 2007 10:27:34 +0200
+
 lm-sensors (1:2.10.4-2) unstable; urgency=low
 
   * pwmconfig: reprint the prompt each time (closes: bug#400609). 
