@@ -28,6 +28,7 @@
 
 #include "sensord.h"
 #include "lib/error.h"
+#include "version.h"
 
 #define MAX_CHIP_NAMES 32
 
@@ -79,7 +80,7 @@ static struct {
   { "local4", LOG_LOCAL4 }, { "local5", LOG_LOCAL5 },
   { "local6", LOG_LOCAL6 }, { "local7", LOG_LOCAL7 },
   { "daemon", LOG_DAEMON }, { "user", LOG_USER },
-  { NULL }
+  { NULL, 0 }
 };
 
 static int
@@ -125,7 +126,7 @@ static const char *daemonSyntax =
 
 static const char *appSyntax =
   "  -a, --alarm-scan          -- only scan for alarms\n"
-  "  -s, --set                 -- execute set statements too (root only)\n"
+  "  -s, --set                 -- execute set statements (root only)\n"
   "  -r, --rrd-file <file>     -- only update RRD file\n"
   "  -c, --config-file <file>  -- configuration file (default sensors.conf)\n"
   "  -d, --debug               -- display some debug information\n"
@@ -211,27 +212,23 @@ parseArgs
         doSet = 1;
         break;
       case 'c':
-        if ((sensorsCfgFile = strdup (optarg)) == NULL)
-          return -1;
+        sensorsCfgFile = optarg;
         break;
       case 'p':
-        if ((pidFile = strdup (optarg)) == NULL)
-          return -1;
+        pidFile = optarg;
         break;
       case 'r':
-        if ((rrdFile = strdup (optarg)) == NULL)
-          return -1;
+        rrdFile = optarg;
         break;
       case 'd':
         debug = 1;
         break;
       case 'g':
         doCGI = 1;
-        if ((cgiDir = strdup (optarg)) == NULL)
-          return -1;
+        cgiDir = optarg;
         break;
       case 'v':
-        printf ("sensord version %s\n", version);
+        printf ("sensord version %s\n", LM_VERSION);
         exit (EXIT_SUCCESS);
         break;
       case 'h':

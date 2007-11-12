@@ -27,6 +27,7 @@
 #include "error.h"
 #include "proc.h"
 #include "general.h"
+#include "sysfs.h"
 
 static int sensors_do_this_chip_sets(sensors_chip_name name);
 
@@ -149,8 +150,6 @@ int sensors_get_label(sensors_chip_name name, int feature, char **result)
 {
 	const sensors_chip *chip;
 	const sensors_chip_feature *featureptr;
-	char buf[128], path[PATH_MAX];
-	FILE *f;
 	int i;
 
 	*result = NULL;
@@ -166,18 +165,23 @@ int sensors_get_label(sensors_chip_name name, int feature, char **result)
 				goto sensors_get_label_exit;
 			}
 
-	/* No user specified label, check for a _label sysfs file */
-	snprintf(path, PATH_MAX, "%s/%s_label", name.busname,
-		featureptr->data.name);
-	
-	if ((f = fopen(path, "r"))) {
-		i = fread(buf, 1, sizeof(buf) - 1, f);
-		fclose(f);
-		if (i > 0) {
-			/* i - 1 to strip the '\n' at the end */
-			buf[i - 1] = 0;
-			*result = strdup(buf);
-			goto sensors_get_label_exit;
+	if (sensors_found_sysfs) {
+		char buf[128], path[PATH_MAX];
+		FILE *f;
+
+		/* No user specified label, check for a _label sysfs file */
+		snprintf(path, PATH_MAX, "%s/%s_label", name.busname,
+			featureptr->data.name);
+
+		if ((f = fopen(path, "r"))) {
+			i = fread(buf, 1, sizeof(buf) - 1, f);
+			fclose(f);
+			if (i > 0) {
+				/* i - 1 to strip the '\n' at the end */
+				buf[i - 1] = 0;
+				*result = strdup(buf);
+				goto sensors_get_label_exit;
+			}
 		}
 	}
 
@@ -196,10 +200,8 @@ int sensors_get_ignored(sensors_chip_name name, int feature)
 	const sensors_chip *chip;
 	const sensors_chip_feature *featureptr;
 	const sensors_chip_feature *alt_featureptr;
-	int i, res;
+	int i;
 
-	/* Default: valid */
-	res = 1;
 	if (sensors_chip_name_has_wildcards(name))
 		return -SENSORS_ERR_WILDCARDS;
 	if (!(featureptr = sensors_lookup_feature_nr(name.prefix, feature)))
@@ -212,13 +214,12 @@ int sensors_get_ignored(sensors_chip_name name, int feature)
 		return -SENSORS_ERR_NO_ENTRY;
 	for (chip = NULL; (chip = sensors_for_all_config_chips(name, chip));)
 		for (i = 0; i < chip->ignores_count; i++)
-			if (!strcasecmp(featureptr->data.name, chip->ignores[i].name))
-				return 0; /* Exact match always overrules! */
-			else if (alt_featureptr &&
-				 !strcasecmp(alt_featureptr->data.name,
-					     chip->ignores[i].name))
-				res = 0;
-	return res;
+			if (!strcasecmp(featureptr->data.name, chip->ignores[i].name) ||
+			    (alt_featureptr &&
+			     !strcasecmp(alt_featureptr->data.name, chip->ignores[i].name)))
+				return 0;
+	/* valid */
+	return 1;
 }
 
 /* Read the value of a feature of a certain chip. Note that chip should not

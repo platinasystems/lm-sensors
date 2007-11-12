@@ -117,7 +117,10 @@ sensord
     }
   }
 
-  sensorLog (LOG_INFO, "sensord %s", ret ? "failed" : "stopped");
+  if (ret)
+    sensorLog (LOG_INFO, "sensord failed (%d)", ret);
+  else
+    sensorLog (LOG_INFO, "sensord stopped");
 
   return ret;
 }
@@ -164,6 +167,7 @@ daemonize
   } else if (pid != 0) {
     fprintf (file, "%d\n", pid);
     fclose (file);
+    unloadLib ();
     exit (EXIT_SUCCESS);
   }
 

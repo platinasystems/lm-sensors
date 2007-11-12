@@ -9,7 +9,6 @@
 #    Verify that all fans are running at normal speed after this
 #    program has exited!!!
 #
-#    Copyright 2003-2005 The lm_sensors project
 #    Copyright (C) 2007 Jean Delvare <khali@linux-fr.org>
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -190,7 +189,7 @@ do
 		pwmdisable $i
 		if [ $? -ne 0 ]
 		then
-			echo "Failed to set pwm$i to full speed" >&2
+			echo "Failed to set $i to full speed" >&2
 			echo "Something's wrong, check your fans!" >&2
 			exit 1
 		fi
