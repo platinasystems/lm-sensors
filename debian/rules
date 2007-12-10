@@ -37,26 +37,7 @@ install-stamp: build
 	dh_clean -s -k 
 	dh_installdirs -s
 
-	$(MAKE) user_install DESTDIR=$(CURDIR)/debian/tmp PREFIX=/usr MANDIR=/usr/share/man \
-		PROG_EXTRA=sensord EXLDFLAGS=""
-
-	# Install extra files as needed
-	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.server/sensord
-	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.workstation/sensord
-	install -m 0644 etc/sensors.conf.eg debian/lm-sensors/usr/share/lm-sensors/sensors.conf.eg
-
-	# Install isadump only if it has been built (on i386 archs only)
-	if [ -x prog/dump/isadump ] ; then \
-	        cp -f prog/dump/isadump debian/lm-sensors/usr/sbin ; \
-		mkdir -p debian/lm-sensors/usr/share/man/man8 ; \
-	        cp -f prog/dump/isadump.8 debian/lm-sensors/usr/share/man/man8 ; \
-	fi
-	# Install isaset only if it has been built (on i386 archs only)
-	if [ -x prog/dump/isaset ] ; then \
-	        cp -f prog/dump/isaset debian/lm-sensors/usr/sbin ; \
-		mkdir -p debian/lm-sensors/usr/share/man/man8 ; \
-	        cp -f prog/dump/isaset.8 debian/lm-sensors/usr/share/man/man8 ; \
-	fi
+	$(MAKE) user_install DESTDIR=$(CURDIR)/debian/tmp PREFIX=/usr MANDIR=/usr/share/man EXLDFLAGS=""
 
 	dh_install -s --sourcedir=debian/tmp
 
