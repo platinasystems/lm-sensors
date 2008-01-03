@@ -1,3 +1,11 @@
+lm-sensors (1:2.10.5-4) unstable; urgency=low
+
+  * Conflicts with old lm-sensors package.
+  * Handle /etc/sensors.conf using ucf, the same way the old 
+    lm-sensors package.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 03 Jan 2008 07:51:47 +0100
+
 lm-sensors (1:2.10.5-3) unstable; urgency=low
 
   * Drop lm-sensors and sensord packages, they are now provided by

@@ -37,9 +37,17 @@ install-stamp: build
 	dh_clean -s -k 
 	dh_installdirs -s
 
-	$(MAKE) user_install DESTDIR=$(CURDIR)/debian/tmp PREFIX=/usr MANDIR=/usr/share/man EXLDFLAGS=""
+	$(MAKE) user_install \
+		DESTDIR=$(CURDIR)/debian/tmp \
+		PREFIX=/usr \
+		MANDIR=/usr/share/man \
+		EXLDFLAGS=""
 
 	dh_install -s --sourcedir=debian/tmp
+
+	# Install extra files as needed
+	install -m 0644 etc/sensors.conf.eg debian/libsensors3/usr/share/libsensors3/sensors.conf.eg
+
 
 	touch install-stamp
 
