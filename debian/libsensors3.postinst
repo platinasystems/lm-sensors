@@ -18,7 +18,7 @@ case "$1" in
 		fi
 	fi
 	# Create the configuration file
-	ucf --debconf-ok --three-way /usr/share/lm-sensors/sensors.conf.eg /etc/sensors.conf
+	ucf --debconf-ok --three-way /usr/share/libsensors3/sensors.conf.eg /etc/sensors.conf
     ;;
     abort-upgrade|abort-remove|abort-deconfigure)
     ;;

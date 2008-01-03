@@ -1,3 +1,9 @@
+lm-sensors (1:2.10.5-5) unstable; urgency=low
+
+  * Fix location of default configuration file in postinst.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 03 Jan 2008 08:13:03 +0100
+
 lm-sensors (1:2.10.5-4) unstable; urgency=low
 
   * Conflicts with old lm-sensors package.
