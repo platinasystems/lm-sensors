@@ -1,3 +1,10 @@
+lm-sensors (1:2.9.1-1sarge4) oldstable-security; urgency=high
+
+  * Build against kernel-build-2.4.27-4_2.4.27-10sarge6.
+  * Increment ABI to -4.
+
+ -- dann frazier <dannf@debian.org>  Wed, 20 Feb 2008 13:55:43 -0700
+
 lm-sensors (1:2.9.1-1sarge3) stable-security; urgency=high
 
   * Build against kernel-build-2.4.27-3_2.4.27-10sarge2.
