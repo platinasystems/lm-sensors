@@ -69,12 +69,14 @@
 #  SPD revision decoding depends on memory type
 #  use more user-friendly labels
 #  fix HTML formatted output on checksum error
+# Version 1.5  2007-11-08  Jean Delvare <khali@linux-fr.org>
+#  fix module speed (DDR2 SDRAM)
 #
 #
 # EEPROM data decoding for SDRAM DIMM modules. 
 #
-# Two assumptions: lm_sensors-2.x installed,
-# and Perl is at /usr/bin/perl
+# The eeprom driver must be loaded. For kernels older than 2.6.0, the
+# eeprom driver can be found in the lm-sensors package.
 #
 # use the following command line switches
 #  -f, --format            print nice html output
@@ -104,9 +106,9 @@ use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
 ["AMD", "AMI", "Fairchild", "Fujitsu",
  "GTE", "Harris", "Hitachi", "Inmos",
  "Intel", "I.T.T.", "Intersil", "Monolithic Memories",
- "Mostek", "Freescale (formerly Motorola)", "National", "NEC",
+ "Mostek", "Freescale (former Motorola)", "National", "NEC",
  "RCA", "Raytheon", "Conexant (Rockwell)", "Seeq",
- "Philips Semi. (Signetics)", "Synertek", "Texas Instruments", "Toshiba",
+ "NXP (former Signetics, Philips Semi.)", "Synertek", "Texas Instruments", "Toshiba",
  "Xicor", "Zilog", "Eurotechnique", "Mitsubishi",
  "Lucent (AT&T)", "Exel", "Atmel", "SGS/Thomson",
  "Lattice Semi.", "NCR", "Wafer Scale Integration", "IBM",
@@ -114,17 +116,17 @@ use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
  "MicrochipTechnology", "Ricoh Ltd.", "VLSI", "Micron Technology",
  "Hyundai Electronics", "OKI Semiconductor", "ACTEL", "Sharp",
  "Catalyst", "Panasonic", "IDT", "Cypress",
- "DEC", "LSI Logic", "Zarlink (formerly Plessey)", "UTMC",
+ "DEC", "LSI Logic", "Zarlink (former Plessey)", "UTMC",
  "Thinking Machine", "Thomson CSF", "Integrated CMOS (Vertex)", "Honeywell",
  "Tektronix", "Sun Microsystems", "SST", "ProMos/Mosel Vitelic",
- "Infineon (formerly Siemens)", "Macronix", "Xerox", "Plus Logic",
+ "Infineon (former Siemens)", "Macronix", "Xerox", "Plus Logic",
  "SunDisk", "Elan Circuit Tech.", "European Silicon Str.", "Apple Computer",
  "Xilinx", "Compaq", "Protocol Engines", "SCI",
  "Seiko Instruments", "Samsung", "I3 Design System", "Klic",
  "Crosspoint Solutions", "Alliance Semiconductor", "Tandem", "Hewlett-Packard",
  "Intg. Silicon Solutions", "Brooktree", "New Media", "MHS Electronic",
  "Performance Semi.", "Winbond Electronic", "Kawasaki Steel", "Bright Micro",
- "TECMAR", "Exar", "PCMCIA", "LG Semi (formerly Goldstar)",
+ "TECMAR", "Exar", "PCMCIA", "LG Semi (former Goldstar)",
  "Northern Telecom", "Sanyo", "Array Microsystems", "Crystal Semiconductor",
  "Analog Devices", "PMC-Sierra", "Asparix", "Convex Computer",
  "Quality Semiconductor", "Nimbus Technology", "Transwitch", "Micronas (ITT Intermetall)",
@@ -142,14 +144,14 @@ use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
  "Music Semi", "Ericsson Components", "SpaSE", "Eon Silicon Devices",
  "Programmable Micro Corp", "DoD", "Integ. Memories Tech.", "Corollary Inc.",
  "Dallas Semiconductor", "Omnivision", "EIV(Switzerland)", "Novatel Wireless",
- "Zarlink (formerly Mitel)", "Clearpoint", "Cabletron", "Silicon Technology",
+ "Zarlink (former Mitel)", "Clearpoint", "Cabletron", "STEC (former Silicon Technology)",
  "Vanguard", "Hagiwara Sys-Com", "Vantis", "Celestica",
  "Century", "Hal Computers", "Rohm Company Ltd.", "Juniper Networks",
  "Libit Signal Processing", "Mushkin Enhanced Memory", "Tundra Semiconductor", "Adaptec Inc.",
  "LightSpeed Semi.", "ZSP Corp.", "AMIC Technology", "Adobe Systems",
  "Dynachip", "PNY Electronics", "Newport Digital", "MMC Networks",
  "T Square", "Seiko Epson", "Broadcom", "Viking Components",
- "V3 Semiconductor", "Flextronics (formerly Orbit)", "Suwa Electronics", "Transmeta",
+ "V3 Semiconductor", "Flextronics (former Orbit)", "Suwa Electronics", "Transmeta",
  "Micron CMS", "American Computer & Digital Components Inc", "Enhance 3000 Inc", "Tower Semiconductor",
  "CPU Design", "Price Point", "Maxim Integrated Product", "Tellabs",
  "Centaur Technology", "Unigen Corporation", "Transcend Information", "Memory Card Technology",
@@ -175,7 +177,7 @@ use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
  "HADCO Corporation", "Corsair", "Actrans System Inc.", "ALPHA Technologies",
  "Silicon Laboratories, Inc. (Cygnal)", "Artesyn Technologies", "Align Manufacturing", "Peregrine Semiconductor",
  "Chameleon Systems", "Aplus Flash Technology", "MIPS Technologies", "Chrysalis ITS",
- "ADTEC Corporation", "Kentron Technologies", "Win Technologies", "Tachyon Semiconductor (formerly ASIC Designs Inc.)",
+ "ADTEC Corporation", "Kentron Technologies", "Win Technologies", "Tachyon Semiconductor (former ASIC Designs Inc.)",
  "Extreme Packet Devices", "RF Micro Devices", "Siemens AG", "Sarnoff Corporation",
  "Itautec Philco SA", "Radiata Inc.", "Benchmark Elect. (AVEX)", "Legend",
  "SpecTek Incorporated", "Hi/fn", "Enikia Incorporated", "SwitchOn Networks",
@@ -187,9 +189,9 @@ use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
  "Element 14", "Pycon", "Saifun Semiconductors", "Sibyte, Incorporated",
  "MetaLink Technologies", "Feiya Technology", "I & C Technology", "Shikatronics",
  "Elektrobit", "Megic", "Com-Tier", "Malaysia Micro Solutions",
- "Hyperchip", "Gemstone Communications", "Anadigm (formerly Anadyne)", "3ParData",
+ "Hyperchip", "Gemstone Communications", "Anadigm (former Anadyne)", "3ParData",
  "Mellanox Technologies", "Tenx Technologies", "Helix AG", "Domosys",
- "Skyup Technology", "HiNT Corporation", "Chiaro", "MCI Computer GMBH",
+ "Skyup Technology", "HiNT Corporation", "Chiaro", "MDT Technologies GmbH (former MCI Computer GMBH)",
  "Exbit Technology A/S", "Integrated Technology Express", "AVED Memory", "Legerity",
  "Jasmine Networks", "Caspian Networks", "nCUBE", "Silicon Access Networks",
  "FDK Corporation", "High Bandwidth Access", "MultiLink Technology", "BRECIS",
@@ -197,7 +199,7 @@ use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
  "Fast-Chip", "Zucotto Wireless", "Realchip", "Galaxy Power",
  "eSilicon", "Morphics Technology", "Accelerant Networks", "Silicon Wave",
  "SandCraft", "Elpida"],
-["Solectron", "Optosys Technologies", "Buffalo (Formerly Melco)", "TriMedia Technologies",
+["Solectron", "Optosys Technologies", "Buffalo (former Melco)", "TriMedia Technologies",
  "Cyan Technologies", "Global Locate", "Optillion", "Terago Communications",
  "Ikanos Communications", "Princeton Technology", "Nanya Technology", "Elite Flash Storage",
  "Mysticom", "LightSand Communications", "ATI Technologies", "Agere Systems",
@@ -238,7 +240,7 @@ use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
  "Fulcrum Microsystems", "Positivo Informatica Ltd", "XIOtech Corporation", "PortalPlayer",
  "Zhiying Software", "Direct2Data", "Phonex Broadband", "Skyworks Solutions",
  "Entropic Communications", "Pacific Force Technology", "Zensys A/S", "Legend Silicon Corp.",
- "sci-worx GmbH", "Oasis Silicon Systems", "Renesas Technology", "Raza Microelectronics",
+ "sci-worx GmbH", "SMSC (former Oasis Silicon Systems)", "Renesas Technology", "Raza Microelectronics",
  "Phyworks", "MediaTek", "Non-cents Productions", "US Modular",
  "Wintegra Ltd", "Mathstar", "StarCore", "Oplus Technologies",
  "Mindspeed", "Just Young Computer", "Radia Communications", "OCZ",
@@ -289,7 +291,17 @@ use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
  "Kreton Corporation", "Cochlear Ltd.", "Altair Semiconductor", "NetEffect, Inc.",
  "Spansion, Inc.", "Taiwan Semiconductor Mfg", "Emphany Systems Inc.",
  "ApaceWave Technologies", "Mobilygen Corporation", "Tego", "Cswitch Corporation",
- "Haier (Beijing) IC Design Co.", "MetaRAM", "Axel Electronics Co. Ltd."]);
+ "Haier (Beijing) IC Design Co.", "MetaRAM", "Axel Electronics Co. Ltd.", "Tilera Corporation",
+ "Aquantia", "Vivace Semiconductor", "Redpine Signals", "Octalica", "InterDigital Communications",
+ "Avant Technology", "Asrock, Inc.", "Availink", "Quartics, Inc.", "Element CXI",
+ "Innovaciones Microelectronicas", "VeriSilicon Microelectronics", "W5 Networks"],
+["MOVEKING", "Mavrix Technology, Inc.", "CellGuide Ltd.", "Faraday Technology",
+ "Diablo Technologies, Inc.", "Jennic", "Octasic", "Molex Incorporated", "3Leaf Networks",
+ "Bright Micron Technology", "Netxen", "NextWave Broadband Inc.", "DisplayLink", "ZMOS Technology",
+ "Tec-Hill", "Multigig, Inc.", "Amimon", "Euphonic Technologies, Inc.", "BRN Phoenix",
+ "InSilica", "Ember Corporation", "Avexir Technologies Corporation", "Echelon Corporation",
+ "Edgewater Computer Systems", "XMOS Semiconductor Ltd.", "GENUSION, Inc.", "Memory Corp NV",
+ "SiliconBlue Technologies", "Rambus Inc."]);
 
 $use_sysfs = -d '/sys/bus';
 
@@ -863,6 +875,7 @@ sub decode_ddr2_sdram($)
 {
 	my $bytes = shift;
 	my ($l, $temp);
+	my $ctime;
 
 # SPD revision
 	if ($bytes->[62] != 0xff) {
@@ -874,15 +887,15 @@ sub decode_ddr2_sdram($)
 	prints "Memory Characteristics";
 
 	$l = "Maximum module speed";
-	$temp = ($bytes->[9] >> 4) + ($bytes->[9] & 0xf) * 0.1;
-	my $ddrclk = 4 * (1000 / $temp);
+	$ctime = ddr2_sdram_ctime($bytes->[9]);
+	my $ddrclk = 2 * (1000 / $ctime);
 	my $tbits = ($bytes->[7] * 256) + $bytes->[6];
-	if (($bytes->[11] == 2) || ($bytes->[11] == 1)) { $tbits = $tbits - 8; }
+	if ($bytes->[11] & 0x03) { $tbits = $tbits - 8; }
 	my $pcclk = int ($ddrclk * $tbits / 8);
-	$pcclk += 100 if ($pcclk % 100) >= 50; # Round properly
+	# Round down to comply with Jedec
 	$pcclk = $pcclk - ($pcclk % 100);
 	$ddrclk = int ($ddrclk);
-	printl $l, "${ddrclk}MHz (PC${pcclk})";
+	printl $l, "${ddrclk}MHz (PC2-${pcclk})";
 
 #size computation
 	my $k=0;
@@ -910,9 +923,6 @@ sub decode_ddr2_sdram($)
 	my $trcd;
 	my $trp;
 	my $tras;
-	my $ctime;
-	
-	$ctime = ddr2_sdram_ctime($bytes->[9]);
 	
 	$trcd =($bytes->[29] >> 2)+(($bytes->[29] & 3)*0.25);
 	$trp =($bytes->[27] >> 2)+(($bytes->[27] & 3)*0.25);

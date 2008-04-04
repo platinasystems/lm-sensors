@@ -1,9 +1,9 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 #
 #    sensors-detect - Detect PCI bus and chips
 #    Copyright (C) 1998 - 2002  Frodo Looijaard <frodol@dds.nl>
-#    Copyright (C) 2004 - 2007  Jean Delvare <khali@linux-fr.org>
+#    Copyright (C) 2004 - 2008  Jean Delvare <khali@linux-fr.org>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ foreach ('/usr/sbin', '/usr/local/sbin', '/sbin') {
 use vars qw(@pci_adapters @chip_ids $i2c_addresses_to_scan @superio_ids
             @cpu_ids $revision);
 
-$revision = '$Revision: 4966 $ ($Date: 2007-10-20 01:41:53 -0700 (Sat, 20 Oct 2007) $)';
+$revision = '$Revision: 5132 $ ($Date: 2008-02-26 14:52:35 +0100 (mar, 26 fév 2008) $)';
 $revision =~ s/\$\w+: (.*?) \$/$1/g;
 $revision =~ s/ \([^()]*\)//;
 
@@ -760,7 +760,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
      {
        name => "National Semiconductor LM78",
        driver => "lm78",
-       i2c_addrs => [0x20..0x2f], 
+       i2c_addrs => [0x28..0x2f], 
        i2c_detect => sub { lm78_detect(0, @_); },
        isa_addrs => [0x290],
        isa_detect => sub { lm78_isa_detect(0, @_); },
@@ -769,7 +769,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
      {
        name => "National Semiconductor LM78-J",
        driver => "lm78",
-       i2c_addrs => [0x20..0x2f], 
+       i2c_addrs => [0x28..0x2f], 
        i2c_detect => sub { lm78_detect(1, @_); },
        isa_addrs => [0x290],
        isa_detect => sub { lm78_isa_detect(1, @_); },
@@ -778,7 +778,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
      {
        name => "National Semiconductor LM79",
        driver => "lm78",
-       i2c_addrs => [0x20..0x2f], 
+       i2c_addrs => [0x28..0x2f], 
        i2c_detect => sub { lm78_detect(2, @_); },
        isa_addrs => [0x290],
        isa_detect => sub { lm78_isa_detect(2, @_); },
@@ -910,7 +910,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        name => "Winbond W83781D",
        driver => "w83781d",
        i2c_detect => sub { w83781d_detect(0, @_); },
-       i2c_addrs => [0x20..0x2f], 
+       i2c_addrs => [0x28..0x2f], 
        isa_addrs => [0x290],
        isa_detect => sub { w83781d_isa_detect(0, @_); },
        alias_detect => sub { w83781d_alias_detect(0, @_); },
@@ -918,7 +918,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
      {
        name => "Winbond W83782D",
        driver => "w83781d",
-       i2c_addrs => [0x20..0x2f], 
+       i2c_addrs => [0x28..0x2f], 
        i2c_detect => sub { w83781d_detect(1, @_); },
        isa_addrs => [0x290],
        isa_detect => sub { w83781d_isa_detect(1, @_); },
@@ -1237,6 +1237,12 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        i2c_detect => sub { lm90_detect(8, @_); },
      },
      {
+       name => "Texas Instruments TMP401",
+       driver => "tmp401",
+       i2c_addrs => [0x4c],
+       i2c_detect => sub { lm90_detect(9, @_); },
+     },
+     {
        name => "National Semiconductor LM63",
        driver => "lm63",
        i2c_addrs => [0x4c],
@@ -1321,24 +1327,6 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        i2c_detect => sub { adm1022_detect(2, @_); },
      },
      {
-       name => "Silicon Integrated Systems SIS5595",
-       driver => "sis5595",
-       isa_addrs => [ 0 ],
-       isa_detect => sub { sis5595_pci_detect(); },
-     },
-     {
-       name => "VIA VT82C686 Integrated Sensors",
-       driver => "via686a",
-       isa_addrs => [ 0 ],
-       isa_detect => sub { via686a_pci_detect(); },
-     },
-     {
-       name => "VIA VT8231 Integrated Sensors",
-       driver => "vt8231",
-       isa_addrs => [ 0 ],
-       isa_detect => sub { via8231_pci_detect(); },
-     },
-     {
        name => "VIA VT1211 (I2C)",
        driver => "use-isa-instead",
        i2c_addrs => [0x2d],
@@ -1405,7 +1393,13 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        name => "SMSC DME1737",
        driver => "dme1737",
        i2c_addrs => [0x2c..0x2e],
-       i2c_detect => sub { dme1737_detect(@_); },
+       i2c_detect => sub { dme1737_detect(1, @_); },
+     },
+     {
+       name => "SMSC SCH5027D-NW",
+       driver => "dme1737",
+       i2c_addrs => [0x2c..0x2e],
+       i2c_detect => sub { dme1737_detect(2, @_); },
      },
      {
        name => "Fintek F75111R/RG/N (GPIO)",
@@ -1421,13 +1415,13 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
      },
      {
        name => "Fintek F75373S/SG",
-       driver => "to-be-written",
+       driver => "f75375s",
        i2c_addrs => [0x2d..0x2e],
        i2c_detect => sub { fintek_detect(3, @_); },
      },
      {
        name => "Fintek F75375S/SP",
-       driver => "to-be-written",
+       driver => "f75375s",
        i2c_addrs => [0x2d..0x2e],
        i2c_detect => sub { fintek_detect(4, @_); },
      },
@@ -1454,12 +1448,6 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        driver => "to-be-written",
        i2c_addrs => [0x2f],
        i2c_detect => sub { fintek_detect(7, @_); },
-     },
-     {
-       name => "Philips Semiconductors PCA9540",
-       driver => "pca9540",
-       i2c_addrs => [0x70],
-       i2c_detect => sub { pca9540_detect(@_); },
      },
      {
        name => "Smart Battery",
@@ -1692,12 +1680,12 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	logdev => 0x0f,
       },
       {
-	name => "Nat. Semi. PC87371 Super IO",
+	name => "Nat. Semi. PC87317 Super IO",
 	driver => "not-a-sensor",
 	devid => 0xd0,
       },
       {
-	name => "Nat. Semi. PC97371 Super IO",
+	name => "Nat. Semi. PC97317 Super IO",
 	driver => "not-a-sensor",
 	devid => 0xdf,
       },
@@ -1788,6 +1776,11 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	name => "SMSC LPC47B357/M967 Super IO",
 	driver => "not-a-sensor",
 	devid => 0x5d,
+      },
+      {
+	name => "SMSC LPC47B367-NC Super IO",
+	driver => "not-a-sensor",
+	devid => 0x6d,
       },
       {
 	name => "SMSC LPC47B37x Super IO Fan Sensors",
@@ -1891,6 +1884,12 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	logdev => 0x08,
       },
       {
+	name => "SMSC SCH5027D-NW Super IO",
+	# Hardware monitoring features are accessed on the SMBus
+	driver => "via-smbus-only",
+	devid => 0x89,
+      },
+      {
 	name => "SMSC SCH5307-NS Super IO",
 	driver => "smsc47b397",
 	devid => 0x81,
@@ -1907,6 +1906,12 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	# No datasheet
 	driver => "not-a-sensor",
 	devid => 0x79,
+      },
+      {
+	name => "SMSC SCH5514D-NS Super IO",
+	# No datasheet
+	driver => "not-a-sensor",
+	devid => 0x83,
       },
     ],
     # Non-standard SMSC detection callback and chip list. These chips differ
@@ -2038,10 +2043,21 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	logdev => 0x04,
       },
       {
+	name => "Fintek F71858DG Super IO Sensors",
+	driver => "to-be-written",
+	devid => 0x0507,
+	logdev => 0x02,
+      },
+      {
 	name => "Fintek F71882FG/F71883FG Super IO Sensors",
 	driver => "f71882fg",
 	devid => 0x0541,
 	logdev => 0x04,
+      },
+      {
+	name => "Fintek F81216D Super IO",
+	driver => "not-a-sensor",
+	devid => 0x0208,
       },
       {
 	name => "Fintek F81218D Super IO",
@@ -2116,6 +2132,21 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 #          etc. It must return a confidence value, undef if no supported
 #          CPU is found.
 @cpu_ids = (
+  {
+    name => "Silicon Integrated Systems SIS5595",
+    driver => "sis5595",
+    detect => sub { sis5595_pci_detect(); },
+  },
+  {
+    name => "VIA VT82C686 Integrated Sensors",
+    driver => "via686a",
+    detect => sub { via686a_pci_detect(); },
+  },
+  {
+    name => "VIA VT8231 Integrated Sensors",
+    driver => "vt8231",
+    detect => sub { via8231_pci_detect(); },
+  },
   {
     name => "AMD K8 thermal sensors",
     driver => "k8temp",
@@ -2332,12 +2363,13 @@ sub initialize_conf
 # [2] -> SUBLEVEL
 # [3] -> EXTRAVERSION
 #
-use vars qw(@kernel_version);
+use vars qw(@kernel_version $kernel_arch);
 
 sub initialize_kernel_version
 {
   `uname -r` =~ /(\d+)\.(\d+)\.(\d+)(.*)/;
   @kernel_version = ($1, $2, $3, $4);
+  chomp($kernel_arch = `uname -m`);
 }
 
 sub kernel_version_at_least
@@ -3221,8 +3253,8 @@ sub scan_isa_bus
   foreach $chip (@chip_ids) {
     next if not exists $chip->{isa_addrs} or not exists $chip->{isa_detect};
     foreach $addr (@{$chip->{isa_addrs}}) {
-      printf("\%-60s", sprintf("Probing for `\%s'\%s... ", $chip->{name},
-                               $addr ? sprintf(" at 0x\%x", $addr) : ''));
+      printf("\%-60s", sprintf("Probing for `\%s'\ at 0x\%x... ", $chip->{name},
+                               $addr));
       $conf = &{$chip->{isa_detect}} ($addr);
       print("No\n"), next if not defined $conf;
       print "Success!\n";
@@ -3905,7 +3937,7 @@ sub lm83_detect
 # $_[0]: Chip to detect
 #   (0 = LM90, 1=LM89/LM99, 2=LM86, 3=ADM1032, 4=MAX6657/MAX6658/MAX6659,
 #    5 = ADT7461, 6 = MAX6648/MAX6692, 7 = MAX6680/MAX6681,
-#    8 = W83L771W/G)
+#    8 = W83L771W/G), 9 = TI TMP401
 # $_[1]: A reference to the file descriptor to access this chip.
 # $_[2]: Address
 # Returns: undef if not detected, 4, 6 or 8 if detected.
@@ -3985,6 +4017,13 @@ sub lm90_detect
     return if $rate > 0x09;
     return if $mid != 0x5c;     # Winbond
     return if $cid != 0x00;     # W83L771W/G
+    return 6;
+  }
+  if ($chip == 9) {
+    return if ($conf & 0x1B) != 0;
+    return if $rate > 0x0F;
+    return if $mid != 0x55;     # Texas Instruments
+    return if $cid != 0x11;     # TMP401
     return 6;
   }
   return;
@@ -4313,12 +4352,21 @@ sub lm85_detect
 {
   my ($vendor,$file,$addr) = @_;
   return if (i2c_smbus_read_byte_data($file,0x3e)) != $vendor ;
-  return if (i2c_smbus_read_byte_data($file,0x3f) & 0xf0) != 0x60;
+
+  my $verstep = i2c_smbus_read_byte_data($file,0x3f);
+  return if ($verstep & 0xf0) != 0x60;
 
   if ($vendor == 0x41) # Analog Devices
   {
     return if i2c_smbus_read_byte_data($file, 0x3d) != 0x27;
     return (8);
+  }
+
+  if ($vendor == 0x5c) # SMSC
+  {
+    # Return undef if this is a SCH5027
+    return if $verstep >= 0x69 and
+        i2c_smbus_read_byte_data($file, 0xba) == 0x0f;
   }
 
   return (7);
@@ -5137,21 +5185,34 @@ sub smsc47m192_detect
   return ($addr == 0x2d ? 6 : 5);
 }
 
-# $_[0]: A reference to the file descriptor to access this chip.
-# $_[1]: Address
+# $_[0]: Chip to detect
+#        (1 = DME1737, 2 = SCH5027)
+# $_[1]: A reference to the file descriptor to access this chip.
+# $_[2]: Address
 # Returns: undef if not detected, 5 or 6 if detected.
 # Registers used:
 #   0x3E: Manufacturer ID
 #   0x3F: Version/Stepping
 #   0x73: Read-only test register (4 test bits)
 #   0x8A: Read-only test register (7 test bits)
+#   0xBA: Read-only test register (8 test bits)
 sub dme1737_detect
 {
-  my ($file, $addr) = @_;
-  return unless i2c_smbus_read_byte_data($file, 0x3E) == 0x5c
-           and (i2c_smbus_read_byte_data($file, 0x3F) & 0xF8) == 0x88
-           and (i2c_smbus_read_byte_data($file, 0x73) & 0x0F) == 0x09
-           and (i2c_smbus_read_byte_data($file, 0x8A) & 0x7F) == 0x4D;
+  my ($chip, $file, $addr) = @_;
+  my $vendor = i2c_smbus_read_byte_data($file, 0x3E);
+  my $verstep = i2c_smbus_read_byte_data($file, 0x3F);
+
+  return unless $vendor == 0x5C; # SMSC
+
+  if ($chip == 1) { # DME1737
+      return unless ($verstep & 0xF8) == 0x88 and
+          (i2c_smbus_read_byte_data($file, 0x73) & 0x0F) == 0x09 and
+          (i2c_smbus_read_byte_data($file, 0x8A) & 0x7F) == 0x4D;
+  } elsif ($chip == 2) { # SCH5027
+      return unless $verstep >= 0x69 and $verstep <= 0x6F and
+          i2c_smbus_read_byte_data($file, 0xBA) == 0x0F;
+  }
+
   return ($addr == 0x2e ? 6 : 5);
 }
 
@@ -5193,24 +5254,6 @@ sub fintek_detect
   }
 
   return 7;
-}
-
-# $_[0]: A reference to the file descriptor to access this chip.
-# $_[1]: Address
-# Returns: undef if not detected, 1 if detected
-# Detection is rather difficult, since the PCA9540 has a single register.
-# Fortunately, no other device is known to live at this address.
-sub pca9540_detect
-{
-	my ($file, $addr) = @_;
-	my $reg = i2c_smbus_read_byte($file);
-
-	return if ($reg & 0xfa);
-	return if $reg != i2c_smbus_read_byte($file);
-	return if $reg != i2c_smbus_read_byte($file);
-	return if $reg != i2c_smbus_read_byte($file);
-
-	return 1;
 }
 
 # This checks for non-FFFF values for temperature, voltage, and current.
@@ -5307,7 +5350,7 @@ sub w83l785ts_detect
 #        if somebody finds a way to distinguish MAX6650 and MAX6651.
 # $_[1]: A reference to the file descriptor to access this chip.
 # $_[2]: Address
-# Returns: undef if not detected, 4 if detected.
+# Returns: undef if not detected, 3 if detected.
 #
 # The max6650 has no device ID register. However, a few registers have
 # spare bits, which are documented as being always zero on read. We read
@@ -5334,7 +5377,7 @@ sub max6650_detect
   return if i2c_smbus_read_byte_data($file,0x14) & 0xE0;
   return if ($conf & 0xC0) or ($conf & 0x07) > 4;
 
-  return 4;
+  return 3;
 }
 
 # $_[0]: Chip to detect. Always zero.
@@ -5454,7 +5497,9 @@ sub coretemp_detect
 		if ($probecpu->{'vendor_id'} eq 'GenuineIntel' && 
 				$probecpu->{'cpu family'} == 6 &&
 				($probecpu->{'model'} == 14 ||
-				 $probecpu->{'model'} == 15)) {
+				 $probecpu->{'model'} == 15 ||
+				 $probecpu->{'model'} == 0x16 ||
+				 $probecpu->{'model'} == 0x17)) {
 			return 9;
 		}
 	}
@@ -5559,21 +5604,21 @@ sub generate_modprobes
       } elsif ($adap->{driver} eq "to-be-written") {
         $modprobes .= "# no driver available for adapter ".$adap->{name}."\n";
       } else {
-        $modprobes .= "$adap->{driver}\n"
-          unless $modprobes =~ /$adap->{driver}\n/;
+        $modprobes .= "modprobe $adap->{driver}\n"
+          unless $modprobes =~ /modprobe $adap->{driver}\n/;
       }
       last;
     }
   }
   # i2c-isa is loaded automatically (as a dependency) since 2.6.14,
   # and will soon be gone.
-  $modprobes .= "i2c-isa\n" if ($isa && !kernel_version_at_least(2, 6, 18));
+  $modprobes .= "modprobe i2c-isa\n" if ($isa && !kernel_version_at_least(2, 6, 18));
   if ($ipmi) {
     $modprobes .= "# You must also install and load the IPMI modules\n";
     if (kernel_version_at_least(2, 6, 0)) {
-      $modprobes .= "ipmi-si\n";
+      $modprobes .= "modprobe ipmi-si\n";
     } else {
-      $modprobes .= "i2c-ipmi\n";
+      $modprobes .= "modprobe i2c-ipmi\n";
     }
   }
 
@@ -5602,7 +5647,7 @@ sub generate_modprobes
                        "# http://www.lm-sensors.org/wiki/Devices. If driver is built\n".
                        "# into the kernel, or unavailable, comment out the following line.\n";
        }
-       $modprobes .= "$chip->{driver}\n";
+       $modprobes .= "modprobe $chip->{driver}\n";
     }
 
     # Handle misdetects
@@ -5664,6 +5709,9 @@ sub main
   initialize_conf;
   initialize_proc_pci;
   initialize_modules_list;
+  # make sure any special case chips are added to the chip_ids list before
+  # making the support modules list
+  chip_special_cases();
   initialize_modules_supported;
   initialize_cpu_list();
 
@@ -5688,7 +5736,8 @@ sub main
     print "As you skipped adapter detection, we will only scan already loaded\n".
           "adapter modules.\n";
   } else {
-    print "We will now try to load each adapter module in turn.\n";
+    print "We will now try to load each adapter module in turn.\n"
+      if (@adapters);
     foreach $adapter (@adapters) {
       next if $adapter eq "DISABLED";
       next if $adapter eq "to-be-tested";
@@ -5707,8 +5756,8 @@ sub main
     }
   }
 
-  print "If you have undetectable or unsupported adapters, you can have them\n".
-        "scanned by manually loading the modules before running this script.\n\n";
+  print "If you have undetectable or unsupported I2C/SMBus adapters, you can have\n".
+        "them scanned by manually loading the modules before running this script.\n\n";
   initialize_i2c_adapters_list();
 
   if (!exists($modules_list{"i2c-dev"})
@@ -5727,9 +5776,6 @@ sub main
     print "\n";
   }
 
-  # Before looking for chips, make sure any special case chips are
-  # added to the chip_ids list
-  chip_special_cases();
   $i2c_addresses_to_scan = i2c_addresses_to_scan();
 
   print "We are now going to do the I2C/SMBus adapter probings. Some chips may\n",
@@ -5763,30 +5809,34 @@ sub main
   }
   print "\n";
 
-  print "Some chips are also accessible through the ISA I/O ports. We have to\n".
-        "write to arbitrary I/O ports to probe them. This is usually safe though.\n".
-        "Yes, you do have ISA I/O ports even if you do not have any ISA slots!\n";
-  print "Do you want to scan the ISA I/O ports? (YES/no): ";
-  unless (<STDIN> =~ /^\s*n/i) {
-    initialize_ioports();
-    scan_isa_bus();
-    close_ioports();
-  }
-  print "\n";
+  # Skip "random" I/O port probing on PPC
+  if ($kernel_arch ne 'ppc'
+   && $kernel_arch ne 'ppc64') {
+    print "Some chips are also accessible through the ISA I/O ports. We have to\n".
+          "write to arbitrary I/O ports to probe them. This is usually safe though.\n".
+          "Yes, you do have ISA I/O ports even if you do not have any ISA slots!\n";
+    print "Do you want to scan the ISA I/O ports? (YES/no): ";
+    unless (<STDIN> =~ /^\s*n/i) {
+      initialize_ioports();
+      scan_isa_bus();
+      close_ioports();
+    }
+    print "\n";
 
-  print "Some Super I/O chips may also contain sensors. We have to write to\n".
-        "standard I/O ports to probe them. This is usually safe.\n";
-  print "Do you want to scan for Super I/O sensors? (YES/no): ";
-  unless (<STDIN> =~ /^\s*n/i) {
-    initialize_ioports();
-    scan_superio(0x2e, 0x2f);
-    scan_superio(0x4e, 0x4f);
-    close_ioports();
+    print "Some Super I/O chips may also contain sensors. We have to write to\n".
+          "standard I/O ports to probe them. This is usually safe.\n";
+    print "Do you want to scan for Super I/O sensors? (YES/no): ";
+    unless (<STDIN> =~ /^\s*n/i) {
+      initialize_ioports();
+      scan_superio(0x2e, 0x2f);
+      scan_superio(0x4e, 0x4f);
+      close_ioports();
+    }
+    print "\n";
   }
-  print "\n";
 
-  print "Some CPUs or memory controllers may also contain embedded sensors.\n";
-  print "Do you want to scan for them? (YES/no): ";
+  print "Some south bridges, CPUs or memory controllers may also contain\n";
+  print "embedded sensors. Do you want to scan for them? (YES/no): ";
   unless (<STDIN> =~ /^\s*n/i) {
     $| = 1;
     foreach my $entry (@cpu_ids) {
@@ -5838,47 +5888,117 @@ sub main
   }
   print "\n";
 
-  print "I will now generate the commands needed to load the required modules.\n".
-        "Just press ENTER to continue: ";
-  <STDIN>;
-     
-  print "\n";
   my ($modprobes, $configfile) = generate_modprobes 1;	# 1 == prefer ISA
+
   if (defined $configfile) {
-    print "To make the sensors modules behave correctly, add these lines to\n".
-          "/etc/modprobe.d/lm-sensors:\n\n";
-    print "#----cut here----\n".
-          $configfile.
-          "#----cut here----\n\n";
-  }
-  print "To load everything that is needed, add this to /etc/modules:\n\n";
-  print "#----cut here----\n".
-        $modprobes.
-        "#----cut here----\n\n";
-
-  if ($modprobes =~ /i2c-viapro/ && $modprobes =~ /via686a/ && kernel_version_at_least(2,6,0)) {
-    print("WARNING: Please note that i2c-viapro and via686a may conflict which\n",
-          "each other. If you get 'sensors not found', try loading only one module\n",
-          "at the same time.\n\n");
-  }
-  print "Do you want to add these lines automatically? (yes/NO)";
-
-  $_ = <STDIN>;
-  if (m/^\s*[Yy]/) {
-    if (defined $configfile) {
-      open(MODPROBE, ">>/etc/modprobe.d/lm-sensors")
-        or die "Sorry, can't create /etc/modprobe.d/lm-sensors ($!)?!?";
-      print MODPROBE
+    my $have_modprobe_d = -d '/etc/modprobe.d';
+    printf "Do you want to \%s /etc/modprobe.d/lm_sensors? (\%s): ",
+           (-e '/etc/modprobe.d/lm_sensors' ? 'overwrite' : 'generate'),
+           ($have_modprobe_d ? 'YES/no' : 'yes/NO');
+    $_ = <STDIN>;
+    if (($have_modprobe_d and not m/^\s*n/i) or m/^\s*y/i) {
+      unless ($have_modprobe_d) {
+        mkdir '/etc/modprobe.d', 0777
+          or die "Sorry, can't create /etc/modprobe.d ($!)";
+      }
+      open(local *MODPROBE_D, ">/etc/modprobe.d/lm_sensors")
+        or die "Sorry, can't create /etc/modprobe.d/lm_sensors ($!)";
+      print MODPROBE_D
         "# Generated by sensors-detect on " . scalar localtime() . "\n";
-      print MODPROBE $configfile;
-      close(MODPROBE);
+      print MODPROBE_D $configfile;
+      close(MODPROBE_D);
+    } else {
+      print "To make the sensors modules behave correctly, add these lines to\n".
+            "$modules_conf:\n\n";
+      print "#----cut here----\n".
+            $configfile.
+            "#----cut here----\n\n";
     }
-    open(MODULES, ">>/etc/modules")
-      or die "Sorry, can't create /etc/modules ($!)?!?";
-    print MODULES
-      "\n# Generated by sensors-detect on " . scalar localtime() . "\n";
-    print MODULES $modprobes;
-    close(MODULES);
+  }
+
+  my $have_sysconfig = -d '/etc/sysconfig';
+  printf "Do you want to \%s /etc/sysconfig/lm_sensors? (\%s): ",
+         (-e '/etc/sysconfig/lm_sensors' ? 'overwrite' : 'generate'),
+         ($have_sysconfig ? 'YES/no' : 'yes/NO');
+  $_ = <STDIN>;
+  if (($have_sysconfig and not m/^\s*n/i) or m/^\s*y/i) {
+    unless ($have_sysconfig) {
+      mkdir '/etc/sysconfig', 0777
+        or die "Sorry, can't create /etc/sysconfig ($!)";
+    }
+    open(local *SYSCONFIG, ">/etc/sysconfig/lm_sensors")
+      or die "Sorry, can't create /etc/sysconfig/lm_sensors ($!)";
+    print SYSCONFIG <<'EOT';
+#    /etc/sysconfig/lm_sensors - Defines modules loaded by
+#                                /etc/init.d/lm_sensors
+#    Copyright (c) 1998 - 2001  Frodo Looijaard <frodol@dds.nl>
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+#
+# See also the lm_sensors homepage at:
+#     http://www.lm-sensors.org/
+#
+# This file is used by /etc/init.d/lm_sensors and defines the modules to
+# be loaded/unloaded. This file is sourced into /etc/init.d/lm_sensors.
+#
+# The format of this file is a shell script that simply defines the modules
+# in order as normal variables with the special names:
+#    MODULE_0, MODULE_1, MODULE_2, etc.
+#
+# List the modules that are to be loaded for your system
+#
+EOT
+    print SYSCONFIG
+      "# Generated by sensors-detect on " . scalar localtime() . "\n";
+    my @modules = grep /^modprobe /, split "\n", $modprobes;
+    my $i = 0;
+    my $sysconfig = "";
+    foreach (@modules) {
+      s/^modprobe //;
+      $sysconfig .= "MODULE_$i=$_\n";
+      $i++;
+    }
+    print SYSCONFIG $sysconfig;
+    close(SYSCONFIG);
+
+    print "Copy prog/init/lm_sensors.init to /etc/init.d/lm_sensors\n".
+          "for initialization at boot time.\n"
+      unless -f "/etc/init.d/lm_sensors";
+
+    if (-x "/sbin/insserv" && -f "/etc/init.d/lm_sensors") {
+      system("/sbin/insserv", "/etc/init.d/lm_sensors");
+    } else {
+      print "You should now start the lm_sensors service to load the required\n".
+            "kernel modules.\n\n";
+    }
+  } else {
+    print "To load everything that is needed, add this to one of the system\n".
+          "initialization scripts (e.g. /etc/rc.d/rc.local):\n\n";
+    print "#----cut here----\n".
+          $modprobes.
+          (-e '/usr/bin/sensors' ?
+            "/usr/bin/sensors -s\n" :
+            "/usr/local/bin/sensors -s\n") .
+          "#----cut here----\n\n";
+
+    print "If you have some drivers built into your kernel, the list above will\n".
+          "contain too many modules. Skip the appropriate ones! You really\n".
+          "should try these commands right now to make sure everything is\n".
+          "working properly. Monitoring programs won't work until the needed\n".
+          "modules are loaded.\n\n";
   }
 }
 

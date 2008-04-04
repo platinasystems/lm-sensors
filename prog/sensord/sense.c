@@ -278,14 +278,9 @@ scanChips
 (void) {
   int ret = 0;
 
-/*
- * Debian mod: kill the debug messages, since they spam syslog every
- * minute. -- JEH
- */
-  
-/*  sensorLog (LOG_DEBUG, "sensor sweep started"); */
+  sensorLog (LOG_DEBUG, "sensor sweep started"); /* only logged in debug mode */
   ret = doChips (DO_SCAN);
-/*  sensorLog (LOG_DEBUG, "sensor sweep finished"); */
+  sensorLog (LOG_DEBUG, "sensor sweep finished");
 
   return ret;
 }

@@ -979,10 +979,6 @@ address. You must select an address that is not in use.  `cat
 
    * Check `lsmod'.
 
-   * If you are using Linux 2.6, did you insert both i2c-viapro and
-     via686a? They conflict which each other, so don't load both
-     together.
-
 4.22 Sensors output is not correct!
 ===================================
 

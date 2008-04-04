@@ -1026,7 +1026,6 @@ and @command{mount /proc}.
 @item Did you @command{modprobe} your I2C adapter modules?
 @item Did you @command{modprobe i2c-isa} if you have ISA sensor chips?
 @item Check @command{lsmod}.
-@item If you are using Linux 2.6, did you insert both i2c-viapro and via686a? They conflict which each other, so don't load both together.
 @end itemize
 
 

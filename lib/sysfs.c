@@ -20,6 +20,9 @@
 /* this define needed for strndup() */
 #define _GNU_SOURCE
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -38,7 +41,13 @@ char sensors_sysfs_mount[NAME_MAX];
 /* returns !0 if sysfs filesystem was found, 0 otherwise */
 int sensors_init_sysfs(void)
 {
-	if (sysfs_get_mnt_path(sensors_sysfs_mount, NAME_MAX) == 0)
+	struct stat statbuf;
+
+	/* libsysfs will return success even if sysfs is not mounted,
+	   so we have to double-check */
+	if (sysfs_get_mnt_path(sensors_sysfs_mount, NAME_MAX) == 0
+	 && stat(sensors_sysfs_mount, &statbuf) == 0
+	 && statbuf.st_nlink > 2)
 		sensors_found_sysfs = 1;
 
 	return sensors_found_sysfs;
@@ -51,6 +60,7 @@ static int sensors_read_one_sysfs_chip(struct sysfs_device *dev)
 	struct sysfs_attribute *attr, *bus_attr;
 	char bus_path[SYSFS_PATH_MAX];
 	sensors_proc_chips_entry entry;
+	int err = -SENSORS_ERR_PARSE;
 
 	/* ignore any device without name attribute */
 	if (!(attr = sysfs_get_device_attr(dev, "name")))
@@ -103,8 +113,11 @@ static int sensors_read_one_sysfs_chip(struct sysfs_device *dev)
 		/* PCI */
 		entry.name.addr = (domain << 16) + (bus << 8) + (slot << 3) + fn;
 		entry.name.bus = SENSORS_CHIP_NAME_BUS_PCI;
-	} else
+	} else {
+		/* Ignore unknown devices */
+		err = 0;
 		goto exit_free;
+	}
 
 	sensors_add_proc_chips(&entry);
 
@@ -113,7 +126,7 @@ static int sensors_read_one_sysfs_chip(struct sysfs_device *dev)
 exit_free:
 	free(entry.name.prefix);
 	free(entry.name.busname);
-	return -SENSORS_ERR_PARSE;
+	return err;
 }
 
 /* returns 0 if successful, !0 otherwise */
@@ -169,10 +182,8 @@ int sensors_read_sysfs_chips(void)
 
 	dlist_for_each_data(clsdevs, clsdev, struct sysfs_class_device) {
 		struct sysfs_device *dev;
-		if (!(dev = sysfs_get_classdev_device(clsdev))) {
-			ret = -SENSORS_ERR_PROC;
-			goto exit;
-		}
+		if (!(dev = sysfs_get_classdev_device(clsdev)))
+			continue;
 		if ((ret = sensors_read_one_sysfs_chip(dev)))
 			goto exit;
 	}

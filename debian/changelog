@@ -1,3 +1,9 @@
+lm-sensors (1:2.10.6-1) unstable; urgency=low
+
+  * New upstream version. 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Fri, 04 Apr 2008 22:07:51 +0200
+
 lm-sensors (1:2.10.5-5) unstable; urgency=low
 
   * Fix location of default configuration file in postinst.

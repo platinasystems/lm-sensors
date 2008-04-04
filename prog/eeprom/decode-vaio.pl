@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# Copyright (C) 2002-2006 Jean Delvare <khali@linux-fr.org>
+# Copyright (C) 2002-2007 Jean Delvare <khali@linux-fr.org>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -43,6 +43,10 @@
 #  Revision might be a Service Tag.
 # Version 1.4  2006-09-20  Jean Delvare <khali@linux-fr.org>
 #  Detect and skip false positives (e.g. EDID EEPROMs).
+# Version 1.5  2007-11-19  Jean Delvare <khali@linux-fr.org>
+#  UUID and serial number might be hidden
+#  The model name is actually the first half of the asset tag
+#  The timestamp is only 18-byte long
 #
 # EEPROM data decoding for Sony Vaio laptops. 
 #
@@ -62,6 +66,7 @@
 #   PCG-GR114EK  : OK
 #   PCG-GR114SK  : OK
 #   PCG-GR214EP  : OK
+#   PCG-GRT955MP : OK
 #   PCG-GRX316G  : OK
 #   PCG-GRX570   : OK
 #   PCG-GRX600K  : OK
@@ -70,16 +75,19 @@
 #   PCG-Z600NE   : No EEPROM
 #   VGN-S260     : OK
 #   VGN-S4M/S    : OK
+#   VGN-TZ11MN/N : OK
 # Any feedback appreciated anyway.
 #
 # Thanks to Werner Heuser, Carsten Blume, Christian Gennerat, Joe Wreschnig,
-# Xavier Roche, Sebastien Lefevre, Lars Heer, Steve Dobson, Kent Hunt and
-# others for their precious help.
+# Xavier Roche, Sebastien Lefevre, Lars Heer, Steve Dobson, Kent Hunt,
+# Timo Hoenig and others for their precious help.
 
 
 use strict;
 use Fcntl qw(:DEFAULT :seek);
 use vars qw($sysfs $found);
+
+use constant ONLYROOT	=> "Readable only by root";
 
 sub print_item
 {
@@ -159,6 +167,21 @@ sub decode_string
 	return($string);
 }
 
+sub decode_hexa
+{
+	my ($bus, $addr, $offset, $length) = @_;
+
+	my @bytes = unpack('C*', read_eeprom_bytes($bus, $addr, $offset, $length));
+	my $string='';
+
+	for(my $i=0;$i<$length;$i++)
+	{
+		$string.=sprintf('%02X', shift(@bytes));
+	}
+
+	return($string);
+}
+
 sub decode_uuid
 {
 	my ($bus,$addr,$base) = @_;
@@ -175,7 +198,14 @@ sub decode_uuid
 		}
 	}
 
-	return($string);
+	if ($string eq '00000000-0000-0000-0000-000000000000')
+	{
+		return(ONLYROOT);
+	}
+	else
+	{
+		return($string);
+	}
 }
 
 sub vaio_decode
@@ -187,22 +217,24 @@ sub vaio_decode
 	return 0 unless $name =~ m/^[A-Z-]{4}/;
 
 	print_item('Machine Name', $name);
-	print_item('Serial Number', decode_string($bus, $addr, 192, 32));
+	my $serial = decode_string($bus, $addr, 192, 32);
+	print_item('Serial Number', $serial ? $serial : ONLYROOT);
 	print_item('UUID', decode_uuid($bus, $addr, 16));
 	my $revision = decode_string($bus, $addr, 160, 10);
 	print_item(length($revision) > 2 ? 'Service Tag' : 'Revision',
 		   $revision);
-	print_item('Model Name', 'PCG-'.decode_string($bus, $addr, 170, 4));
+	print_item('Asset Tag', decode_string($bus, $addr, 170, 4).
+				decode_hexa($bus, $addr, 174, 12));
 	print_item('OEM Data', decode_string($bus, $addr, 32, 16));
-	print_item('Timestamp', decode_string($bus, $addr, 224, 32));
+	print_item('Timestamp', decode_string($bus, $addr, 224, 18));
 	return 1;
 }
 
 BEGIN
 {
 	print("Sony Vaio EEPROM Decoder\n");
-	print("Copyright (C) 2002-2006  Jean Delvare\n");
-	print("Version 1.4\n\n");
+	print("Copyright (C) 2002-2007  Jean Delvare\n");
+	print("Version 1.5\n\n");
 }
 
 END
