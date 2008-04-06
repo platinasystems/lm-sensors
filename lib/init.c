@@ -17,6 +17,7 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <locale.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "sensors.h"
@@ -41,6 +42,7 @@ static void free_ignore(sensors_ignore ignore);
 int sensors_init(FILE *input)
 {
   int res;
+  char *locale;
   sensors_cleanup();
   if (sensors_init_sysfs()) {
     if ((res = sensors_read_sysfs_bus()) || (res = sensors_read_sysfs_chips()))
@@ -51,7 +53,16 @@ int sensors_init(FILE *input)
   }
   if ((res = sensors_scanner_init(input)))
     return -SENSORS_ERR_PARSE;
-  if ((res = sensors_yyparse()))
+  locale = setlocale(LC_ALL, NULL);
+  if (locale)
+    locale = strdup(locale);
+  setlocale(LC_ALL, "C");
+  res = sensors_yyparse();
+  if (locale) {
+    setlocale(LC_ALL, locale);
+    free(locale);
+  }
+  if (res)
     return -SENSORS_ERR_PARSE;
   if ((res = sensors_substitute_busses()))
     return res;

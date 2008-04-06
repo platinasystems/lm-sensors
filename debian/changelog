@@ -1,3 +1,9 @@
+lm-sensors (1:2.10.6-2) unstable; urgency=low
+
+  * Parse the configuration file in C locales (closes: bug#421286). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 06 Apr 2008 23:17:42 +0200
+
 lm-sensors (1:2.10.6-1) unstable; urgency=low
 
   * New upstream version. 
