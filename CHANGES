@@ -1,10 +1,42 @@
 lm_sensors CHANGES file
 -----------------------
 
+2.10.7 (20080701)
+  Library: Don't choke on unrecognized devices, part 2
+           Parse the configuration file in C locale (#2312)
+  Makefile: Fallback to simple depmod if System.map can't be found
+  Module asb100: Remove some dead code (2.6 backport)
+  Module i2c-amd756: Fix functionality flags (2.6 backport)
+  Module i2c-amd756-s4882: Fix an error path (2.6 backport)
+  Module i2c-i801: Drop broken I2C block read support
+                   Add ICH10 support
+  Module i2c-piix4: Minor cleanups (2.6 backport)
+  Module i2c-sis5595: Minor cleanups (2.6 backport)
+  Module lm75: Fix an incorrect comment (2.6 backport)
+  Module lm90: Fix LM86 detection (#2335)
+  Module w83l785ts: Don't ask user to report failures (2.6 backport)
+  Program fancontrol: Don't use named pipes when we don't need them (#2319)
+  Program sensord: Add lm90, adm1032, lm99, lm86, max6657, adt7461 support
+                   Fix adm1021, adm1023 support with 2.6 kernel (#2334)
+  Program sensors-detect: New device ID for the SMSC SCH5317
+                          Add SMSC SCH5127 detection
+                          Add National Semiconductor LM64 detection
+                          Add Asus F8000 detection
+                          Add Intel ICH10 (bus) detection
+                          Don't probe I2C addresses 0x40-0x47
+                          Fix the parsing of I2C addresses not to scan
+                          Detect and skip 1-register-only I2C devices
+                          Avoid SMBus word transactions where possible
+                          Add Dallas DS1631 detection
+                          Fix Andigilog aSC7621 support
+                          Fix Analog Devices ADT7461 support
+                          Add VIA C7 support
+                          Fix Winbond W83L786NR/NG/R/G support (#2336)
+
 2.10.6 "Welcome Home Lina" (20080306)
   Library: Fix fschrc and fschmd support
            Fix sysfs presence detection
-           Don't choke on unrecognized devices (#2087)
+           Don't choke on unrecognized devices, part 1 (#2087)
            Fix lm93 vid2 access (#2295)
            No in1 on w83783s
            Support DOS-style configuration files again (#2284)

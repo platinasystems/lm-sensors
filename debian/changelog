@@ -1,3 +1,10 @@
+lm-sensors (1:2.10.7-1) unstable; urgency=low
+
+  * New upstream version, with support for 2.6.26 kernels.
+  * Bumped Standards-version to 3.8.0 (No changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 02 Jul 2008 21:17:45 +0200
+
 lm-sensors (1:2.10.6-2) unstable; urgency=low
 
   * Parse the configuration file in C locales (closes: bug#421286). 
