@@ -37,6 +37,7 @@
     Tolapai		5032   ("")
     ICH10		3A30   ("")
     ICH10		3A60   ("")
+    PCH			3B30   ("")
 
     This driver supports several versions of Intel's I/O Controller Hubs (ICH).
     For SMBus support, they are similar to the PIIX4 and are part
@@ -119,6 +120,10 @@
 #define PCI_DEVICE_ID_INTEL_ICH10_5	0x3a60
 #endif
 
+#ifndef PCI_DEVICE_ID_INTEL_PCH_SMBUS
+#define PCI_DEVICE_ID_INTEL_PCH_SMBUS	0x3b30
+#endif
+
 #ifdef I2C_CLIENT_PEC
 #define HAVE_PEC
 #endif
@@ -192,7 +197,8 @@ static int __devinit i801_setup(struct pci_dev *dev)
 	    dev->device == PCI_DEVICE_ID_INTEL_ICH9_6 ||
 	    dev->device == PCI_DEVICE_ID_INTEL_TOLAPAI_1 ||
 	    dev->device == PCI_DEVICE_ID_INTEL_ICH10_4 ||
-	    dev->device == PCI_DEVICE_ID_INTEL_ICH10_5)
+	    dev->device == PCI_DEVICE_ID_INTEL_ICH10_5 ||
+	    dev->device == PCI_DEVICE_ID_INTEL_PCH_SMBUS)
 		isich4 = 1;
 	else
 		isich4 = 0;
@@ -255,11 +261,6 @@ static int i801_transaction(void)
 	int result = 0;
 	int timeout = 0;
 
-	dev_dbg(I801_dev, "Transaction (pre): CNT=%02x, CMD=%02x, "
-		"ADD=%02x, DAT0=%02x, DAT1=%02x\n", inb_p(SMBHSTCNT),
-		inb_p(SMBHSTCMD), inb_p(SMBHSTADD), inb_p(SMBHSTDAT0),
-		inb_p(SMBHSTDAT1));
-
 	/* Make sure the SMBus host is ready to start transmitting */
 	/* 0x1f = Failed, Bus_Err, Dev_Err, Intr, Host_Busy */
 	if ((temp = (0x1f & inb_p(SMBHSTSTS))) != 0x00) {
@@ -295,9 +296,7 @@ static int i801_transaction(void)
 
 	if (temp & 0x08) {
 		result = -1;
-		dev_err(I801_dev, "Bus collision! SMBus may be locked "
-			"until next hard reset. (sorry!)\n");
-		/* Clock stops and slave is stuck in mid-transmission */
+		dev_err(I801_dev, "Lost arbitration\n");
 	}
 
 	if (temp & 0x04) {
@@ -312,10 +311,6 @@ static int i801_transaction(void)
 		dev_dbg(I801_dev, "Failed reset at end of transaction "
 			"(%02x)\n", temp);
 	}
-	dev_dbg(I801_dev, "Transaction (post): CNT=%02x, CMD=%02x, "
-		"ADD=%02x, DAT0=%02x, DAT1=%02x\n", inb_p(SMBHSTCNT),
-		inb_p(SMBHSTCMD), inb_p(SMBHSTADD), inb_p(SMBHSTDAT0),
-		inb_p(SMBHSTDAT1));
 	return result;
 }
 
@@ -361,11 +356,6 @@ static int i801_block_transaction(union i2c_smbus_data *data, char read_write,
 		else
 			smbcmd = I801_BLOCK_DATA;
 		outb_p(smbcmd | ENABLE_INT9, SMBHSTCNT);
-
-		dev_dbg(I801_dev, "Block (pre %d): CNT=%02x, CMD=%02x, "
-			"ADD=%02x, DAT0=%02x, BLKDAT=%02x\n", i,
-			inb_p(SMBHSTCNT), inb_p(SMBHSTCMD), inb_p(SMBHSTADD),
-			inb_p(SMBHSTDAT0), inb_p(SMBBLKDAT));
 
 		/* Make sure the SMBus host is ready to start transmitting */
 		temp = inb_p(SMBHSTSTS);
@@ -419,7 +409,7 @@ static int i801_block_transaction(union i2c_smbus_data *data, char read_write,
 				"Error: Failed bus transaction\n");
 		} else if (temp & 0x08) {
 			result = -1;
-			dev_err(I801_dev, "Bus collision!\n");
+			dev_err(I801_dev, "Lost arbitration\n");
 		} else if (temp & 0x04) {
 			result = -1;
 			dev_dbg(I801_dev, "Error: no response!\n");
@@ -447,10 +437,6 @@ static int i801_block_transaction(union i2c_smbus_data *data, char read_write,
 				"Bad status (%02x) at end of transaction\n",
 				temp);
 		}
-		dev_dbg(I801_dev, "Block (post %d): CNT=%02x, CMD=%02x, "
-			"ADD=%02x, DAT0=%02x, BLKDAT=%02x\n", i,
-			inb_p(SMBHSTCNT), inb_p(SMBHSTCMD), inb_p(SMBHSTADD),
-			inb_p(SMBHSTDAT0), inb_p(SMBBLKDAT));
 
 		if (result < 0)
 			goto END;
@@ -699,6 +685,12 @@ static struct pci_device_id i801_ids[] __devinitdata = {
 	{
 		.vendor =	PCI_VENDOR_ID_INTEL,
 		.device =	PCI_DEVICE_ID_INTEL_ICH10_5,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_INTEL,
+		.device =	PCI_DEVICE_ID_INTEL_PCH_SMBUS,
 		.subvendor =	PCI_ANY_ID,
 		.subdevice =	PCI_ANY_ID,
 	},

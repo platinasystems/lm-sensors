@@ -1,6 +1,50 @@
 lm_sensors CHANGES file
 -----------------------
 
+2.10.8 (20081216)
+  File doc/chips/lm90: Update datasheet links (2.6 backport)
+  File doc/chips/pc87360: Drop dead links to datasheets (2.6 backport)
+  File i2c-dev.h: Drop I2C_FUNC_SMBUS_*I2C_BLOCK_2 defines
+  Library: Avoid namespace pollution
+           Add support for the IT8720F chip
+           Support separate prefixes lm89, max6658, max6659, max6681,
+            max6646, max6647 and max6649
+           Add alternative feature name for f71882fg temperature alarms
+  Module i2c-i801: Remove verbose debugging messages (2.6 backport)
+                   Properly report bus arbitration lost (2.6 backport)
+                   Add support for PCH (Ibex Peak) (2.6 backport)
+  Module i2c-piix4: Minor cleanups (2.6 backport)
+  Module i2c-viapro: Add VX800/VX820 support (2.6 backport)
+  Module lm78: Prevent misdetection of Winbond chips
+  Module lm90: Don't spam the kernel log (2.6 backport)
+  Module max1619: Use inline functions instead of macros (2.6 backport)
+  Program decode-dimms.pl: Only export the ceil function from POSIX 
+                           Fix decoding of SDR SDRAM bytes 12-14
+  Program pwmconfig: Fix MINSTOP and MINSTART test functions (#2340)
+                     Change default for MINTEMP from 0 to 20 degrees C
+  Program sensord: Add it8720 support
+                   Add lm89, max6658, max6659, max6681, max6646, max6647
+                    and max6649 support
+                   Accept negative temperatures in RRD database
+                   Don't bail out on transient errors (#2330)
+  Program sensors: Recognize it87 thermal sensor type 4 as thermistor
+                   Add it8720 support
+                   Add lm89, max6658, max6659, max6681, max6646, max6647
+                    and max6649 support
+  Program sensors-detect: Add VIA VT1212 support
+                          Add SMSC EMC2700LPC support
+                          Add ITE IT8720F support
+                          Add Texas Instruments TMP411 support
+                          Prevent misdetection of W83627DHG on I2C as LM78
+                          W83627DHG has no subclients
+                          Add VIA VX800/VX820 support
+                          Fix detection of Intel 5000 series FB-DIMM AMB
+                          Fix detection of ADT7462
+                          Fix detection of SMSC LPC47M292
+                          Add SMSC LPC47M233 support
+                          Fix SMBus detection of W83627EHF and W83627DHG
+                          Add Intel Core I7 support
+
 2.10.7 (20080701)
   Library: Don't choke on unrecognized devices, part 2
            Parse the configuration file in C locale (#2312)

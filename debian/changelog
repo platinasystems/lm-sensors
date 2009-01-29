@@ -1,3 +1,10 @@
+lm-sensors (1:2.10.8-1) unstable; urgency=low
+
+  * New upstream version. 
+  * Cleanup of debian/rules 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 29 Jan 2009 21:21:20 +0100
+
 lm-sensors (1:2.10.7-1) unstable; urgency=low
 
   * New upstream version, with support for 2.6.26 kernels.

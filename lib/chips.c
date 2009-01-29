@@ -6267,7 +6267,8 @@ static sensors_chip_feature applesmc_features[] =
 		NOSYSCTL, VALUE(5), 3 }, \
 	{ { SENSORS_F71882FG_TEMP_ALARM(nr), "temp" #nr "_alarm", \
 		SENSORS_F71882FG_TEMP(nr), NOMAP, R }, \
-		NOSYSCTL, VALUE(1), 0 }, \
+		NOSYSCTL, VALUE(1), 0, "temp" #nr "_max_alarm", 0, \
+		"temp" #nr "_alarm" }, \
 	{ { SENSORS_F71882FG_TEMP_FAULT(nr), "temp" #nr "_fault", \
 		SENSORS_F71882FG_TEMP(nr), NOMAP, R }, \
 		NOSYSCTL, VALUE(2), 0 }, \
@@ -6443,6 +6444,7 @@ sensors_chip_features sensors_chip_features_list[] =
  { SENSORS_IT8712_PREFIX, it87_features },
  { SENSORS_IT8716_PREFIX, it87_features },
  { SENSORS_IT8718_PREFIX, it87_features },
+ { SENSORS_IT8720_PREFIX, it87_features },
  { SENSORS_FSCPOS_PREFIX, fscpos_features },
  { SENSORS_FSCSCY_PREFIX, fscscy_features },
  { SENSORS_FSCHER_PREFIX, fscher_features },
@@ -6470,11 +6472,18 @@ sensors_chip_features sensors_chip_features_list[] =
  { SENSORS_LM83_PREFIX, lm83_features },
  { SENSORS_LM90_PREFIX, lm90_features },
  { SENSORS_ADM1032_PREFIX, lm90_features },
+ { SENSORS_LM89_PREFIX, lm90_features },
  { SENSORS_LM99_PREFIX, lm90_features },
  { SENSORS_LM86_PREFIX, lm90_features },
  { SENSORS_MAX6657_PREFIX, lm90_features },
+ { SENSORS_MAX6658_PREFIX, lm90_features },
+ { SENSORS_MAX6659_PREFIX, lm90_features },
  { SENSORS_ADT7461_PREFIX, lm90_features },
  { SENSORS_MAX6680_PREFIX, lm90_features },
+ { SENSORS_MAX6681_PREFIX, lm90_features },
+ { SENSORS_MAX6646_PREFIX, lm90_features },
+ { SENSORS_MAX6647_PREFIX, lm90_features },
+ { SENSORS_MAX6649_PREFIX, lm90_features },
  { SENSORS_LM63_PREFIX, lm63_features },
  { SENSORS_MAX1619_PREFIX, max1619_features },
  { SENSORS_XEONTEMP_PREFIX, xeontemp_features },

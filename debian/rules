@@ -2,13 +2,27 @@
 # This is fairly complicated since it can be called either to build the
 # source package, or to build a kernel module package.
 
+# Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
+
+# These are used for cross-compiling and for saving the configure script
+# from having to guess our platform (since we know it already)
+DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+DEB_HOST_GNU_SYSTEM ?= $(shell dpkg-architecture -qDEB_HOST_GNU_SYSTEM)
+
+ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
+        CFLAGS += -g
+endif
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+        INSTALL_PROGRAM += -s
+endif
 
 clean:
 	dh_testdir
 	dh_testroot
 	
-	$(MAKE) clean PROG_EXTRA=sensord
+	$(MAKE) clean
 	
 	rm -f debian/lm-sensors-*.README.Debian
 	
@@ -25,8 +39,9 @@ build-stamp:
 	# binary programs and librairies
 	$(MAKE) user \
 		PREFIX=/usr \
-		PROG_EXTRA=sensord \
-		EXLDFLAGS=""
+		MANDIR=/usr/share/man \
+		EXLDFLAGS="" \
+		CFLAGS="$(CFLAGS)"
 
 	touch build-stamp
 
@@ -41,13 +56,13 @@ install-stamp: build
 		DESTDIR=$(CURDIR)/debian/tmp \
 		PREFIX=/usr \
 		MANDIR=/usr/share/man \
-		EXLDFLAGS=""
+		EXLDFLAGS="" \
+		CFLAGS="$(CFLAGS)"
 
 	dh_install -s --sourcedir=debian/tmp
 
 	# Install extra files as needed
 	install -m 0644 etc/sensors.conf.eg debian/libsensors3/usr/share/libsensors3/sensors.conf.eg
-
 
 	touch install-stamp
 
@@ -61,23 +76,19 @@ binary-arch: build install
 	dh_testdir 
 	dh_testroot
 	dh_installchangelogs -s CHANGES
-	dh_installdocs -s -XCVS
-	dh_installexamples -s -XCVS -XModule.mk
-	dh_installmodules -n -s --name=i2c
-	dh_installinit -psensord
-	dh_installinit -plm-sensors --no-start -- start 47 S .  # Should start after modutils (20) and mountnfs (45)
-	dh_installman -s
-	dh_link -s
-	dh_strip -s
-	dh_compress -s -X.pl
-	dh_fixperms -s
-	dh_perl -s
-	dh_makeshlibs -s
-	dh_installdeb -s
-	dh_shlibdeps -s
-	dh_gencontrol -s
-	dh_md5sums -s
-	dh_builddeb -s
+	dh_installdocs -a
+	dh_installman -a
+	dh_link -a
+	dh_strip -a
+	dh_compress -a
+	dh_fixperms -a
+	dh_perl -a
+	dh_makeshlibs -a
+	dh_installdeb -a
+	dh_shlibdeps -a
+	dh_gencontrol -a
+	dh_md5sums -a
+	dh_builddeb -a
 
 binary: binary-arch binary-indep
 .PHONY: clean build install binary-indep binary-arch binary
