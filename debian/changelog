@@ -1,3 +1,12 @@
+lm-sensors (1:2.10.8-2) unstable; urgency=low
+
+  * Drop the dependency on makedev, and remove the corresponding code
+    from postinst (closes: bug#546871).
+  * Switch to debhelper 5. 
+  * Bumped Standards-version to 3.8.3 (No changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 16 Sep 2009 23:15:20 +0200
+
 lm-sensors (1:2.10.8-1) unstable; urgency=low
 
   * New upstream version. 

@@ -11,12 +11,6 @@ set -e
 
 case "$1" in
     configure)
-	# Create the device node if MAKEDEV exists
-	if [ -x /sbin/MAKEDEV ] ; then
-		if [ ! -c /dev/i2c-0 ]; then
-			(cd /dev && /sbin/MAKEDEV i2c) || true
-		fi
-	fi
 	# Create the configuration file
 	ucf --debconf-ok --three-way /usr/share/libsensors3/sensors.conf.eg /etc/sensors.conf
     ;;
