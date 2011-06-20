@@ -3,19 +3,20 @@
     conf-parse.y - Part of libsensors, a Linux library for reading sensor data.
     Copyright (c) 1998, 1999  Frodo Looijaard <frodol@dds.nl>
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA 02110-1301 USA.
 */
 
 #define YYERROR_VERBOSE
@@ -81,9 +82,9 @@ static sensors_chip *current_chip = NULL;
   void *nothing;
   sensors_chip_name_list chips;
   sensors_expr *expr;
-  int bus;
+  sensors_bus_id bus;
   sensors_chip_name chip;
-  int line;
+  sensors_config_line line;
 }  
 
 %left <nothing> '-' '+'
@@ -105,9 +106,8 @@ static sensors_chip *current_chip = NULL;
 
 %type <chips> chip_name_list
 %type <expr> expression
-%type <bus> i2cbus_name
+%type <bus> bus_id
 %type <name> adapter_name
-%type <name> algorithm_name
 %type <name> function_name
 %type <name> string
 %type <chip> chip_name
@@ -121,7 +121,6 @@ input:	  /* empty */
 ;
 
 line:	  bus_statement EOL
-	| busalgo_statement EOL
 	| label_statement EOL
 	| set_statement EOL
 	| chip_statement EOL
@@ -130,24 +129,13 @@ line:	  bus_statement EOL
 	| error	EOL
 ;
 
-bus_statement:	  BUS i2cbus_name adapter_name
+bus_statement:	  BUS bus_id adapter_name
 		  { sensors_bus new_el;
-		    new_el.lineno = $1;
-                    new_el.number = $2;
+		    new_el.line = $1;
+		    new_el.bus = $2;
                     new_el.adapter = $3;
 		    bus_add_el(&new_el);
 		  }
-;
-
-/* for compatibility, deprecated */
-busalgo_statement:	  BUS i2cbus_name adapter_name algorithm_name
-			  { sensors_bus new_el;
-			    new_el.lineno = $1;
-	                    new_el.number = $2;
-	                    new_el.adapter = $3;
-			    free($4);
-			    bus_add_el(&new_el);
-			  }
 ;
 
 label_statement:	  LABEL function_name string
@@ -158,7 +146,7 @@ label_statement:	  LABEL function_name string
 			      free($3);
 			      YYERROR;
 			    }
-			    new_el.lineno = $1;
+			    new_el.line = $1;
 			    new_el.name = $2;
 			    new_el.value = $3;
 			    label_add_el(&new_el);
@@ -173,7 +161,7 @@ set_statement:	  SET function_name expression
 		      sensors_free_expr($3);
 		      YYERROR;
 		    }
-		    new_el.lineno = $1;
+		    new_el.line = $1;
 		    new_el.name = $2;
 		    new_el.value = $3;
 		    set_add_el(&new_el);
@@ -189,7 +177,7 @@ compute_statement:	  COMPUTE function_name expression ',' expression
 			      sensors_free_expr($5);
 			      YYERROR;
 			    }
-			    new_el.lineno = $1;
+			    new_el.line = $1;
 			    new_el.name = $2;
 			    new_el.from_proc = $3;
 			    new_el.to_proc = $5;
@@ -204,7 +192,7 @@ ignore_statement:	IGNORE function_name
 			    free($2);
 			    YYERROR;
 			  }
-			  new_el.lineno = $1;
+			  new_el.line = $1;
 			  new_el.name = $2;
 			  ignore_add_el(&new_el);
 			}
@@ -212,7 +200,7 @@ ignore_statement:	IGNORE function_name
 
 chip_statement:	  CHIP chip_name_list
 		  { sensors_chip new_el;
-		    new_el.lineno = $1;
+		    new_el.line = $1;
 		    new_el.labels = NULL;
 		    new_el.sets = NULL;
 		    new_el.computes = NULL;
@@ -307,24 +295,18 @@ expression:	  FLOAT
 		  }
 ;
 
-i2cbus_name:	  NAME
-		  { int res = sensors_parse_i2cbus_name($1,&$$);
+bus_id:		  NAME
+		  { int res = sensors_parse_bus_id($1,&$$);
 		    free($1);
 		    if (res) {
-                      sensors_yyerror("Parse error in i2c bus name");
+                      sensors_yyerror("Parse error in bus id");
 		      YYERROR;
                     }
 		  }
 ;
 
 adapter_name:	  NAME
-		  { sensors_strip_of_spaces($1);
-		    $$ = $1; }
-;
-
-algorithm_name:	  NAME
-		  { sensors_strip_of_spaces($1);
-		    $$ = $1; }
+		  { $$ = $1; }
 ;
 
 function_name:	  NAME
@@ -350,17 +332,16 @@ chip_name:	  NAME
 void sensors_yyerror(const char *err)
 {
   if (sensors_lex_error[0]) {
-    sensors_parse_error(sensors_lex_error,sensors_yylineno);
+    sensors_parse_error_wfn(sensors_lex_error, sensors_yyfilename, sensors_yylineno);
     sensors_lex_error[0] = '\0';
   } else
-    sensors_parse_error(err,sensors_yylineno);
+    sensors_parse_error_wfn(err, sensors_yyfilename, sensors_yylineno);
 }
 
 sensors_expr *malloc_expr(void)
 {
   sensors_expr *res = malloc(sizeof(sensors_expr));
   if (! res)
-    sensors_fatal_error("malloc_expr","Allocating a new expression");
+    sensors_fatal_error(__func__, "Allocating a new expression");
   return res;
 }
-  

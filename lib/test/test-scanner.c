@@ -13,7 +13,8 @@
 
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA 02110-1301 USA.
 */
 
 #include <stdio.h>
@@ -31,7 +32,7 @@ int main(void)
 	int result;
 
 	/* init the scanner */
-	if ((result = sensors_scanner_init(stdin)))
+	if ((result = sensors_scanner_init(stdin, NULL)))
 		return result;
 
 	do {

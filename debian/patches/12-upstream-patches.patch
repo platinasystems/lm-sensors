@@ -1,0 +1,26 @@
+Recommended patches from upstream: r5952
+
+---
+ prog/detect/sensors-detect |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+--- a/prog/detect/sensors-detect
++++ b/prog/detect/sensors-detect
+@@ -1998,7 +1998,7 @@
+ 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
+ 	}, {
+ 		name => "Fintek F71889A Super IO Sensors",
+-		driver => "to-be-written",
++		driver => "f71882fg",
+ 		devid => 0x1005,
+ 		logdev => 0x04,
+ 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
+@@ -2012,7 +2012,7 @@
+ 		devid => 0x0206,
+ 	}, {
+ 		name => "Fintek F81865F Super IO Sensors",
+-		driver => "to-be-written",
++		driver => "f71882fg",
+ 		devid => 0x0704,
+ 		logdev => 0x04,
+ 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,

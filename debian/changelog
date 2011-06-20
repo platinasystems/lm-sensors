@@ -1,58 +1,270 @@
-lm-sensors (1:2.10.8-2) unstable; urgency=low
+lm-sensors (1:3.3.0-4) unstable; urgency=low
 
-  * Drop the dependency on makedev, and remove the corresponding code
-    from postinst (closes: bug#546871).
-  * Switch to debhelper 5. 
-  * Bumped Standards-version to 3.8.3 (No changes).
+  * Rename source package to lm-sensors now that the version 2 is gone.
+  * Add patch from upstream to support 2 digits kernel version (closes: 
+    #630508).
+  * Convert to multiarch:
+    - Bump debhelper build-dep to >= 8.1.3 for multiarch.
+    - Add Pre-Depends: ${misc:Pre-Depends} to libsensors4 and set it
+    Multi-Arch: same.
+    - Install the library in the multiarch path.
+  * Add build-arch and build-indep targets. 
 
- -- Aurelien Jarno <aurel32@debian.org>  Wed, 16 Sep 2009 23:15:20 +0200
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 20 Jun 2011 21:25:57 +0200
 
-lm-sensors (1:2.10.8-1) unstable; urgency=low
+lm-sensors-3 (1:3.3.0-3) unstable; urgency=low
+
+  * Correctly detect udev in sensors-detect (closes: #628228). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sat, 04 Jun 2011 22:42:37 +0200
+
+lm-sensors-3 (1:3.3.0-2) unstable; urgency=low
+
+  * Avoid printing a warning if ucf is not available (closes: #626402). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 11 May 2011 20:02:23 +0200
+
+lm-sensors-3 (1:3.3.0-1) unstable; urgency=low
+
+  * New upstream version:
+    - refresh all patches.
+    - update 12-upstream-patches.patch with upstream recommended patches.
+    - update symbols file, now that upstream only export symbols of the 
+      public API. Hope it won't break anything, otherwise we should go 
+      through a soname bump and a transition.
+  * Remove old fancontrol links in postinst (closes: bug#612231).
+  * Bumped Standards-version to 3.9.2 (no changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sat, 09 Apr 2011 15:19:33 +0200
+
+lm-sensors-3 (1:3.2.0-1) unstable; urgency=low
+
+  * New upstream version.
+  * Suggests fancontrol instead of recommending it in lm-sensors (closes:
+    bug#567185).
+  * Suggests lm-sensors instead of recommending it in libsensors4 (closes:
+    bug#602914).
+  * Suggests rrdtool in sensord (closes: bug#588132).
+  * Detect SMSC SCH5524-NS chip (closes: bug#588355).
+  * Bumped Standards-version to 3.9.1 (no changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 06 Feb 2011 14:46:28 +0100
+
+lm-sensors-3 (1:3.1.2-6) unstable; urgency=low
+
+  * Fix return value in fancontrol --check (closes: bug#583216). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 26 May 2010 19:17:40 +0200
+
+lm-sensors-3 (1:3.1.2-5) unstable; urgency=low
+
+  * Use the --check option in both the initscript and the fancontrol
+    script (closes: bug#582979).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 26 May 2010 11:15:17 +0200
+
+lm-sensors-3 (1:3.1.2-4) unstable; urgency=low
+
+  * Check /etc/fancontrol before starting the daemon (closes:
+    bug#582979).
+  * Add a README.Debian in lm-sensors package. (closes: bug#576932).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 25 May 2010 11:33:23 +0200
+
+lm-sensors-3 (1:3.1.2-3) unstable; urgency=medium
+
+  * Add 09-sensord-multiple-chips.diff from upstream to fix multiple
+    chip support in sensord (closes: bug#581036).
+  * Fix error message in lm-sensors init script (closes: bug#581350).
+  * Remove /etc/rc1.d/K20sensord on upgrade (closes: bug#573898). 
+  * Fix typos in pwmconfig (closes: bug#570344).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 24 May 2010 23:11:32 +0200
+
+lm-sensors-3 (1:3.1.2-2) unstable; urgency=low
+
+  * Detect old configuration files in init script (closes: bug#568627).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 07 Feb 2010 21:12:44 +0100
+
+lm-sensors-3 (1:3.1.2-1) unstable; urgency=low
 
   * New upstream version. 
-  * Cleanup of debian/rules 
+  * Bumped Standards-version to 3.8.4 (no changes).
 
- -- Aurelien Jarno <aurel32@debian.org>  Thu, 29 Jan 2009 21:21:20 +0100
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 04 Feb 2010 20:15:07 +0100
 
-lm-sensors (1:2.10.7-1) unstable; urgency=low
+lm-sensors-3 (1:3.1.1-6) unstable; urgency=low
 
-  * New upstream version, with support for 2.6.26 kernels.
-  * Bumped Standards-version to 3.8.0 (No changes).
+  * Move fancontrol.txt to the fancontrol package (closes: bug#567181). 
+  * Remove old init scripts if they are not modified an upgrading from
+    version (<< 1:3.1.1-5). (closes: bug#567183).
 
- -- Aurelien Jarno <aurel32@debian.org>  Wed, 02 Jul 2008 21:17:45 +0200
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 27 Jan 2010 22:11:25 +0100
 
-lm-sensors (1:2.10.6-2) unstable; urgency=low
+lm-sensors-3 (1:3.1.1-5) unstable; urgency=low
 
-  * Parse the configuration file in C locales (closes: bug#421286). 
+  * Split-out fancontrol in a separate package (closes: bug#540677).
+  * Restart fancontrol in postinst instead of starting it (closes: 
+    bug#552197).
+  * Don't stop fancontrol in runlevel 0 1 6 (closes: bug#563835).
+  * Don't stop sensord in runlevel 1.
+  * Ignore failures to set sensors at boot time (closes: bug#566184,
+    bug#556361).
 
- -- Aurelien Jarno <aurel32@debian.org>  Sun, 06 Apr 2008 23:17:42 +0200
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 27 Jan 2010 00:00:33 +0100
 
-lm-sensors (1:2.10.6-1) unstable; urgency=low
+lm-sensors-3 (1:3.1.1-4) unstable; urgency=low
+
+  * Bumped Standards-version to 3.8.3 (no changes).
+  * Drop libsensors4 postinst script and the dependency on makedev | 
+    udev. This part has been moved to i2c-tools.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 14 Oct 2009 00:20:17 +0200
+
+lm-sensors-3 (1:3.1.1-3) unstable; urgency=low
+
+  * *.init: depends on $remote_fs instead of $local_fs (closes: 
+    bug#541363). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 13 Aug 2009 20:18:11 +0200
+
+lm-sensors-3 (1:3.1.1-2) unstable; urgency=low
+
+  * Stop managing /etc/sensors3.conf using ucf, as user changes should now
+    go in /etc/sensors.d/.
+  * Mention /etc/sensors.d in libsensors4.NEWS.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 01 Jul 2009 21:46:24 +0000
+
+lm-sensors-3 (1:3.1.1-1) unstable; urgency=low
 
   * New upstream version. 
+    - LDFLAGS is taken into account by the build system (closes: 
+      bug#513171).
+  * debian/sensord.init: add a 'sleep 1' between stop and start for
+    the restart action (closes: #528276).
+  * debian/*.init: add status actions (closes: #525899).
+  * Update sensord.README.Debian to mention /etc/sensors3.conf instead
+    of /etc/sensors.conf (closes: #520056).
+  * Bumped Standards-version to 3.8.2.
 
- -- Aurelien Jarno <aurel32@debian.org>  Fri, 04 Apr 2008 22:07:51 +0200
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 28 Jun 2009 21:59:56 +0200
 
-lm-sensors (1:2.10.5-5) unstable; urgency=low
+lm-sensors-3 (1:3.1.0-2) unstable; urgency=low
 
-  * Fix location of default configuration file in postinst.
+  * lm-sensors.preinst: make sure that the directory exists before
+    trying to remove them (closes: bug#518976).
 
- -- Aurelien Jarno <aurel32@debian.org>  Thu, 03 Jan 2008 08:13:03 +0100
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 09 Mar 2009 19:48:36 +0100
 
-lm-sensors (1:2.10.5-4) unstable; urgency=low
+lm-sensors-3 (1:3.1.0-1) unstable; urgency=low
 
-  * Conflicts with old lm-sensors package.
-  * Handle /etc/sensors.conf using ucf, the same way the old 
-    lm-sensors package.
+  * New upstream version.
+  * lm-sensors.fancontrol.init: remove pidfile on stop action (closes:
+    bug#504304).
+  * lm-sensors.fancontrol.init: decrease the stop/start time to 3
+    seconds (closes: bug#504379).
+  * libsensors4.README.Debian: update.
+  * libsensors4.symbols: new file. 
+  * lm-sensors.preinst: remove /etc/modprobe.d/i2c on install/upgrade
+    (closes: bug#518111).
+  * patches/06-sensors-detect-debian.patch: update.
+  * patches/07-sensors-detect-fixes.patch: remove (merged upstream).
+  * patches/07-sensors-detect-modprobe.conf.patch: new patch to create
+    files with .conf extension in /etc/modprobe.d/.
 
- -- Aurelien Jarno <aurel32@debian.org>  Thu, 03 Jan 2008 07:51:47 +0100
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 05 Mar 2009 01:30:18 +0100
 
-lm-sensors (1:2.10.5-3) unstable; urgency=low
+lm-sensors-3 (1:3.0.2-2) unstable; urgency=low
 
-  * Drop lm-sensors and sensord packages, they are now provided by
-    lm-sensors-3.
+  * Remove stop links from rc0 and rc6 (closes: bug#495547).
+  * Add a NEWS.Debian file from libsensors4 explaining how to
+    generate /etc/sensors3.conf from /etc/sensors.conf (closes:
+    bug#496703).
+  * Bumped Standards-version to 3.8.0
+    - Add debian/README.source
 
- -- Aurelien Jarno <aurel32@debian.org>  Mon, 10 Dec 2007 22:00:57 +0100
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 04 Sep 2008 12:40:12 +0200
+
+lm-sensors-3 (1:3.0.2-1) unstable; urgency=low
+
+  * New upstream version.
+  * Use quilt for patch management.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 21 May 2008 17:57:23 +0200
+
+lm-sensors-3 (1:3.0.1-5) unstable; urgency=low
+
+  * /etc/init.d/fancontrol: use --startas instead of --exec. 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 17 Apr 2008 00:03:27 +0200
+
+lm-sensors-3 (1:3.0.1-4) unstable; urgency=low
+
+  * Fix labels/compute/set override (closes: bug#474596).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 13 Apr 2008 01:15:52 +0200
+
+lm-sensors-3 (1:3.0.1-3) unstable; urgency=low
+
+  * Remove /etc/modutils/i2c in preinst script (closes: bug#470611).
+  * Parse the configuration file in C locale (closes: bug#469333).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 18 Mar 2008 17:23:40 +0100
+
+lm-sensors-3 (1:3.0.1-2) unstable; urgency=medium
+
+  * Don't try to convert the configuration file from version 2, let the user
+    do this task (closes: bug#468862, bug#467056).
+  * Suggest i2c-tools instead of i2c (closes: bug#460997).
+  * Rework debian/copyright.
+  * Add an iniscript for fancontrol (closes: bug#400770).
+  * Set minimum load average value to 0 in sensord (closes: bug#446313).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 02 Mar 2008 22:24:39 +0100
+
+lm-sensors-3 (1:3.0.1-1) unstable; urgency=low
+
+  * New upstream version.
+  * Make /etc/init.d/lm-sensors LSB compliant.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 31 Jan 2008 18:03:33 +0100
+
+lm-sensors-3 (1:3.0.0-5) unstable; urgency=low
+
+  * Move sensors3.conf file to libsensors4.
+  * Only convert /etc/sensors.conf into /etc/sensors3.conf if the former has
+    been modified. Otherwise, install the default file.
+  * Fix voltage value references in compute statements in the default
+    configuration file and in the configuration file converter
+    (closes: bug#456774).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 03 Jan 2008 11:11:02 +0100
+
+lm-sensors-3 (1:3.0.0-4) unstable; urgency=medium
+
+  * Apply upstream fix for sensord.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 11 Dec 2007 15:14:10 +0100
+
+lm-sensors-3 (1:3.0.0-3) unstable; urgency=low
+
+  * Ship sensors-detect in the lm-sensors package (closes: bug#454528).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Fri, 07 Dec 2007 00:53:24 +0100
+
+lm-sensors-3 (1:3.0.0-2) unstable; urgency=low
+
+  * Only install isaset and isadump on i386 and amd64.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 03 Dec 2007 22:51:33 +0100
+
+lm-sensors-3 (1:3.0.0-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 27 Nov 2007 12:35:24 +0100
 
 lm-sensors (1:2.10.5-2) unstable; urgency=low
 

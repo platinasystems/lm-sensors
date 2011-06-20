@@ -7,8 +7,7 @@ Introduction
 fancontrol is a shellscript for use with lm_sensors. It reads its
 configuration from a file, then calculates fan speeds from temperatures and
 sets the corresponding pwm outputs to the computed values.  It is included in
-lm_sensors since 2.8.0, the latest version is always available through SVN or
-at http://www.hdev.de/fancontrol/ For easy configuration, there's a script
+lm_sensors since version 2.8.0. For easy configuration, there's a script
 named pwmconfig which lets you interactively write your configuration file for
 fancontrol. Alternatively you can write this file yourself using the
 information from the configuration section of this document.
@@ -100,14 +99,14 @@ VARIABLE=chip/pwmdev=value chip/pwmdev2=value2 [...]
 VARIABLE2=[...]
 
 Each variable has its own line. The variable name is followed by an equal sign
-and the device=value pairs. These consist of the relative path to the pwm
-output (from /proc/sys/dev/sensors, /sys/bus/i2c/devices or /sys/class/hwmon
-depending on the kernel version) for which the value is valid, equal sign
-followed by the value and are separated by a blank.
+and the device=value pairs. These consist of the path to the pwm output for
+which the value is valid, equal sign followed by the value and are separated
+by a blank. Path can be absolute or relative (from /sys/bus/i2c/devices or
+/sys/class/hwmon depending on the kernel version).
 
 Example:
 
-MINTEMP=w83627hf-isa-0290/pwm2=40 w83627hf-isa-0290/pwm1=54
+MINTEMP=hwmon0/device/pwm1=40 hwmon0/device/pwm2=54
 
 You have to play with the temperature values a bit to get happy. For initial
 setup I recommend using the pwmconfig script. Small changes can be made by
