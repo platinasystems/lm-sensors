@@ -1,6 +1,6 @@
 ---
- prog/detect/sensors-detect |  104 ++++++++++++---------------------------------
- 1 file changed, 30 insertions(+), 74 deletions(-)
+ prog/detect/sensors-detect |  120 +++++++++++----------------------------------
+ 1 file changed, 30 insertions(+), 90 deletions(-)
 
 --- a/prog/detect/sensors-detect
 +++ b/prog/detect/sensors-detect
@@ -10,7 +10,7 @@
  #
  #    sensors-detect - Detect hardware monitoring chips
  #    Copyright (C) 1998 - 2002  Frodo Looijaard <frodol@dds.nl>
-@@ -6402,83 +6402,39 @@
+@@ -6479,99 +6479,39 @@
  		}
  	}
  
@@ -67,6 +67,22 @@
 -			$i++;
 -		}
 -		close(SYSCONFIG);
+-
+-		if (-x "/bin/systemctl" && -d "/lib/systemd/system" &&
+-		    ! -f "/lib/systemd/system/lm_sensors.service") {
+-			print "Copy prog/init/lm_sensors.service to /lib/systemd/system\n".
+-			      "and run 'systemctl enable lm_sensors.service'\n".
+-			      "for initialization at boot time.\n";
+-			return;
+-		}
+-
+-		if (-x "/bin/systemctl" &&
+-		    -f "/lib/systemd/system/lm_sensors.service") {
+-			system("/bin/systemctl", "enable", "lm_sensors.service");
+-			system("/bin/systemctl", "start", "lm_sensors.service");
+-			# All done, don't check for /etc/init.d/lm_sensors
+-			return;
+-		}
 -
 -		print "Copy prog/init/lm_sensors.init to /etc/init.d/lm_sensors\n".
 -		      "for initialization at boot time.\n"

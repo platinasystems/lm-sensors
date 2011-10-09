@@ -9,6 +9,4 @@
 09-sensors-detect-sch5524.patch
 10-pwmconfig.diff
 11-fancontrol-check.patch
-12-upstream-patches.patch
-13-udev-run.patch
 14-2-digits-kernel.patch

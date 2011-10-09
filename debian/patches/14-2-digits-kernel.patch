@@ -1,6 +1,10 @@
+---
+ prog/detect/sensors-detect |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
 --- a/prog/detect/sensors-detect
 +++ b/prog/detect/sensors-detect
-@@ -2462,8 +2462,8 @@
+@@ -2477,8 +2477,8 @@
  
  sub initialize_kernel_version
  {
@@ -11,4 +15,3 @@
  	chomp($kernel_arch = `uname -m`);
  
  	# We only support kernels >= 2.6.5
-
