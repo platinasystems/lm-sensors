@@ -41,7 +41,7 @@ use constant NO_CACHE => 1;
 use vars qw(@pci_adapters @chip_ids @ipmi_ifs @non_hwmon_chip_ids
 	    $i2c_addresses_to_scan $revision @i2c_byte_cache);
 
-$revision = '$Revision: 5984 $ ($Date: 2011-07-10 21:22:53 +0200 (dim. 10 juil. 2011) $)';
+$revision = '$Revision: 6031 $ ($Date: 2012-03-07 17:14:01 +0100 (mer. 07 mars 2012) $)';
 $revision =~ s/\$\w+: (.*?) \$/$1/g;
 $revision =~ s/ \([^()]*\)//;
 
@@ -60,7 +60,7 @@ $revision =~ s/ \([^()]*\)//;
 		vendid	=> 0x8086,
 		devid	=> 0x7603,
 		procid	=> "Intel 82372FB PIIX5 ACPI",
-		driver	=> "to-be-tested",
+		driver	=> "to-be-written",
 	}, {
 		vendid	=> 0x8086,
 		devid	=> 0x719b,
@@ -150,6 +150,26 @@ $revision =~ s/ \([^()]*\)//;
 		vendid	=> 0x8086,
 		devid	=> 0x1C22,
 		procid	=> "Intel Cougar Point (PCH)",
+		driver	=> "i2c-i801",
+	}, {
+		vendid	=> 0x8086,
+		devid	=> 0x1D22,
+		procid	=> "Intel Patsburg (PCH)",
+		driver	=> "i2c-i801",
+	}, {
+		vendid	=> 0x8086,
+		devid	=> 0x2330,
+		procid	=> "Intel DH89xxCC (PCH)",
+		driver	=> "i2c-i801",
+	}, {
+		vendid	=> 0x8086,
+		devid	=> 0x1E22,
+		procid	=> "Intel Panther Point (PCH)",
+		driver	=> "i2c-i801",
+	}, {
+		vendid	=> 0x8086,
+		devid	=> 0x8C22,
+		procid	=> "Intel Lynx Point (PCH)",
 		driver	=> "i2c-i801",
 	}, {
 		vendid	=> 0x8086,
@@ -520,7 +540,12 @@ use vars qw(@i2c_adapter_names);
 		name => "National Semiconductor LM80",
 		driver => "lm80",
 		i2c_addrs => [0x28..0x2f],
-		i2c_detect => sub { lm80_detect(@_); },
+		i2c_detect => sub { lm80_detect(@_, 0); },
+	}, {
+		name => "National Semiconductor LM96080",
+		driver => "lm80",
+		i2c_addrs => [0x28..0x2f],
+		i2c_detect => sub { lm80_detect(@_, 1); },
 	}, {
 		name => "National Semiconductor LM85",
 		driver => "lm85",
@@ -657,7 +682,7 @@ use vars qw(@i2c_adapter_names);
 		i2c_addrs => [0x2c..0x2e],
 		i2c_detect => sub { lm93_detect(@_, 0); },
 	}, {
-		name => "National Semiconductor LM94",
+		name => "National Semiconductor LM94 or LM96194",
 		driver => "lm93",
 		i2c_addrs => [0x2c..0x2e],
 		i2c_detect => sub { lm93_detect(@_, 1); },
@@ -817,6 +842,11 @@ use vars qw(@i2c_adapter_names);
 		driver => "adm1021",
 		i2c_addrs => [0x18..0x1a, 0x29..0x2b, 0x4c..0x4e],
 		i2c_detect => sub { adm1021_detect(@_, 1); },
+	}, {
+		name => "Global Mixed-mode Technology G781",
+		driver => "lm90",
+		i2c_addrs => [0x4c, 0x4d],
+		i2c_detect => sub { lm90_detect(@_, 15); },
 	}, {
 		name => "Maxim MAX1617",
 		driver => "adm1021",
@@ -1022,6 +1052,11 @@ use vars qw(@i2c_adapter_names);
 		driver => "lm63",
 		i2c_addrs => [0x18, 0x4e],
 		i2c_detect => sub { lm63_detect(@_, 3); },
+	}, {
+		name => "National Semiconductor LM96163",
+		driver => "lm63",
+		i2c_addrs => [0x4c],
+		i2c_detect => sub { lm63_detect(@_, 4); },
 	}, {
 		name => "Fintek F75363SG",
 		driver => "lm63", # Not yet
@@ -1315,6 +1350,16 @@ use vars qw(@i2c_adapter_names);
 		i2c_addrs => [0x18..0x1f],
 		i2c_detect => sub { jedec_JC42_4_detect(@_, 10); },
 	}, {
+		name => "ST STTS2002",
+		driver => "jc42",
+		i2c_addrs => [0x18..0x1f],
+		i2c_detect => sub { jedec_JC42_4_detect(@_, 11); },
+	}, {
+		name => "ST STTS3000",
+		driver => "jc42",
+		i2c_addrs => [0x18..0x1f],
+		i2c_detect => sub { jedec_JC42_4_detect(@_, 12); },
+	}, {
 		name => "NXP SE97/SE97B",
 		driver => "jc42",
 		i2c_addrs => [0x18..0x1f],
@@ -1340,6 +1385,11 @@ use vars qw(@i2c_adapter_names);
 		i2c_addrs => [0x18..0x1f],
 		i2c_detect => sub { jedec_JC42_4_detect(@_, 5); },
 	}, {
+		name => "Microchip MCP9804",
+		driver => "jc42",
+		i2c_addrs => [0x18..0x1f],
+		i2c_detect => sub { jedec_JC42_4_detect(@_, 13); },
+	}, {
 		name => "Microchip MCP98242",
 		driver => "jc42",
 		i2c_addrs => [0x18..0x1f],
@@ -1359,6 +1409,11 @@ use vars qw(@i2c_adapter_names);
 		driver => "jc42",
 		i2c_addrs => [0x18..0x1f],
 		i2c_detect => sub { jedec_JC42_4_detect(@_, 9); },
+	}, {
+		name => "Atmel AT30TS00",
+		driver => "jc42",
+		i2c_addrs => [0x18..0x1f],
+		i2c_detect => sub { jedec_JC42_4_detect(@_, 14); },
 	}
 );
 
@@ -1560,14 +1615,34 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		logdev => 0x14,
 		features => FEAT_IN | FEAT_TEMP,
 	}, {
+		name => "ITE IT8510E/TE/G Super IO",
+		driver => "to-be-written",
+		devid => 0x8510,
+		features => FEAT_IN | FEAT_FAN,
+	}, {
+		name => "ITE IT8511E/TE/G Super IO",
+		driver => "to-be-written",
+		devid => 0x8511,
+		features => FEAT_IN | FEAT_FAN,
+	}, {
 		name => "ITE IT8512E/F/G Super IO",
 		driver => "to-be-written",
 		devid => 0x8512,
 		features => FEAT_IN | FEAT_FAN,
 	}, {
+		name => "ITE IT8513E/F/G Super IO",
+		driver => "to-be-written",
+		devid => 0x8513,
+		features => FEAT_IN | FEAT_FAN,
+	}, {
 		name => "ITE IT8516E/F/G Super IO",
 		driver => "to-be-written",
 		devid => 0x8516,
+		features => FEAT_IN | FEAT_FAN,
+	}, {
+		name => "ITE IT8518E Super IO",
+		driver => "to-be-written",
+		devid => 0x8518,
 		features => FEAT_IN | FEAT_FAN,
 	}
 );
@@ -1908,7 +1983,7 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		logdev => 0x0b,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
-		name => "Winbond W83627DHG-P Super IO Sensors",
+		name => "Winbond W83627DHG-P/W83527HG Super IO Sensors",
 		driver => "w83627ehf",
 		devid => 0xB070,
 		devid_mask => 0xFFF0,
@@ -2120,14 +2195,38 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
 		name => "ITE IT8728F Super IO Sensors",
-		driver => "to-be-written",	# it87
+		driver => "it87",
 		devid => 0x8728,
+		logdev => 0x04,
+		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
+	}, {
+		name => "ITE IT8771E Super IO Sensors",
+		driver => "to-be-written",	# it87
+		devid => 0x8771,
 		logdev => 0x04,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
 		name => "ITE IT8772E Super IO Sensors",
 		driver => "to-be-written",	# it87
 		devid => 0x8772,
+		logdev => 0x04,
+		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
+	}, {
+		name => "ITE IT8781F Super IO Sensors",
+		driver => "to-be-written",	# it87
+		devid => 0x8781,
+		logdev => 0x04,
+		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
+	}, {
+		name => "ITE IT8782F Super IO Sensors",
+		driver => "to-be-written",	# it87
+		devid => 0x8782,
+		logdev => 0x04,
+		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
+	}, {
+		name => "ITE IT8783F Super IO Sensors",
+		driver => "to-be-written",	# it87
+		devid => 0x8783,
 		logdev => 0x04,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}
@@ -2764,8 +2863,11 @@ sub initialize_dmi_data
 	);
 	# Many BIOS have broken DMI data, filter it out
 	my %fake = (
-		'System Manufacturer' => 1,
-		'System Name' => 1,
+		'system manufacturer' => 1,
+		'system product name' => 1,
+		'system name' => 1,
+		'system version' => 1,
+		'to be filled by o.e.m.' => 1,
 	);
 	my $dmi_id_dir;
 
@@ -2794,7 +2896,7 @@ sub initialize_dmi_data
 			next;
 		}
 		$dmi{$k} =~ s/\s*$//;
-		delete $dmi{$k} if $dmi{$k} eq '' || exists $fake{$dmi{$k}};
+		delete $dmi{$k} if $dmi{$k} eq '' || exists $fake{lc($dmi{$k})};
 	}
 }
 
@@ -2810,6 +2912,7 @@ sub print_dmi_summary
 	
 	if (defined $system) {
 		print "# System: $system";
+		print " [$dmi{product_version}]" if defined $dmi{product_version};
 		print " (laptop)" if (is_laptop());
 		print "\n";
 	}
@@ -2970,16 +3073,8 @@ sub adapter_pci_detection
 		next unless exists $pci_list{$key};
 
 		$device = $pci_list{$key};
-		if ($try->{driver} eq "to-be-tested") {
-			print "\nWe are currently looking for testers for this adapter!\n".
-			      "Please check http://www.lm-sensors.org/wiki/Devices\n".
-			      "and/or contact us if you want to help.\n\n".
-			      "Continue... ";
-			<STDIN>;
-			print "\n";
-		}
 
-		if ($try->{driver} =~ m/^to-be-/) {
+		if ($try->{driver} eq "to-be-written") {
 			printf "No known driver for device \%s: \%s\n",
 			       pci_busid($device), $try->{procid};
 		} else {
@@ -3741,6 +3836,10 @@ sub probe_superio
 		print "\n    (hardware monitoring capabilities accessible via SMBus only)\n";
 		return FEAT_SMBUS;
 	}
+	if (!exists $chip->{logdev}) {
+		print "\n    (no support yet)\n";
+		return 0;
+	}
 
 	# Switch to the sensor logical device
 	outb($addrreg, $superio{logdevreg});
@@ -4049,7 +4148,9 @@ sub lm73_detect
 	# Bits that always return 0
 	return if ($conf & 0x0c) or ($status & 0x10);
 
-	return if i2c_smbus_read_word_data($file, 0x07) != 0x9001;
+	# Test with byte read first to avoid confusing other chips
+	return if i2c_smbus_read_byte_data($file, 0x07) != 0x01
+	       or i2c_smbus_read_word_data($file, 0x07) != 0x9001;
 
 	# Make sure the chip supports SMBus read word transactions
 	my $cur = i2c_smbus_read_word_data($file, 0x00);
@@ -4228,11 +4329,15 @@ sub ds1621_detect
 	return ($slope == 0x10 && $counter <= $slope) ? 3 : 2;
 }
 
+# Chip to detect: 0 = LM80, 1 = LM96080
 # Registers used:
 #   0x00: Configuration register
 #   0x02: Interrupt state register
-#   0x2a-0x3d: Limits registers
-# This one is easily misdetected since it doesn't provide identification
+#   0x07: Converstion rate register (LM96080 only)
+#   0x2a-0x3d: Limits registers (LM80 only)
+#   0x3e: Manufacturer's ID register (LM96080 only)
+#   0x3f: Stepping/die revision ID register (LM96080 only)
+# The LM80 is easily misdetected since it doesn't provide identification
 # registers. So we have to use some tricks:
 #   - 6-bit addressing, so limits readings modulo 0x40 should be unchanged
 #   - positive temperature limits
@@ -4245,44 +4350,51 @@ sub ds1621_detect
 # to loose comparisons did not change the score.
 sub lm80_detect
 {
-	my ($file, $addr) = @_;
+	my ($file, $addr, $chip) = @_;
 	my ($i, $reg);
 
 	return if (i2c_smbus_read_byte_data($file, 0x00) & 0x80) != 0;
 	return if (i2c_smbus_read_byte_data($file, 0x02) & 0xc0) != 0;
 
-	for ($i = 0x2a; $i <= 0x3d; $i++) {
-		$reg = i2c_smbus_read_byte_data($file, $i);
-		return if i2c_smbus_read_byte_data($file, $i+0x40) != $reg;
-		return if i2c_smbus_read_byte_data($file, $i+0x80) != $reg;
-		return if i2c_smbus_read_byte_data($file, $i+0xc0) != $reg;
-	}
+	if ($chip == 0) {
+		for ($i = 0x2a; $i <= 0x3d; $i++) {
+			$reg = i2c_smbus_read_byte_data($file, $i);
+			return if i2c_smbus_read_byte_data($file, $i+0x40) != $reg;
+			return if i2c_smbus_read_byte_data($file, $i+0x80) != $reg;
+			return if i2c_smbus_read_byte_data($file, $i+0xc0) != $reg;
+		}
 
-	# Refine a bit by checking whether limits are in the correct order
-	# (min<max for voltages, hyst<max for temperature). Since it is still
-	# possible that the chip is an LM80 with limits not properly set,
-	# a few "errors" are tolerated.
-	my $confidence = 0;
-	for ($i = 0x2a; $i <= 0x3a; $i++) {
+		# Refine a bit by checking whether limits are in the correct order
+		# (min<max for voltages, hyst<max for temperature). Since it is still
+		# possible that the chip is an LM80 with limits not properly set,
+		# a few "errors" are tolerated.
+		my $confidence = 0;
+		for ($i = 0x2a; $i <= 0x3a; $i++) {
+			$confidence++
+				if i2c_smbus_read_byte_data($file, $i) < i2c_smbus_read_byte_data($file, $i+1);
+		}
+		# hot temp<OS temp
 		$confidence++
-			if i2c_smbus_read_byte_data($file, $i) < i2c_smbus_read_byte_data($file, $i+1);
+			if i2c_smbus_read_byte_data($file, 0x38) < i2c_smbus_read_byte_data($file, 0x3a);
+
+		# Negative temperature limits are unlikely.
+		for ($i = 0x3a; $i <= 0x3d; $i++) {
+			$confidence++ if (i2c_smbus_read_byte_data($file, $i) & 0x80) == 0;
+		}
+
+		# $confidence is between 0 and 14
+		$confidence = ($confidence >> 1) - 4;
+		# $confidence is now between -4 and 3
+
+		return unless $confidence > 0;
+		return $confidence;
+	} elsif ($chip == 1) {
+		return if (i2c_smbus_read_byte_data($file, 0x07) & 0xfe) != 0;
+		return if i2c_smbus_read_byte_data($file, 0x3e) != 0x01;
+		return if i2c_smbus_read_byte_data($file, 0x3f) != 0x08;
+
+		return 6;
 	}
-	# hot temp<OS temp
-	$confidence++
-		if i2c_smbus_read_byte_data($file, 0x38) < i2c_smbus_read_byte_data($file, 0x3a);
-
-	# Negative temperature limits are unlikely.
-	for ($i = 0x3a; $i <= 0x3d; $i++) {
-		$confidence++ if (i2c_smbus_read_byte_data($file, $i) & 0x80) == 0;
-	}
-
-	# $confidence is between 0 and 14
-	$confidence = ($confidence >> 1) - 4;
-	# $confidence is now between -4 and 3
-
-	return unless $confidence > 0;
-
-	return $confidence;
 }
 
 # Registers used:
@@ -4362,7 +4474,8 @@ sub max6680_95_detect
 #		  6 = MAX6646/MAX6647/MAX6648/MAX6649/MAX6692,
 #		  8 = W83L771W/G, 9 = TMP401, 10 = TMP411,
 #		  11 = W83L771AWG/ASG, 12 = MAX6690,
-#		  13 = ADT7461A/NCT1008, 14 = SA56004
+#		  13 = ADT7461A/NCT1008, 14 = SA56004,
+#		  15 = G781
 # Registers used:
 #   0x03: Configuration
 #   0x04: Conversion rate
@@ -4473,6 +4586,12 @@ sub lm90_detect
 		return if $rate > 0x09;
 		return if $mid != 0xa1;		# NXP Semiconductor/Philips
 		return 6 if $cid == 0x00;	# SA56004
+	}
+	if ($chip == 15) {
+		return if ($conf & 0x3f) != 0;
+		return if $rate > 0x08;
+		return if $mid != 0x47;		# GMT
+		return 8 if $cid == 0x01;	# G781
 	}
 	return;
 }
@@ -4602,7 +4721,7 @@ sub adt7481_detect
 	return 6;
 }
 
-# Chip to detect: 1 = LM63, 2 = F75363SG, 3 = LM64
+# Chip to detect: 1 = LM63, 2 = F75363SG, 3 = LM64, 4 = LM96163
 # Registers used:
 #   0xfe: Manufacturer ID
 #   0xff: Chip ID / die revision
@@ -4630,6 +4749,11 @@ sub lm63_detect
 	} elsif ($chip == 3) {
 		return if $mid != 0x01		# National Semiconductor
 		       || $cid != 0x51;		# LM64
+		return if ($conf & 0x18) != 0x00
+		       || ($mask & 0xa4) != 0xa4;
+	} elsif ($chip == 4) {
+		return if $mid != 0x01		# National Semiconductor
+		       || $cid != 0x49;		# LM96163
 		return if ($conf & 0x18) != 0x00
 		       || ($mask & 0xa4) != 0xa4;
 	}
@@ -5881,7 +6005,8 @@ sub max6655_detect
 # Chip to detect: 0 = STTS424, 1 = SE97/SE97B, 2 = SE98, 3 = ADT7408,
 #                 4 = TS3000/TSE2002, 5 = MAX6604, 6 = MCP98242,
 #                 7 = MCP98243, 8 = MCP9843, 9 = CAT6095 / CAT34TS02,
-#                 10 = STTS424E
+#                 10 = STTS424E, 11 = STTS2002, 12 = STTS3000
+#                 13 = MCP9804, 14 = AT30TS00
 # Registers used:
 #   0x00: Capabilities
 #   0x01: Configuration
@@ -5938,6 +6063,18 @@ sub jedec_JC42_4_detect
 	} elsif ($chip == 10) {
 		return unless $manid == 0x10;		# STMicrolectronics
 		return unless $devid == 0x00;		# STTS424E02
+	} elsif ($chip == 11) {
+		return unless $manid == 0x10;		# STMicrolectronics
+		return unless $devid == 0x03;		# STTS2002
+	} elsif ($chip == 12) {
+		return unless $manid == 0x10;		# STMicrolectronics
+		return unless $devid == 0x02;		# STTS3000
+	} elsif ($chip == 13) {
+		return unless $manid == 0x00;		# MCP
+		return unless $devid == 02;		# MCP9804
+	} elsif ($chip == 14) {
+		return unless $manid == 0x00;		# Atmel
+		return unless $devid == 0x82;		# AT30TS00
 	}
 
 	# Now, do it all again with words. Note that we get
@@ -5964,7 +6101,7 @@ sub jedec_JC42_4_detect
 		return unless $devid == 0x0108;		# ADT7408
 	} elsif ($chip == 4) {
 		return unless $manid == 0xb300;		# IDT
-		return unless $devid == 0x0329;		# TS3000/TSE2002
+		return unless $devid == 0x0329 || $devid == 0x1229; # TS3000/TSE2002
 	} elsif ($chip == 5) {
 		return unless $manid == 0x4d00;		# MAXIM
 		return unless $devid == 0x003e;		# MAX6604
@@ -5983,6 +6120,18 @@ sub jedec_JC42_4_detect
 	} elsif ($chip == 10) {
 		return unless $manid == 0x4a10;		# STMicrolectronics
 		return unless ($devid & 0xfeff) == 0x0000; # STTS424E02
+	} elsif ($chip == 11) {
+		return unless $manid == 0x4a10;		# STMicrolectronics
+		return unless ($devid & 0xfeff) == 0x0003; # STTS2002
+	} elsif ($chip == 12) {
+		return unless $manid == 0x4a10;		# STMicrolectronics
+		return unless ($devid & 0xfeff) == 0x0002; # STTS3000
+	} elsif ($chip == 13) {
+		return unless $manid == 0x5400;		# MCP
+		return unless ($devid & 0xfcff) == 0x0002; # MCP9804
+	} elsif ($chip == 14) {
+		return unless $manid == 0x1f00;		# Atmel
+		return unless ($devid & 0xfeff) == 0x0082; # AT30TS00
 	}
 
 	return 5;
@@ -6620,7 +6769,7 @@ sub main
 	      "Do you want to scan for them? This is totally safe. (YES/no): ";
 	unless (<STDIN> =~ /^\s*n/i) {
 		# Load the cpuid driver if needed
-		unless (-e "/dev/cpu/$cpu[0]->{nr}/cpuid") {
+		unless (-e "$sysfs_root/class/cpuid") {
 			load_module("cpuid");
 			udev_settle();
 		}
