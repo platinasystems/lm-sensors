@@ -1,12 +1,3 @@
-lm-sensors (1:3.3.2-2~bpo60+1) squeeze-backports; urgency=low
-
-  * Rebuild for squeeze-backports.
-  * Disable multiarch by changing LIBDIR, removing Multi-Arch from
-      debian/control, and editing debian/libsensors4*.install.
-  * Build requires backported debhelper.
-
- -- Matt Taggart <taggart@debian.org>  Mon, 11 Mar 2013 00:31:46 -0700
-
 lm-sensors (1:3.3.2-2) unstable; urgency=low
 
   * Tell user to restart kmod instead of modules-init-tools (closes: 
