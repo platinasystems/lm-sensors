@@ -11,6 +11,10 @@ DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 DEB_HOST_MULTIARCH  ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
+CFLAGS += $(shell dpkg-buildflags --get CFLAGS)
+CPPFLAGS += $(shell dpkg-buildflags --get CPPFLAGS)
+LDFLAGS += $(shell dpkg-buildflags --get LDFLAGS)
+
 clean:
 	dh_testdir
 	dh_testroot
@@ -29,9 +33,14 @@ build-arch-stamp:
 	# binary programs and librairies
 	$(MAKE) user \
 		PREFIX=/usr \
-		LIBDIR=/usr/lib/$(DEB_HOST_MULTIARCH) \
+		LIBDIR=/usr/lib \
+		MANDIR=/usr/share/man \
 		PROG_EXTRA=sensord \
-		EXLDFLAGS=""
+		CFLAGS="$(CFLAGS)" \
+		CPPFLAGS="$(CPPFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" \
+		EXLDFLAGS="$(LDFLAGS)"
+
 
 	touch $@
 
@@ -50,14 +59,19 @@ install-stamp: build
 	$(MAKE) user_install \
 		DESTDIR=$(CURDIR)/debian/tmp \
 		PREFIX=/usr \
-		LIBDIR=/usr/lib/$(DEB_HOST_MULTIARCH) \
+		LIBDIR=/usr/lib \
 		MANDIR=/usr/share/man \
 		PROG_EXTRA=sensord \
-		EXLDFLAGS=""
+		CFLAGS="$(CFLAGS)" \
+		CPPFLAGS="$(CPPFLAGS)" \
+		LDFLAGS="$(LDFLAGS)" \
+		EXLDFLAGS="$(LDFLAGS)"
+
 
 	# Install extra files as needed
 	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.server/sensord
 	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.workstation/sensord
+	install -m 0644 debian/lm-sensors.service debian/lm-sensors/lib/systemd/system/
 
 	# Make sure /etc/sensors.d/ is not removed
 	touch debian/tmp/etc/sensors.d/.placeholder
