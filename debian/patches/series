@@ -7,9 +7,7 @@
 07-sensors3.conf-local-changes.patch
 08-sensors-detect-lm85.patch
 09-sensors-detect-sch5524.patch
-10-pwmconfig.diff
+10-pwmconfig.patch
 11-fancontrol-check.patch
 12-sensors-detect-superio-x86.patch
 14-2-digits-kernel.patch
-15-sensors-detect-skip-EDID.patch
-16-sensors-detect-skip-graphics-cards.patch

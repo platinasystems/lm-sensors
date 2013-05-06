@@ -1,9 +1,15 @@
-lm-sensors (1:3.3.2-2+deb7u1) wheezy; urgency=low
+lm-sensors (1:3.3.3-1) unstable; urgency=low
 
-  * Backport patches from upstream to skip probing for EDID or graphics
-    cards, as it might causes hardware breakage (closes: #724736).
+  * New upstream version:
+    - Don't choke on systems without PCI (closes: #695889).
+  * Bumped Standards-version to 3.9.4.0 (no changes).
+  * Compress .deb with xz.
+  * Add a watch file (closes: #694848).
+  * Fix RRD file creation with loadavg (closes: #614965).
+  * Backport pwmconfig changes from upstream to fix multiple fan
+    control (closes: #695895).
 
- -- Aurelien Jarno <aurel32@debian.org>  Wed, 02 Oct 2013 07:45:50 +0200
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 06 May 2013 23:37:35 +0200
 
 lm-sensors (1:3.3.2-2) unstable; urgency=low
 

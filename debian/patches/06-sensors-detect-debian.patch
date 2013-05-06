@@ -10,7 +10,7 @@
  #
  #    sensors-detect - Detect hardware monitoring chips
  #    Copyright (C) 1998 - 2002  Frodo Looijaard <frodol@dds.nl>
-@@ -6628,99 +6628,39 @@
+@@ -6652,99 +6652,39 @@
  		}
  	}
  
