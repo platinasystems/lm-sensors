@@ -4,7 +4,7 @@
 
 --- a/prog/detect/sensors-detect
 +++ b/prog/detect/sensors-detect
-@@ -1861,6 +1861,11 @@
+@@ -1876,6 +1876,11 @@
  		driver => "not-a-sensor",
  		devid => 0x83,
  	}, {

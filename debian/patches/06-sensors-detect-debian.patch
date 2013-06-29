@@ -1,6 +1,6 @@
 ---
- prog/detect/sensors-detect |  120 +++++++++++----------------------------------
- 1 file changed, 30 insertions(+), 90 deletions(-)
+ prog/detect/sensors-detect |  107 ++++++++++++---------------------------------
+ 1 file changed, 30 insertions(+), 77 deletions(-)
 
 --- a/prog/detect/sensors-detect
 +++ b/prog/detect/sensors-detect
@@ -10,7 +10,7 @@
  #
  #    sensors-detect - Detect hardware monitoring chips
  #    Copyright (C) 1998 - 2002  Frodo Looijaard <frodol@dds.nl>
-@@ -6652,99 +6652,39 @@
+@@ -6679,86 +6679,39 @@
  		}
  	}
  
@@ -53,19 +53,6 @@
 -		print SYSCONFIG "BUS_MODULES=\"", join(" ", @{$bus_modules}), "\"\n"
 -			if @{$bus_modules};
 -		print SYSCONFIG "HWMON_MODULES=\"", join(" ", @{$hwmon_modules}), "\"\n";
--
--		print SYSCONFIG <<'EOT';
--
--# For compatibility reasons, modules are also listed individually as variables
--#    MODULE_0, MODULE_1, MODULE_2, etc.
--# You should use BUS_MODULES and HWMON_MODULES instead if possible.
--
--EOT
--		my $i = 0;
--		foreach (@{$bus_modules}, @{$hwmon_modules}) {
--			print SYSCONFIG "MODULE_$i=$_\n";
--			$i++;
--		}
 -		close(SYSCONFIG);
 -
 -		if (-x "/bin/systemctl" && -d "/lib/systemd/system" &&

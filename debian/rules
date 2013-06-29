@@ -71,7 +71,7 @@ install-stamp: build
 	# Install extra files as needed
 	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.server/sensord
 	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.workstation/sensord
-	install -m 0644 debian/lm-sensors.service debian/lm-sensors/lib/systemd/system/
+#	install -m 0644 debian/lm-sensors.service debian/lm-sensors/lib/systemd/system/
 
 	# Make sure /etc/sensors.d/ is not removed
 	touch debian/tmp/etc/sensors.d/.placeholder
@@ -100,7 +100,9 @@ binary-indep: build install
 	dh_testroot
 	dh_installchangelogs -i CHANGES
 	dh_installdocs -i -XCVS
+	dh_systemd_enable -pfancontrol
 	dh_installinit -pfancontrol --restart-after-upgrade -- start 20 2 3 4 5 .
+	dh_systemd_start -pfancontrol
 	dh_installman -i
 	dh_link -i
 	dh_compress -i
@@ -117,8 +119,10 @@ binary-arch: build install
 	dh_installchangelogs -s CHANGES
 	dh_installdocs -s -XCVS
 	dh_installexamples -s -XCVS -XModule.mk
+	dh_systemd_enable -plm-sensors
 	dh_installinit -plm-sensors --no-start -- start 47 S .
 	dh_installinit -psensord -- start 20 2 3 4 5 .
+	dh_systemd_start -plm-sensors
 	dh_installman -s
 	dh_link -s
 	dh_strip -s

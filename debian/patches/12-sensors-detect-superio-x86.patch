@@ -4,7 +4,7 @@
 
 --- a/prog/detect/sensors-detect
 +++ b/prog/detect/sensors-detect
-@@ -6752,9 +6752,9 @@
+@@ -6779,9 +6779,9 @@
  	print "\n";
  
  	$superio_features = 0;

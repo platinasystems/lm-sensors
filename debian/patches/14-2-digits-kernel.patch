@@ -4,7 +4,7 @@
 
 --- a/prog/detect/sensors-detect
 +++ b/prog/detect/sensors-detect
-@@ -2596,8 +2596,8 @@
+@@ -2625,8 +2625,8 @@
  
  sub initialize_kernel_version
  {
