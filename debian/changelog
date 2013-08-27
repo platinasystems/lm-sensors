@@ -1,3 +1,10 @@
+lm-sensors (1:3.3.4-2) unstable; urgency=low
+
+  * debian/fancontrol.init: pass the config file location as argument of
+    the fancontrol daemon (closes: #720213).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 27 Aug 2013 18:36:05 +0200
+
 lm-sensors (1:3.3.4-1) unstable; urgency=low
 
   * New upstream version.
