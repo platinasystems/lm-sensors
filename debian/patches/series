@@ -11,3 +11,5 @@
 11-fancontrol-check.patch
 12-sensors-detect-superio-x86.patch
 14-2-digits-kernel.patch
+15-sensors-detect-skip-EDID.patch
+16-sensors-detect-skip-graphics-cards.patch
