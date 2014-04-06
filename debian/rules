@@ -75,12 +75,6 @@ install-stamp: build
 		LDFLAGS="$(LDFLAGS)" \
 		EXLDFLAGS="$(LDFLAGS)"
 
-
-	# Install extra files as needed
-	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.server/sensord
-	install -m 0644 debian/sensord.logcheck debian/sensord/etc/logcheck/ignore.d.workstation/sensord
-#	install -m 0644 debian/lm-sensors.service debian/lm-sensors/lib/systemd/system/
-
 	# Make sure /etc/sensors.d/ is not removed
 	touch debian/tmp/etc/sensors.d/.placeholder
 
@@ -109,7 +103,7 @@ binary-indep: build install
 	dh_installchangelogs -i CHANGES
 	dh_installdocs -i -XCVS
 	dh_systemd_enable -pfancontrol
-	dh_installinit -pfancontrol --restart-after-upgrade -- start 20 2 3 4 5 .
+	dh_installinit -pfancontrol --restart-after-upgrade
 	dh_systemd_start -pfancontrol
 	dh_installman -i
 	dh_link -i
@@ -118,7 +112,7 @@ binary-indep: build install
 	dh_installdeb -i
 	dh_gencontrol -i
 	dh_md5sums -i
-	dh_builddeb -i -- -Zxz
+	dh_builddeb -i
 
 # Build architecture-dependant files that arn't kernel modules here.
 binary-arch: build install
@@ -128,9 +122,10 @@ binary-arch: build install
 	dh_installdocs -s -XCVS
 	dh_installexamples -s -XCVS -XModule.mk
 	dh_systemd_enable -plm-sensors
-	dh_installinit -plm-sensors --no-start -- start 47 S .
-	dh_installinit -psensord -- start 20 2 3 4 5 .
 	dh_systemd_start -plm-sensors
+	dh_installinit -plm-sensors --no-start
+	dh_installinit -psensord
+	dh_installlogcheck -s
 	dh_installman -s
 	dh_link -s
 	dh_strip -s
@@ -142,7 +137,7 @@ binary-arch: build install
 	dh_shlibdeps -s
 	dh_gencontrol -s
 	dh_md5sums -s
-	dh_builddeb -s -- -Zxz
+	dh_builddeb -s
 
 binary: binary-arch binary-indep
 .PHONY: clean build install binary-indep binary-arch binary

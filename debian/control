@@ -3,7 +3,7 @@ Section: utils
 Priority: extra
 Build-Depends: debhelper (>= 8.1.3), bison, flex, librrd2-dev, dh-systemd (>= 1.3)
 Maintainer: Aurelien Jarno <aurel32@debian.org>
-Standards-Version: 3.9.4
+Standards-Version: 3.9.5
 Homepage: http://www.lm-sensors.org
 
 Package: lm-sensors
