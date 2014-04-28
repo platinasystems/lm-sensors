@@ -1,6 +1,6 @@
 ---
- prog/detect/sensors-detect |  107 ++++++++++++---------------------------------
- 1 file changed, 30 insertions(+), 77 deletions(-)
+ prog/detect/sensors-detect |  104 ++++++++++++---------------------------------
+ 1 file changed, 30 insertions(+), 74 deletions(-)
 
 --- a/prog/detect/sensors-detect
 +++ b/prog/detect/sensors-detect
@@ -10,7 +10,7 @@
  #
  #    sensors-detect - Detect hardware monitoring chips
  #    Copyright (C) 1998 - 2002  Frodo Looijaard <frodol@dds.nl>
-@@ -6679,86 +6679,39 @@
+@@ -6770,83 +6770,39 @@
  		}
  	}
  
@@ -32,7 +32,7 @@
 +	      "contain too many modules. Skip the appropriate ones!\n";
 +
 +	print "\nDo you want to add these lines automatically to /etc/modules? (yes/NO)";
- 	$_ = <STDIN>;
+ 	$_ = read_answer();
 -	if (($have_sysconfig and not m/^\s*n/i) or m/^\s*y/i) {
 -		unless ($have_sysconfig) {
 -			mkdir('/etc/sysconfig', 0777)
@@ -107,10 +107,8 @@
 -		       "/usr/local/bin/sensors -s\n").
 -		      "#----cut here----\n\n");
 -
--		print "If you have some drivers built into your kernel, the list above will\n".
--		      "contain too many modules. Skip the appropriate ones! You really\n".
--		      "should try these commands right now to make sure everything is\n".
--		      "working properly. Monitoring programs won't work until the needed\n".
+-		print "You really should try these commands right now to make sure everything\n".
+-		      "is working properly. Monitoring programs won't work until the needed\n".
 -		      "modules are loaded.\n\n";
 +		print MODULES "# Chip drivers\n";
 +		print MODULES "$_\n" foreach (@{$hwmon_modules});
@@ -121,7 +119,6 @@
 +		      "loaded. You may want to run '/etc/init.d/kmod start'\n".
 +		      "to load them.\n";
  	}
--
 +	print "\n";
  }
  
