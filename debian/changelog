@@ -1,3 +1,14 @@
+lm-sensors (1:3.4.0-1) unstable; urgency=medium
+
+  * New upstream version:
+    - Fixes fancontrol when FCFANS is not set (closes: #727731).
+  * debian/sensord.maintscript: fix version (closes: #747379, #756474).
+  * Improve fancontrol description.
+  * Mention sensors-detect(8) in sensors(1) (closes: #766775).
+  * Bumped Standards-version to 3.9.6 (no changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 09 Aug 2015 18:03:52 +0200
+
 lm-sensors (1:3.3.5-2) unstable; urgency=medium
 
   * debian/lm-sensors.preinst: remove and rely now on lm-sensors.maintscript

@@ -8,4 +8,5 @@
 09-sensors-detect-sch5524.patch
 11-fancontrol-check.patch
 12-sensors-detect-superio-x86.patch
+13-sensors-manpage.patch
 14-2-digits-kernel.patch
