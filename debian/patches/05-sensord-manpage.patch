@@ -2,9 +2,33 @@
  prog/sensord/sensord.8 |   22 +---------------------
  1 file changed, 1 insertion(+), 21 deletions(-)
 
---- a/prog/sensord/sensord.8
-+++ b/prog/sensord/sensord.8
-@@ -330,27 +330,7 @@
+Index: lm-sensors-3.4.0/prog/sensord/sensord.8
+===================================================================
+--- lm-sensors-3.4.0.orig/prog/sensord/sensord.8
++++ lm-sensors-3.4.0/prog/sensord/sensord.8
+@@ -291,9 +291,9 @@ that we disable logging of sensor readin
+ and enable logging of the load average.
+ .IP
+ .nf
+-mkdir /var/www/sensord
+-chown www-data:staff /var/www/sensord
+-chmod a=rwxs /var/www/sensord
++mkdir /var/www/html/sensord
++chown www-data:staff /var/www/html/sensord
++chmod a=rwxs /var/www/html/sensord
+ .fi
+ .PP
+ Here, we create a world-writable, Web-accessible directory in which
+@@ -304,7 +304,7 @@ ownership that is appropriate for your m
+ .nf
+ sensord --load-average \\
+   --rrd-file /var/log/sensord.rrd \\
+-  --rrd-cgi /var/www/sensord \\
++  --rrd-cgi /var/www/html/sensord \\
+   > /usr/lib/cgi-bin/sensord.cgi
+ chmod a+rx /usr/lib/cgi-bin/sensord.cgi
+ .fi
+@@ -330,27 +330,7 @@ the URL `http://localhost/cgi-bin/sensor
  It is expected that all required sensor modules are loaded prior to
  this daemon being started. This can either be achieved with a system
  specific module loading scheme (e.g., listing the required modules
