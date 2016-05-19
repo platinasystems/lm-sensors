@@ -10,3 +10,4 @@
 12-sensors-detect-superio-x86.patch
 13-sensors-manpage.patch
 14-2-digits-kernel.patch
+15-path-max.patch
