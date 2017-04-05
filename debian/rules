@@ -8,7 +8,6 @@ MAKEARGS_INDP = DESTDIR=$(CURDIR)/debian/tmp \
 		LIBDIR=/usr/lib/$(DEB_HOST_MULTIARCH) \
 		MANDIR=/usr/share/man
 MAKEARGS_ARCH = $(MAKEARGS_INDP) \
-		PROG_EXTRA=sensord \
 		CFLAGS="$(CFLAGS)" \
 		CPPFLAGS="$(CPPFLAGS)" \
 		LDFLAGS="$(LDFLAGS)" \
@@ -57,4 +56,3 @@ override_dh_auto_install-arch:
 
 override_dh_installinit-arch:
 	dh_installinit -plm-sensors --no-start
-	dh_installinit -psensord --restart-after-upgrade
