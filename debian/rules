@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@ --parallel --with systemd
+	dh $@ --with systemd
 
 MAKEARGS_INDP = DESTDIR=$(CURDIR)/debian/tmp \
 		PREFIX=/usr \
