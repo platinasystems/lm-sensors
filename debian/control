@@ -26,6 +26,7 @@ Multi-Arch: foreign
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${misc:Depends}
 Priority: optional
+Breaks: libsensors4
 Replaces: libsensors4
 Suggests: lm-sensors
 Description: lm-sensors configuration files
