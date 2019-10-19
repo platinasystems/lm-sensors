@@ -3,7 +3,7 @@
 include /usr/share/dpkg/architecture.mk
 
 %:
-	dh $@ --with systemd
+	dh $@
 
 MAKEARGS_INDP = DESTDIR=$(CURDIR)/debian/tmp \
 		PREFIX=/usr \
@@ -34,6 +34,9 @@ override_dh_auto_install-indep:
 override_dh_installinit-indep:
 	dh_installinit -pfancontrol --restart-after-upgrade
 
+override_dh_installsystemd-indep:
+	dh_installsystemd -pfancontrol --restart-after-upgrade
+
 
 #
 # Architecture targets
@@ -59,3 +62,6 @@ override_dh_auto_install-arch:
 
 override_dh_installinit-arch:
 	dh_installinit -plm-sensors --no-start
+
+override_dh_installsystemd-arch:
+	dh_installsystemd -plm-sensors --no-start
