@@ -1,8 +1,7 @@
-This package was debianized by Stephen Crowley crow@debian.org and is now
+This package was debianized by Stephen Crowley <crow@debian.org> and is now
 maintained by Aurelien Jarno <aurel32@debian.org>.
 
 It was downloaded from https://hwmon.wiki.kernel.org/lm_sensors
-i
 
 Authors:
   Frodo Looijaard <frodol@dds.nl>

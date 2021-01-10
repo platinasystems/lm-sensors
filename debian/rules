@@ -1,7 +1,5 @@
 #!/usr/bin/make -f
 
-include /usr/share/dpkg/architecture.mk
-
 %:
 	dh $@
 
@@ -49,15 +47,13 @@ override_dh_auto_install-arch:
 
 	# Install isadump only if it has been built (on x86/x86_64 archs only)
 	if [ -x prog/dump/isadump ] ; then \
-		cp -f prog/dump/isadump $(CURDIR)/debian/lm-sensors/usr/sbin ; \
-		mkdir -p $(CURDIR)/debian/lm-sensors/usr/share/man/man8 ; \
-		cp -f prog/dump/isadump.8 $(CURDIR)/debian/lm-sensors/usr/share/man/man8 ; \
+		dh_install -plm-sensors usr/sbin/isadump ; \
+		dh_install -plm-sensors usr/share/man/man8/isadump.8 ; \
 	fi
 	# Install isaset only if it has been built (on x86/x86_64 archs only)
 	if [ -x prog/dump/isaset ] ; then \
-		cp -f prog/dump/isaset $(CURDIR)/debian/lm-sensors/usr/sbin ; \
-		mkdir -p $(CURDIR)/debian/lm-sensors/usr/share/man/man8 ; \
-		cp -f prog/dump/isaset.8 $(CURDIR)/debian/lm-sensors/usr/share/man/man8 ; \
+		dh_install -plm-sensors usr/sbin/isaset ; \
+		dh_install -plm-sensors usr/share/man/man8/isaset.8 ; \
 	fi
 
 override_dh_installinit-arch:
