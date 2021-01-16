@@ -81,7 +81,7 @@ Architecture: all
 Multi-Arch: foreign
 Depends: libsensors-dev (>= ${source:Version}), ${misc:Depends}
 Section: libdevel
-Description: transitional dummy package 
+Description: transitional dummy package
  This is a transitional dummy package, it can be safely removed.
 
 Package: fancontrol
