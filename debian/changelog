@@ -1,3 +1,10 @@
+lm-sensors (1:3.6.0-6) unstable; urgency=medium
+
+  * Restart fancontrol.service after power sleep.  Closes: #664141.
+  * Call dh_missing with --list-missing on non-Linux.  Closes: #980944.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 25 Jan 2021 01:03:48 +0100
+
 lm-sensors (1:3.6.0-5) unstable; urgency=medium
 
   * Upload to unstable. 
