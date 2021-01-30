@@ -77,9 +77,9 @@ Description: lm-sensors development kit
  development.
 
 Package: libsensors4-dev
-Architecture: all
-Multi-Arch: foreign
-Depends: libsensors-dev (>= ${source:Version}), ${misc:Depends}
+Architecture: any
+Multi-Arch: same
+Depends: libsensors-dev (= ${binary:Version}), ${misc:Depends}
 Section: libdevel
 Description: transitional dummy package
  This is a transitional dummy package, it can be safely removed.
