@@ -1,7 +1,6 @@
 /*
-    i2cbusses.h - Part of the lm_sensors project
-
-    Copyright (C) 2004       The lm_sensors group
+    sysfs.h - part of libsensors, a library for reading Linux sensor data
+    Copyright (C) Mark M. Hoffman <mhoffman@lightlink.com>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,11 +17,27 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef _I2CBUSSES_H
-#define _I2CBUSSES_H
+#ifndef SENSORS_LIB_SYSFS_H
+#define SENSORS_LIB_SYSFS_H
 
-void print_i2c_busses(int procfmt);
+#ifdef SYSFS_SUPPORT
+extern int sensors_found_sysfs;
 
-int open_i2c_dev(const int i2cbus, char *filename, const int quiet);
+extern char sensors_sysfs_mount[];
+
+extern int sensors_init_sysfs(void);
+
+extern int sensors_read_sysfs_chips(void);
+
+extern int sensors_read_sysfs_bus(void);
+
+#else
+
+#define sensors_found_sysfs 0
+#define sensors_init_sysfs() 0
+#define sensors_read_sysfs_chips() (-1)
+#define sensors_read_sysfs_bus() (-1)
 
 #endif
+
+#endif /* !SENSORS_LIB_SYSFS_H */

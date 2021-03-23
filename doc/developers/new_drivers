@@ -21,10 +21,9 @@ steps apply.
   You are of course free to write your own drivers, but it is smart to
   check first nobody else is already working on it, in case the
   New Drivers page is out of date.
-  You will also need to ask us to have an ID reserved in
-  i2c-id.h in the i2c package.
   Tell us it's OK to put your name on the "New Drivers" page.
-  Ask to be put on the mailing list so you get project updates.
+
+* Consider subscribing to the mailing list.
 
 * Check out our latest code from CVS.
   You should use this as a base for your development.
@@ -136,10 +135,11 @@ steps apply.
 
 * If you want to have your driver integrated to Linux 2.6, you have to
   port your driver to the new sysfs interface. Once done and preferably
-  after testing, submit a patch to the Linux kernel mailing list
-  <linux-kernel at vger dot kernel dot org>, our mailing list
-  <sensors at stimpy dot netroedge.com>,and Greg KH (greg at kroah
-  dot com).
+  after testing, submit a patch to our mailing list: see
+  http://secure.netroedge.com/~lm78/author.html
+  Make sure to check the current status for your driver first:
+  http://secure.netroedge.com/~lm78/kernel26.html
+  http://secure.netroedge.com/~lm78/newdrivers.html
 
 ---------------------------------------------------------------------
 Checklist for us to do on the webpage:

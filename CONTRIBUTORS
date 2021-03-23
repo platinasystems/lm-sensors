@@ -1,7 +1,7 @@
 This package could not have been created without the help of many, many people.
 The most notable contributors are listed below. You are probably best off
-to mail <sensors@stimpy.netroedge.com> if you have questions, suggestions or
-problems.
+to use the mailing list (see http://secure.netroedge.com/~lm78/author.html)
+if you have questions, suggestions or problems.
 
 * Alexander Larsson <alla@lysator.liu.se>
   Wrote the original lm78 module; lm_sensors version 1 was no more than an
@@ -78,10 +78,12 @@ problems.
   Author of the i2c-sis630 bus driver.
   Added Onsemi MC1066 support to the adm1021 driver.
 * Jean Delvare <khali@linux-fr.org>
+  Author of the lm63, lm83, lm90 and w83l785ts SMBus chip drivers.
+  Author of the f71805f and pc87360 Super-I/O chip drivers.
+  Author of the i2c-amd756-s4882 and pca9540 SMBus multiplexing drivers.
   Author of the decode-vaio.pl Vaio EEPROM decoder.
   Author of the decode-edid.pl EDID data decoder.
   Perl scripts maintainer, tester, bug fixer, general support.
-  Author of the lm83, lm90, pca9540 and pc87360 chip drivers.
 * Vojtech Pavlik <vojtech@suse.cz>	
   Author of the i2c-amd8111 bus driver.
   Added support for amd8111 SMBus 1.0 controller to i2c-amd756.
@@ -96,3 +98,5 @@ problems.
   Author of the fscher driver.
 * Alexey Fisher <fishor@mail.ru>
   Author of the max1619 chip driver.
+* Rudolf Marek <r.marek@sh.cvut.cz>
+  Various fixes and support handling

@@ -223,8 +223,8 @@ static int fscpos_attach_adapter(struct i2c_adapter *adapter)
 	return i2c_detect(adapter, &addr_data, fscpos_detect);
 }
 
-int fscpos_detect(struct i2c_adapter *adapter, int address,
-		unsigned short flags, int kind)
+static int fscpos_detect(struct i2c_adapter *adapter, int address,
+			 unsigned short flags, int kind)
 {
 	int i;
 	struct i2c_client *new_client;
@@ -341,7 +341,7 @@ static int fscpos_write_value(struct i2c_client *client, u8 reg, u8 value)
 	return i2c_smbus_write_byte_data(client, reg, value);
 }
 
-/* Called when we have found a new FSCPOS. It should set limits, etc. */
+/* Called when we have found a new FSCPOS. */
 static void fscpos_init_client(struct i2c_client *client)
 {
 	struct fscpos_data *data = client->data;

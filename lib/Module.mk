@@ -33,7 +33,7 @@ LIBMAN5FILES := $(MODULE_DIR)/sensors.conf.5
 # the public header files - in this case they are error.h, sensors.h,
 # chips.h.
 LIBMAINVER := 3
-LIBMINORVER := 0.9
+LIBMINORVER := 1.0
 LIBVER := $(LIBMAINVER).$(LIBMINORVER)
 
 # The static lib name, the shared lib name, and the internal ('so') name of
@@ -50,6 +50,10 @@ LIBCSOURCES := $(MODULE_DIR)/data.c $(MODULE_DIR)/general.c \
                $(MODULE_DIR)/error.c $(MODULE_DIR)/chips.c \
                $(MODULE_DIR)/proc.c $(MODULE_DIR)/access.c \
                $(MODULE_DIR)/init.c
+ifdef SYSFS_SUPPORT
+	LIBCSOURCES := $(LIBCSOURCES) $(MODULE_DIR)/sysfs.c
+endif
+
 LIBOTHEROBJECTS := $(MODULE_DIR)/conf-parse.o $(MODULE_DIR)/conf-lex.o
 LIBSHOBJECTS := $(LIBCSOURCES:.c=.lo) $(LIBOTHEROBJECTS:.o=.lo)
 LIBSTOBJECTS := $(LIBCSOURCES:.c=.ao) $(LIBOTHEROBJECTS:.o=.ao)
@@ -60,8 +64,13 @@ LIBHEADERFILES := $(MODULE_DIR)/error.h $(MODULE_DIR)/sensors.h \
                   $(MODULE_DIR)/chips.h
 
 # How to create the shared library
+ifdef SYSFS_SUPPORT
+$(MODULE_DIR)/$(LIBSHLIBNAME): $(LIBSHOBJECTS)
+	$(CC) -shared -Wl,-soname,$(LIBSHSONAME) -o $@ $^ -lc -lm -lsysfs
+else
 $(MODULE_DIR)/$(LIBSHLIBNAME): $(LIBSHOBJECTS)
 	$(CC) -shared -Wl,-soname,$(LIBSHSONAME) -o $@ $^ -lc -lm
+endif
 
 $(MODULE_DIR)/$(LIBSHSONAME): $(MODULE_DIR)/$(LIBSHLIBNAME)
 	$(RM) $@

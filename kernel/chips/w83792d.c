@@ -22,7 +22,7 @@
     1. This driver is only for 2.4 kernel(2.4.10 or later), 2.6 kernel
        need a different driver.
     2. This driver is only for Winbond W83792D C version device, there
-       are also some motherboards with B version W83792D device. The 
+       are also some motherboards with B version W83792D device. The
        calculation method to in6-in7(measured value, limits) is a little
        different between C and B version. C or B version can be identified
        by CR[0x49h].
@@ -66,10 +66,12 @@ MODULE_PARM_DESC(init, "Set to one for chip initialization");
 /* #define W83792D_DEBUG 1 */
 
 /* Constants specified below */
+#define W83792D_REG_GPIO_EN 0x1A
 #define W83792D_REG_CONFIG 0x40
 #define W83792D_REG_I2C_ADDR 0x48
 #define W83792D_REG_CHIPID 0x49   /* contains version ID: A/B/C */
 #define W83792D_REG_I2C_SUBADDR 0x4A
+#define W83792D_REG_PIN 0x4B
 #define W83792D_REG_IRQ 0x4C
 #define W83792D_REG_BANK 0x4E
 #define W83792D_REG_CHIPMAN 0x4F  /* contains the vendor ID */
@@ -243,7 +245,6 @@ static inline u8 FAN_TO_REG(long rpm, int div)
 
 struct w83792d_data {
 	struct i2c_client client;
-	struct semaphore lock;
 	int sysctl_id;
 	enum chips type;
 
@@ -257,7 +258,8 @@ struct w83792d_data {
 	u8 in[9];		/* Register value */
 	u8 in_max[9];		/* Register value */
 	u8 in_min[9];		/* Register value */
-	u8 low_bits[2];		/* Register value */
+	u16 low_bits;		/* Register value */
+	u8 has_fan;		/* Bit vector */
 	u8 fan[7];		/* Register value */
 	u8 fan_min[7];		/* Register value */
 	u8 fan_cfg;		/* Configure Fan Mode */
@@ -277,15 +279,25 @@ struct w83792d_data {
 	u8 sf2_levels[3][4];	/* Smart FanII: Fan1,2,3 duty cycle levels */
 };
 
+/* Read the w83792d register value, only use bank 0 of the 792 chip */
+static inline int
+w83792d_read_value(struct i2c_client *client, u8 reg)
+{
+	return i2c_smbus_read_byte_data(client, reg);
+}
+
+/* Write value into the w83792d registers, only use bank 0 of the 792 chip */
+static inline int
+w83792d_write_value(struct i2c_client *client, u8 reg, u8 value)
+{
+	return i2c_smbus_write_byte_data(client, reg, value);
+}
 
 static int w83792d_attach_adapter(struct i2c_adapter *adapter);
 static int w83792d_detect(struct i2c_adapter *adapter, int address,
 			  unsigned short flags, int kind);
 static int w83792d_detach_client(struct i2c_client *client);
 
-static int w83792d_read_value(struct i2c_client *client, u8 register);
-static int w83792d_write_value(struct i2c_client *client, u8 register,
-			       u8 value);
 static void w83792d_init_client(struct i2c_client *client);
 static void w83792d_update_client(struct i2c_client *client);
 #ifdef W83792D_DEBUG
@@ -303,6 +315,8 @@ static void w83792d_temp_add(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results);
 static void w83792d_vrm(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results); */
+static void w83792d_set_fan_div(struct i2c_client *client,
+				int nr, u8 newdiv);
 static void w83792d_fan_div(struct i2c_client *client, int operation,
 			    int ctl_name, int *nrels_mag, long *results);
 static void w83792d_alarms(struct i2c_client *client, int operation,
@@ -354,7 +368,7 @@ static struct i2c_driver w83792d_driver = {
 #define W83792D_SYSCTL_TEMP1 1200
 #define W83792D_SYSCTL_TEMP2 1201
 #define W83792D_SYSCTL_TEMP3 1202
-/*#define W83792D_SYSCTL_VID 1300	
+/*#define W83792D_SYSCTL_VID 1300
 #define W83792D_SYSCTL_VRM 1301*/
 #define W83792D_SYSCTL_PWM_FLAG 1400
 #define W83792D_SYSCTL_PWM1 1401
@@ -440,7 +454,7 @@ static ctl_table w83792d_dir_table_template[] =
 	 &i2c_sysctl_real, NULL, &w83792d_temp_add},
 	/*{W83792D_SYSCTL_VID, "vid", NULL, 0, 0444, NULL, &i2c_proc_real,
 	 &i2c_sysctl_real, NULL, &w83792d_vid}, */
-	{W83792D_SYSCTL_FAN_DIV, "fan_div", NULL, 0, 0644, NULL, &i2c_proc_real,
+	{W83792D_SYSCTL_FAN_DIV, "fan_div", NULL, 0, 0444, NULL, &i2c_proc_real,
 	 &i2c_sysctl_real, NULL, &w83792d_fan_div},
 	{W83792D_SYSCTL_ALARMS, "alarms", NULL, 0, 0644, NULL,
 	 &i2c_proc_real, &i2c_sysctl_real, NULL, &w83792d_alarms},
@@ -520,7 +534,6 @@ static int w83792d_detect(struct i2c_adapter *adapter, int address,
 
 	new_client = &data->client;
 	new_client->addr = address;
-	init_MUTEX(&data->lock);
 	new_client->data = data;
 	new_client->adapter = adapter;
 	new_client->driver = &w83792d_driver;
@@ -570,7 +583,7 @@ static int w83792d_detect(struct i2c_adapter *adapter, int address,
 			goto ERROR1;
 		}
 		val1 = w83792d_read_value(new_client, W83792D_REG_WCHIPID);
-		if (val1 == 0x7a && address >= 0x2c) {
+		if (val1 == 0x7a) {
 			kind = w83792d;
 		} else {
 			if (kind == 0)
@@ -597,6 +610,7 @@ static int w83792d_detect(struct i2c_adapter *adapter, int address,
 	strcpy(new_client->name, client_name);
 	data->type = kind;
 	data->valid = 0;
+	data->has_fan = 0x07; /* at least 3 fan inputs */
 	init_MUTEX(&data->update_lock);
 
 	/* Tell the I2C layer a new client has arrived */
@@ -657,6 +671,20 @@ static int w83792d_detect(struct i2c_adapter *adapter, int address,
 		}
 	}
 
+	/* Read GPIO enable register to check if pins for fan 4,5 are used as
+	   GPIO */
+	val1 = w83792d_read_value(new_client, W83792D_REG_GPIO_EN);
+	if (!(val1 & 0x40))
+		data->has_fan |= 0x08;	/* fan 4 */
+	if (!(val1 & 0x20))
+		data->has_fan |= 0x10;	/* fan 5 */
+
+	val1 = w83792d_read_value(new_client, W83792D_REG_PIN);
+	if (val1 & 0x40)
+		data->has_fan |= 0x20;	/* fan 6 */
+	if (val1 & 0x04)
+		data->has_fan |= 0x40;	/* fan 7 */
+
 	/* Register a new directory entry with module sensors */
 	if ((i = i2c_register_entry(new_client, type_name,
 				    w83792d_dir_table_template, THIS_MODULE)) < 0) {
@@ -714,22 +742,7 @@ static int w83792d_detach_client(struct i2c_client *client)
 	return 0;
 }
 
-/* Read the w83792d register value, only use bank 0 of the 792 chip */
-static int w83792d_read_value(struct i2c_client *client, u8 reg)
-{
-	int res = 0;
-	res = i2c_smbus_read_byte_data(client, reg);
-	return res;
-}
-
-/* Write value into the w83792d registers, only use bank 0 of the 792 chip */
-static int w83792d_write_value(struct i2c_client *client, u8 reg, u8 value)
-{
-	i2c_smbus_write_byte_data(client, reg, value);
-	return 0;
-}
-
-/* Called when we have found a new W83792D. It should set limits, etc. */
+/* Called when we have found a new W83792D. */
 static void w83792d_init_client(struct i2c_client *client)
 {
 	int temp2_cfg, temp3_cfg;
@@ -785,10 +798,10 @@ static void w83792d_update_client(struct i2c_client *client)
 			data->in_min[i] = w83792d_read_value(client,
 						W83792D_REG_IN_MIN[i]);
 		}
-		data->low_bits[0] = w83792d_read_value(client,
-						W83792D_REG_LOW_BITS1);
-		data->low_bits[1] = w83792d_read_value(client,
-						W83792D_REG_LOW_BITS2);
+		data->low_bits = w83792d_read_value(client,
+						W83792D_REG_LOW_BITS1) +
+				 (w83792d_read_value(client,
+						W83792D_REG_LOW_BITS2) << 8);
 
 		for (i = 0; i < 7; i++) {
 			/* Update the Fan measured value and limits */
@@ -800,7 +813,7 @@ static void w83792d_update_client(struct i2c_client *client)
 			pwm_array_tmp[i] = w83792d_read_value(client,
 						W83792D_REG_PWM[i]);
 			data->pwm[i] = pwm_array_tmp[i] & 0x0f;
-			data->pwm_flag[1] = (pwm_array_tmp[i] >> 7) & 0x01;
+			data->pwm_flag[i] = pwm_array_tmp[i] >> 7;
 		}
 		data->fan_cfg = w83792d_read_value(client, W83792D_REG_FAN_CFG);
 
@@ -815,6 +828,21 @@ static void w83792d_update_client(struct i2c_client *client)
 		data->fan_div[4] = reg_array_tmp[2] & 0x07;
 		data->fan_div[5] = (reg_array_tmp[2] >> 4) & 0x07;
 		data->fan_div[6] = reg_array_tmp[3] & 0x07;
+
+		for (i = 0; i < 7; i++) {
+			if (!(data->has_fan & (1 << i)))
+				continue;
+			if (data->fan[i] == 0xff && data->fan_div[i] < 7)
+				w83792d_set_fan_div(client, i, 7);
+			else if (data->fan[i] < 0x70 && data->fan_div[i] > 0) {
+				w83792d_set_fan_div(client, i,
+							data->fan_div[i] - 1);
+			} else if (data->fan[i] > 0xf8 &&
+						data->fan_div[i] < 7) {
+				w83792d_set_fan_div(client, i,
+							data->fan_div[i] + 1);
+			}
+		}
 
 		/* Update the Temperature1 measured value and limits */
 		data->temp1[0] = w83792d_read_value(client, W83792D_REG_TEMP1);
@@ -842,7 +870,7 @@ static void w83792d_update_client(struct i2c_client *client)
 			(w83792d_read_value(client, W83792D_REG_ALARM3) << 16);
 
 		/* Update CaseOpen status and it's CLR_CHS. */
-		data->chassis[0] = (w83792d_read_value(client, 
+		data->chassis[0] = (w83792d_read_value(client,
 					W83792D_REG_CASE_OPEN)
 				    >> 5) & 0x01;
 		data->chassis[1] = (w83792d_read_value(client,
@@ -903,8 +931,8 @@ static void w83792d_print_debug(struct w83792d_data *data)
 		printk(KERN_DEBUG "vin[%d] max is: 0x%x\n", i, data->in_max[i]);
 		printk(KERN_DEBUG "vin[%d] min is: 0x%x\n", i, data->in_min[i]);
 	}
-	printk(KERN_DEBUG "Low Bit1 is: 0x%x\n", data->low_bits[0]);
-	printk(KERN_DEBUG "Low Bit2 is: 0x%x\n", data->low_bits[1]);
+	printk(KERN_DEBUG "Low Bit1 is: 0x%x\n", data->low_bits & 0xff);
+	printk(KERN_DEBUG "Low Bit2 is: 0x%x\n", data->low_bits >> 8);
 	printk(KERN_DEBUG "7 set of Fan Counts and 3 set of Duty Cycles: =====>\n");
 	printk(KERN_DEBUG "fan_cfg is: 0x%x\n", data->fan_cfg);
 	for (i=0; i<=6; i++) {
@@ -952,10 +980,6 @@ static void w83792d_in(struct i2c_client *client, int operation, int ctl_name,
 {
 	struct w83792d_data *data = client->data;
 	int nr = ctl_name - W83792D_SYSCTL_IN0;
-	u16 vol_max_tmp = 0;
-	u16 vol_min_tmp = 0;
-	u16 vol_count = 0;
-	u16 low_bits = 0;
 
 	/* result[0]: low limit, result[1]: high limit,
 	   result[2]: measured value */
@@ -963,43 +987,13 @@ static void w83792d_in(struct i2c_client *client, int operation, int ctl_name,
 		*nrels_mag = 3;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		w83792d_update_client(client);
-		/* Read High/Low limit. */
-		vol_min_tmp = data->in_min[nr];
-		vol_max_tmp = data->in_max[nr];
-		results[0] = IN_FROM_REG(nr, vol_min_tmp*4);
-		results[1] = IN_FROM_REG(nr, vol_max_tmp*4);
-
-		/* Read voltage measured value. */
-		vol_count = data->in[nr];
-		vol_count = (vol_count << 2);
-		low_bits = 0;
-		switch (nr)
-		{
-		case 0:  /* vin0 */
-			low_bits = (data->low_bits[0]) & 0x03;
-			break;
-		case 1:  /* vin1 */
-			low_bits = ((data->low_bits[0]) & 0x0c) >> 2;
-			break;
-		case 2:  /* vin2 */
-			low_bits = ((data->low_bits[0]) & 0x30) >> 4;
-			break;
-		case 3:  /* vin3 */
-			low_bits = ((data->low_bits[0]) & 0xc0) >> 6;
-			break;
-		case 4:  /* vin4 */
-			low_bits = (data->low_bits[1]) & 0x03;
-			break;
-		case 5:  /* vin5 */
-			low_bits = ((data->low_bits[1]) & 0x0c) >> 2;
-			break;
-		case 6:  /* vin6 */
-			low_bits = ((data->low_bits[1]) & 0x30) >> 4;
-		default:
-			break;
-		}
-		vol_count = vol_count | low_bits;
-		results[2] = IN_FROM_REG(nr, vol_count);
+		results[0] = IN_FROM_REG(nr, data->in_min[nr]*4);
+		results[1] = IN_FROM_REG(nr, data->in_max[nr]*4);
+		/* in7 and in8 do not have low bits, but the formula still
+		   works */
+		results[2] = IN_FROM_REG(nr, ((data->in[nr] << 2) |
+						((data->low_bits >> (2 * nr))
+							& 0x03)));
 		*nrels_mag = 3;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		if (*nrels_mag >= 1) {
@@ -1019,61 +1013,49 @@ static void w83792d_in(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
+static void w83792d_set_fan_div(struct i2c_client *client, int nr, u8 newdiv)
+{
+	struct w83792d_data *data = client->data;
+	int min, old;
+	u8 tmp;
+
+	min = FAN_FROM_REG(data->fan_min[nr], DIV_FROM_REG(data->fan_div[nr]));
+	old = FAN_FROM_REG(data->fan[nr], DIV_FROM_REG(data->fan_div[nr]));
+	data->fan_div[nr] = newdiv;
+	tmp = w83792d_read_value(client, W83792D_REG_FAN_DIV[nr >> 1]);
+	tmp &= (nr & 1) ? 0x8f : 0xf8;
+	tmp |= (nr & 1) ? ((newdiv << 4) & 0x70) : (newdiv & 0x07);
+	w83792d_write_value(client, W83792D_REG_FAN_DIV[nr >> 1], tmp);
+	data->fan_min[nr] = FAN_TO_REG(min, DIV_FROM_REG(data->fan_div[nr]));
+	data->fan[nr] = FAN_TO_REG(old, DIV_FROM_REG(data->fan_div[nr]));
+	w83792d_write_value(client, W83792D_REG_FAN_MIN[nr],
+				data->fan_min[nr]);
+}
+
 /* read/write fan meaured value and limits */
-void w83792d_fan(struct i2c_client *client, int operation, int ctl_name,
+static void w83792d_fan(struct i2c_client *client, int operation, int ctl_name,
 		 int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
 	int nr = ctl_name - W83792D_SYSCTL_FAN1;
-	u8 tmp_reg, tmp_fan_div;
 
 	/* result[0]: low limit, result[1]: measured value */
 	if (operation == SENSORS_PROC_REAL_INFO)
 		*nrels_mag = 0;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		w83792d_update_client(client);
-		results[0] = FAN_FROM_REG(data->fan_min[nr],
-				  DIV_FROM_REG(data->fan_div[nr]));
-		/* adjust Fan Divisor, then change RPM */
-		do {
-			w83792d_update_client(client);
-			if ((data->fan[nr]>0x50) && (data->fan[nr]<0xff)) {
-			/* optimal case. 0x50 and 0xff are experience data */
-				results[1] = FAN_FROM_REG(data->fan[nr],
-						DIV_FROM_REG(data->fan_div[nr]));
-				break; /* go out of the do-while loop. */
-			} else {
-				if (((data->fan_div[nr])>=0x07 &&
-					(data->fan[nr])==0xff) ||
-				    ((data->fan_div[nr])<=0 &&
-					(data->fan[nr])<0x78)) {
-					results[1] = 0;
-					break;
-				} else if ((data->fan_div[nr])<0x07 &&
-					 (data->fan[nr])==0xff) {
-					(data->fan_div[nr])++;
-					results[1] = FAN_FROM_REG(data->fan[nr],
-						     DIV_FROM_REG(data->fan_div[nr]));
-				} else if ((data->fan_div[nr])>0 &&
-					  (data->fan[nr])<0x78) {
-					(data->fan_div[nr])--;
-					results[1] = FAN_FROM_REG(data->fan[nr],
-						     DIV_FROM_REG(data->fan_div[nr]));
-				}
-
-				tmp_reg = w83792d_read_value(client,
-						W83792D_REG_FAN_DIV[nr/2]);
-				tmp_reg &= (nr%2 == 0) ? 0xf8 : 0x8f;
-				tmp_fan_div = (nr%2 == 0) ? (data->fan_div[nr])
-					: (((data->fan_div[nr])<<4)&0x70);
-				w83792d_write_value(client,
-						    W83792D_REG_FAN_DIV[nr/2],
-						    tmp_reg|tmp_fan_div);
-			}
-		} while (0);
+		if (data->has_fan & (1 << nr)) {
+			results[0] = FAN_FROM_REG(data->fan_min[nr],
+					DIV_FROM_REG(data->fan_div[nr]));
+			results[1] = FAN_FROM_REG(data->fan[nr],
+					DIV_FROM_REG(data->fan_div[nr]));
+		} else {
+			results[0] = 0;
+			results[1] = 0;
+		}
 		*nrels_mag = 2;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
-		if (*nrels_mag >= 1) {
+		if (*nrels_mag >= 1 && (data->has_fan & (1 << nr))) {
 			data->fan_min[nr] = FAN_TO_REG(results[0],
 					    DIV_FROM_REG(data->fan_div[nr]));
 			w83792d_write_value(client,
@@ -1084,7 +1066,7 @@ void w83792d_fan(struct i2c_client *client, int operation, int ctl_name,
 }
 
 /* read/write temperature1 meaured value and limits */
-void w83792d_temp(struct i2c_client *client, int operation, int ctl_name,
+static void w83792d_temp(struct i2c_client *client, int operation, int ctl_name,
 		  int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1114,7 +1096,7 @@ void w83792d_temp(struct i2c_client *client, int operation, int ctl_name,
 }
 
 /* read/write temperature2,3 meaured value and limits */
-void w83792d_temp_add(struct i2c_client *client, int operation,
+static void w83792d_temp_add(struct i2c_client *client, int operation,
 		      int ctl_name, int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1197,13 +1179,11 @@ void w83792d_vrm(struct i2c_client *client, int operation, int ctl_name,
 } */
 
 /* Read/Write Fan Divisor */
-void w83792d_fan_div(struct i2c_client *client, int operation,
+static void w83792d_fan_div(struct i2c_client *client, int operation,
 		     int ctl_name, int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
-	int i=0, j=0;
-	u8 temp_reg=0, k=1, fan_div_reg=0;
-	u8 tmp_fan_div;
+	int i = 0;
 
 	if (operation == SENSORS_PROC_REAL_INFO)
 		*nrels_mag = 0;
@@ -1213,33 +1193,12 @@ void w83792d_fan_div(struct i2c_client *client, int operation,
 			results[i] = DIV_FROM_REG(data->fan_div[i]);
 		}
 		*nrels_mag = 7;
-	} else if (operation == SENSORS_PROC_REAL_WRITE) {
-		if (*nrels_mag < 7) {
-			return;
-		}
-		for (i=0; i<7; i++) {
-			temp_reg = SENSORS_LIMIT(results[i], 1, 128);
-			for (k=0,j=0; j<7; j++) {
-				temp_reg = temp_reg>>1;
-				if (temp_reg == 0)
-					break;
-				k++;
-			}
-			fan_div_reg = w83792d_read_value(client,
-					W83792D_REG_FAN_DIV[i/2]);
-			fan_div_reg &= (i%2 == 0) ? 0xf8 : 0x8f;
-			tmp_fan_div = (i%2 == 0) ? (k&0x07)
-					: ((k<<4)&0x70);
-			w83792d_write_value(client,
-					W83792D_REG_FAN_DIV[i/2],
-					fan_div_reg|tmp_fan_div);
-		}
 	}
 }
 
 
 /* Under Smart Fan I mode: read/write the Fan1/2/3 target temperature */
-void w83792d_thermal_cruise(struct i2c_client *client, int operation,
+static void w83792d_thermal_cruise(struct i2c_client *client, int operation,
 			    int ctl_name, int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1272,7 +1231,7 @@ void w83792d_thermal_cruise(struct i2c_client *client, int operation,
 
 /* The tolerance of fan1/fan2/fan3, when using Thermal Cruise(Smart Fan I)
    or Smart Fan II mode. */
-void w83792d_fan_tolerance(struct i2c_client *client, int operation,
+static void w83792d_fan_tolerance(struct i2c_client *client, int operation,
 				 int ctl_name, int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1294,7 +1253,7 @@ void w83792d_fan_tolerance(struct i2c_client *client, int operation,
 			}
 			tol_mask = w83792d_read_value(client,
 				W83792D_REG_FAN_TOL[i]) & ((i==1)?0x0f:0xf0);
-			tol_tmp = SENSORS_LIMIT(results[0], 0, 15);
+			tol_tmp = SENSORS_LIMIT(results[i], 0, 15);
 			tol_tmp &= 0x0f;
 			data->fan_tolerance[i] = tol_tmp;
 			if (i==1) {
@@ -1307,7 +1266,7 @@ void w83792d_fan_tolerance(struct i2c_client *client, int operation,
 }
 
 /* Under Smart Fan II mode: read/write the Fan1/2/3 temperature points */
-void w83792d_sf2_points(struct i2c_client *client, int operation,
+static void w83792d_sf2_points(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1340,10 +1299,10 @@ void w83792d_sf2_points(struct i2c_client *client, int operation,
 
 /* Smart Fan II Duty Cycle1/2/3 of Fan1/2/3.
    Notice that: The Non-Stop can NOT be modified by user,
-   because it is related with some physical characters, 
+   because it is related with some physical characters,
    usually set by BIOS. User's modification to it may lead to
    Fan's stop, then bring danger. */
-void w83792d_sf2_levels(struct i2c_client *client, int operation,
+static void w83792d_sf2_levels(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1380,7 +1339,7 @@ void w83792d_sf2_levels(struct i2c_client *client, int operation,
 }
 
 /* get reatime status of all sensors items: voltage, temp, fan */
-void w83792d_alarms(struct i2c_client *client, int operation, int ctl_name,
+static void w83792d_alarms(struct i2c_client *client, int operation, int ctl_name,
 		    int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1394,7 +1353,7 @@ void w83792d_alarms(struct i2c_client *client, int operation, int ctl_name,
 }
 
 /* Read/Write Chassis status and Reset Chassis. */
-void w83792d_chassis(struct i2c_client *client, int operation,
+static void w83792d_chassis(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1420,12 +1379,12 @@ void w83792d_chassis(struct i2c_client *client, int operation,
 
 /* Read/Write PWM/DC value of Fan1,Fan2,Fan3, which controls the
    Fan Duty Cycle */
-void w83792d_pwm(struct i2c_client *client, int operation, int ctl_name,
+static void w83792d_pwm(struct i2c_client *client, int operation, int ctl_name,
 		 int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
 	int nr = ctl_name - W83792D_SYSCTL_PWM1;
-	u8 pwm_to_reg = 0, pwm_mask;
+	u8 pwm_mask;
 
 	if (operation == SENSORS_PROC_REAL_INFO)
 		*nrels_mag = 0;
@@ -1434,8 +1393,7 @@ void w83792d_pwm(struct i2c_client *client, int operation, int ctl_name,
 		results[0] = data->pwm[nr];
 		*nrels_mag = 1;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
-		pwm_to_reg = SENSORS_LIMIT(results[0], 0, 15);
-		data->pwm[nr] = pwm_to_reg;
+		data->pwm[nr] = SENSORS_LIMIT(results[0], 0, 15);
 		pwm_mask = w83792d_read_value(client,W83792D_REG_PWM[nr]) & 0xf0;
 		w83792d_write_value(client,W83792D_REG_PWM[nr],pwm_mask|data->pwm[nr]);
 	}
@@ -1443,7 +1401,7 @@ void w83792d_pwm(struct i2c_client *client, int operation, int ctl_name,
 
 /* Read/Write PWM/DC mode for Fan1,Fan2,Fan3:
    1->PWM mode, 0->DC mode */
-void w83792d_pwm_flag(struct i2c_client *client, int operation, int ctl_name,
+static void w83792d_pwm_flag(struct i2c_client *client, int operation, int ctl_name,
 		      int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;
@@ -1474,7 +1432,7 @@ void w83792d_pwm_flag(struct i2c_client *client, int operation, int ctl_name,
 
 /* Read/Write Fan mode into:PWM/DC, Thermal Cruise(SmartFanI), SmartFanII
    0->PWM/DC mode, 1->Thermal Cruise mode, 2/3->SmartFanII mode */
-void w83792d_fan_cfg(struct i2c_client *client, int operation,
+static void w83792d_fan_cfg(struct i2c_client *client, int operation,
 		     int ctl_name, int *nrels_mag, long *results)
 {
 	struct w83792d_data *data = client->data;

@@ -24,7 +24,11 @@
 #include <errno.h>
 #include <locale.h>
 #include <langinfo.h>
+
+#ifndef __UCLIBC__
 #include <iconv.h>
+#define HAVE_ICONV
+#endif
 
 #include "lib/sensors.h" 
 #include "lib/error.h"
@@ -116,11 +120,13 @@ void close_config_file(const char* config_file_name)
 
 static void set_degstr(void)
 {
+  const char *deg_default_text[2] = {" C", " F"};
+
+#ifdef HAVE_ICONV
   /* Size hardcoded for better performance.
      Don't forget to count the trailing \0! */
   size_t deg_latin1_size = 3;
   char *deg_latin1_text[2] = {"\260C", "\260F"};
-  const char *deg_default_text[2] = {" C", " F"};
   size_t nconv;
   size_t degstr_size = sizeof(degstr);
   char *degstr_ptr = degstr;
@@ -134,6 +140,7 @@ static void set_degstr(void)
     if (nconv != (size_t) -1)
       return;	   
   }
+#endif /* HAVE_ICONV */
 
   /* There was an error during the conversion, use the default text */
   strcpy(degstr, deg_default_text[fahrenheit]);
@@ -232,8 +239,8 @@ int main (int argc, char *argv[])
     if (res == -SENSORS_ERR_PROC)
       fprintf(stderr,
               "Unable to find i2c bus information;\n"
-              "For 2.6 kernels, make sure you have mounted sysfs and done\n"
-              "'modprobe i2c_sensor'!\n"
+              "For 2.6 kernels, make sure you have mounted sysfs and libsensors\n"
+              "was compiled with sysfs support!\n"
               "For older kernels, make sure you have done 'modprobe i2c-proc'!\n");
     exit(1);
   }
@@ -361,6 +368,7 @@ struct match matches[] = {
 	{ "w83627thf", print_w83781d },
 	{ "w83637hf", print_w83781d },
 	{ "w83697hf", print_w83781d },
+	{ "w83687thf", print_w83781d },
 	{ "w83627ehf", print_w83627ehf },
 	{ "w83791d", print_w83781d },
         { "w83792d", print_w83792d },
@@ -405,6 +413,7 @@ struct match matches[] = {
 	{ "adm1031", print_adm1031 },
 	{ "lm93", print_lm93 },
 	{ "smsc47b397", print_smsc47b397 },
+	{ "f71805f", print_f71805f },
 	{ NULL, NULL }
 };
 
