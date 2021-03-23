@@ -33,9 +33,14 @@ void help(void)
 	fprintf(stderr, "Syntax: i2cdump [-y] I2CBUS ADDRESS [MODE] [BANK "
 	        "[BANKREG]]\n"
 	        "        i2cdump -V\n"
-	        "  MODE is 'b[yte]', 'w[ord]', 's[mbusblock], 'i[2cblock]',\n"
-	        "       or 'c[onsecutive byte address mode]' (default b)\n"
-	        "  Append MODE with 'p' for PEC checking\n"
+	        "  MODE is one of:\n"
+		"    b (byte, default)\n"
+		"    w (word)\n"
+		"    W (word on even register addresses)\n"
+		"    s (SMBus block)\n"
+		"    i (I2C block)\n"
+	        "    c (consecutive byte)\n"
+	        "    Append 'p' to 'b', 'w', 's' or 'c' for PEC checking\n"
 	        "  I2CBUS is an integer\n"
 	        "  ADDRESS is an integer 0x00 - 0x7f\n"
 	        "  BANK and BANKREG are for byte and word accesses (default "
@@ -48,11 +53,11 @@ int main(int argc, char *argv[])
 {
 	char *end;
 	int i, j, res, i2cbus, address, size, file;
-	int bank = 0, bankreg = 0x4E;
+	int bank = 0, bankreg = 0x4E, old_bank = 0;
 	char filename[20];
 	long funcs;
 	int block[256];
-	int pec = 0;
+	int pec = 0, even = 0;
 	int flags = 0;
 	int yes = 0, version = 0;
 
@@ -118,6 +123,9 @@ int main(int argc, char *argv[])
 	} else if (!strncmp(argv[flags+3], "w", 1)) {
 		size = I2C_SMBUS_WORD_DATA;
 		pec = argv[flags+3][1] == 'p';
+	} else if (!strncmp(argv[flags+3], "W", 1)) {
+		size = I2C_SMBUS_WORD_DATA;
+		even = 1;
 	} else if (!strncmp(argv[flags+3], "s", 1)) {
 		size = I2C_SMBUS_BLOCK_DATA;
 		pec = argv[flags+3][1] == 'p';
@@ -259,6 +267,9 @@ int main(int argc, char *argv[])
 		        size == I2C_SMBUS_BYTE_DATA ? "byte" : "word");
 		if (pec)
 			fprintf(stderr, "PEC checking enabled.\n");
+		if (even)
+			fprintf(stderr, "Only probing even register "
+			        "addresses.\n");
 		if (bank) {
 			if (size == I2C_SMBUS_BLOCK_DATA)
 				fprintf(stderr, "Using command 0x%02x.\n",
@@ -270,8 +281,8 @@ int main(int argc, char *argv[])
 
 		fprintf(stderr, "Continue? [Y/n] ");
 		fflush(stderr);
-		fgets(s, 2, stdin);
-		if (s[0] != '\n' && s[0] != 'y' && s[0] != 'Y') {
+		if (!fgets(s, 2, stdin)
+		 || (s[0] != '\n' && s[0] != 'y' && s[0] != 'Y')) {
 			fprintf(stderr, "Aborting on user request.\n");
 			exit(0);
 		}
@@ -279,12 +290,20 @@ int main(int argc, char *argv[])
 
 	/* See Winbond w83781d data sheet for bank details */
 	if (bank && size != I2C_SMBUS_BLOCK_DATA) {
-		i2c_smbus_write_byte_data(file, bankreg, bank | 0x80);
+		res = i2c_smbus_read_byte_data(file, bankreg);
+		if (res >= 0) {
+			old_bank = res;
+			res = i2c_smbus_write_byte_data(file, bankreg,
+				bank | (old_bank & 0xf0));
+		}
+		if (res < 0) {
+			fprintf(stderr, "Error: Bank switching failed\n");
+			exit(1);
+		}
 	}
 
 	/* handle all but word data */
-	if (size != I2C_SMBUS_WORD_DATA) {
-
+	if (size != I2C_SMBUS_WORD_DATA || even) {
 		/* do the block transaction */
 		if (size == I2C_SMBUS_BLOCK_DATA
 		 || size == I2C_SMBUS_I2C_BLOCK_DATA) {
@@ -331,15 +350,33 @@ int main(int argc, char *argv[])
 				if (size == I2C_SMBUS_BYTE_DATA) {
 					block[i+j] = res =
 					  i2c_smbus_read_byte_data(file, i+j);
+				} else if (size == I2C_SMBUS_WORD_DATA) {
+					res = i2c_smbus_read_word_data(file,
+					                               i+j);
+					if (res < 0) {
+						block[i+j] = res;
+						block[i+j+1] = res;
+					} else {
+						block[i+j] = res & 0xff;
+						block[i+j+1] = res >> 8;
+					}
 				} else if (size == I2C_SMBUS_BYTE) {
 					block[i+j] = res =
 					  i2c_smbus_read_byte(file);
 				} else
 					res = block[i+j];
-				if (res < 0)
+
+				if (res < 0) {
 					printf("XX ");
-				else
-					printf("%02x ", res & 0xff);
+					if (size == I2C_SMBUS_WORD_DATA)
+						printf("XX ");
+				} else {
+					printf("%02x ", block[i+j]);
+					if (size == I2C_SMBUS_WORD_DATA)
+						printf("%02x ", block[i+j+1]);
+				}
+				if (size == I2C_SMBUS_WORD_DATA)
+					j++;
 			}
 			printf("   ");
 			for (j = 0; j < 16; j++) {
@@ -376,7 +413,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	if (bank && size != I2C_SMBUS_BLOCK_DATA) {
-		i2c_smbus_write_byte_data(file, bankreg, 0x80);
+		i2c_smbus_write_byte_data(file, bankreg, old_bank);
 	}
 	exit(0);
 }

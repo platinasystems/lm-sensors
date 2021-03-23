@@ -238,10 +238,9 @@ int main (int argc, char *argv[])
     fprintf(stderr,"%s\n",sensors_strerror(res));
     if (res == -SENSORS_ERR_PROC)
       fprintf(stderr,
-              "Unable to find i2c bus information;\n"
+              "Kernel interface access error\n"
               "For 2.6 kernels, make sure you have mounted sysfs and libsensors\n"
-              "was compiled with sysfs support!\n"
-              "For older kernels, make sure you have done 'modprobe i2c-proc'!\n");
+              "was compiled with sysfs support!\n");
     exit(1);
   }
 
@@ -256,7 +255,10 @@ int main (int argc, char *argv[])
     exit(error);
   } else {
     if(chips[0].prefix == SENSORS_CHIP_NAME_PREFIX_ANY)
-	    fprintf(stderr,"No sensors found!\n");
+	    fprintf(stderr,
+	            "No sensors found!\n"
+	            "Make sure you loaded all the kernel drivers you need.\n"
+	            "Try sensors-detect to find out which these are.\n");
     else
 	    fprintf(stderr,"Specified sensor(s) not found!\n");
     sensors_cleanup();
@@ -315,6 +317,8 @@ const char *sprintf_chip_name(sensors_chip_name name)
 
   if (name.bus == SENSORS_CHIP_NAME_BUS_ISA)
     snprintf(buf,BUF_SIZE,"%s-isa-%04x",name.prefix,name.addr);
+  else if (name.bus == SENSORS_CHIP_NAME_BUS_PCI)
+    snprintf(buf,BUF_SIZE,"%s-pci-%04x",name.prefix,name.addr);
   else if (name.bus == SENSORS_CHIP_NAME_BUS_DUMMY)
     snprintf(buf,BUF_SIZE,"%s-%s-%04x",name.prefix,name.busname,name.addr);
   else
@@ -371,7 +375,8 @@ struct match matches[] = {
 	{ "w83687thf", print_w83781d },
 	{ "w83627ehf", print_w83627ehf },
 	{ "w83791d", print_w83781d },
-        { "w83792d", print_w83792d },
+	{ "w83792d", print_w83792d },
+	{ "w83793", print_w83793 },
 	{ "w83l785ts", print_w83l785ts },
 	{ "as99127f", print_w83781d },
 	{ "maxilife", print_maxilife },
@@ -381,6 +386,8 @@ struct match matches[] = {
 	{ "maxilife-nba", print_maxilife },
 	{ "it87", print_it87 },
 	{ "it8712", print_it87 },
+	{ "it8716", print_it87 },
+	{ "it8718", print_it87 },
 	{ "ddcmon", print_ddcmon },
 	{ "eeprom", print_eeprom },
 	{ "fscpos", print_fscpos },
@@ -388,6 +395,7 @@ struct match matches[] = {
 	{ "fscher", print_fscher },
 	{ "pcf8591", print_pcf8591 },
 	{ "vt1211", print_vt1211 },
+	{ "smsc47m192", print_smsc47m192 },
 	{ "smsc47m1", print_smsc47m1 },
 	{ "pc87360", print_pc87360 },
 	{ "pc87363", print_pc87360 },
@@ -414,6 +422,8 @@ struct match matches[] = {
 	{ "lm93", print_lm93 },
 	{ "smsc47b397", print_smsc47b397 },
 	{ "f71805f", print_f71805f },
+ 	{ "abituguru", print_abituguru },
+ 	{ "k8temp", print_k8temp },
 	{ NULL, NULL }
 };
 

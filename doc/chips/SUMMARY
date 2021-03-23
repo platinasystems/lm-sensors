@@ -9,7 +9,7 @@ directory.
 To determine what chips you have in your system, run 'sensors-detect'.
 
 If your sensor chip is not detected by sensors-detect, please contact us
-(see http://secure.netroedge.com/~lm78/author.html). Only contact us
+(see http://www.lm-sensors.org/wiki/AuthorsAndContributors). Only contact us
 if you know for sure that your system includes a sensor chip (for
 example if you have technical documentation mentioning it, or if the
 BIOS setup screen presents monitoring values, or if you can get
@@ -144,6 +144,7 @@ lm80
 
 lm83
 	lm83		4	-	-	-	yes	no
+	lm82		2	-	-	-	yes	no
 
 lm85
 	lm85		3	5	4	3 pwm	yes	no
@@ -228,7 +229,7 @@ via686a
 	vt8231		3	5	2	-	no	yes
 
 vt1211
-	vt1211		2-7	2-7	2	2	no	yes (LPC)
+	vt1211		2-7	1-6	2	2	no	yes (LPC)
 
 vt8231
 	vt8231		2-7	2-7	2	2	no	yes
@@ -319,6 +320,7 @@ This may help identify a chip after doing a 'i2cdump [bus] [address]'.
 0x00	National (on LM84)
 0x01	National
 0x12C3	Asus (at 0x4F)
+0x1934	Fintek (at 0x5D-0x5E)
 0x23	Analog Devices
 0x41	Analog Devices (also at 0x16)
 0x49	TI

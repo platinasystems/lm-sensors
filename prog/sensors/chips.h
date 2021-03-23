@@ -42,6 +42,7 @@ extern void print_lm80(const sensors_chip_name *name);
 extern void print_lm85(const sensors_chip_name *name);
 extern void print_w83781d(const sensors_chip_name *name);
 extern void print_w83792d(const sensors_chip_name *name);
+extern void print_w83793(const sensors_chip_name *name);
 extern void print_w83l785ts(const sensors_chip_name *name);
 extern void print_w83627ehf(const sensors_chip_name *name);
 extern void print_maxilife(const sensors_chip_name *name);
@@ -55,6 +56,7 @@ extern void print_fscher(const sensors_chip_name *name);
 extern void print_pcf8591(const sensors_chip_name *name);
 extern void print_vt1211(const sensors_chip_name *name);
 extern void print_smsc47m1(const sensors_chip_name *name);
+extern void print_smsc47m192(const sensors_chip_name *name);
 extern void print_pc87360(const sensors_chip_name *name);
 extern void print_pc87364(const sensors_chip_name *name);
 extern void print_pc87366(const sensors_chip_name *name);
@@ -71,5 +73,7 @@ extern void print_max6650(const sensors_chip_name *name);
 extern void print_adm1031(const sensors_chip_name *name);
 extern void print_smsc47b397(const sensors_chip_name *name);
 extern void print_f71805f(const sensors_chip_name *name);
+extern void print_abituguru(const sensors_chip_name *name);
+extern void print_k8temp(const sensors_chip_name *name);
 
 #endif /* def PROG_SENSORS_CHIPS_H */

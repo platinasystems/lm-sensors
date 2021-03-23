@@ -22,7 +22,8 @@
 /*
    Supports:
 	Intel PIIX4, 440MX
-	Serverworks OSB4, CSB5, CSB6
+	Serverworks OSB4, CSB5, CSB6, HT-1000
+	ATI IXP200, IXP300, IXP400
 	SMSC Victory66
 
    Note: we assume there can only be one device, with one SMBus interface.
@@ -102,11 +103,6 @@ MODULE_PARM_DESC(force_addr,
 		 "Forcibly enable the PIIX4 at the given address. "
 		 "EXTREMELY DANGEROUS!");
 
-static int fix_hstcfg = 0;
-MODULE_PARM(fix_hstcfg, "i");
-MODULE_PARM_DESC(fix_hstcfg,
-		 "Fix config register. Needed on some boards (Force CPCI735).");
-
 static int piix4_transaction(void);
 
 static unsigned short piix4_smba = 0;
@@ -141,7 +137,7 @@ static int __devinit piix4_setup(struct pci_dev *PIIX4_dev,
 
 #ifdef CONFIG_X86
 	if(ibm_dmi_probe() && PIIX4_dev->vendor == PCI_VENDOR_ID_INTEL) {
-		printk(KERN_ERR "i2c-piix4.o: IBM Laptop detected; this module "
+		printk(KERN_ERR "i2c-piix4.o: IBM system detected; this module "
 			"may corrupt your serial eeprom! Refusing to load "
 			"module!\n");
 		return -EPERM;
@@ -170,22 +166,6 @@ static int __devinit piix4_setup(struct pci_dev *PIIX4_dev,
 	}
 
 	pci_read_config_byte(PIIX4_dev, SMBHSTCFG, &temp);
-
-	/* Some BIOS will set up the chipset incorrectly and leave a register
-	   in an undefined state (causing I2C to act very strangely). */
-	if (temp & 0x02) {
-		if (fix_hstcfg) {
-			printk(KERN_INFO "i2c-piix4.o: Working around buggy "
-				"BIOS (I2C)\n");
-			temp &= 0xfd;
-			pci_write_config_byte(PIIX4_dev, SMBHSTCFG, temp);
-		} else {
-			printk(KERN_INFO "i2c-piix4.o: Unusual config register "
-				"value\n");
-			printk(KERN_INFO "i2c-piix4.o: Try using fix_hstcfg=1 "
-				"if you experience problems\n");
-		}
-	}
 
 	/* If force_addr is set, we program the new address here. Just to make
 	   sure, we disable the PIIX4 first. */
@@ -219,7 +199,7 @@ static int __devinit piix4_setup(struct pci_dev *PIIX4_dev,
 	}
 
 #ifdef DEBUG
-	if ((temp & 0x0E) == 8)
+	if (((temp & 0x0E) == 8) || ((temp & 0x0E) == 2))
 		printk(KERN_DEBUG "i2c-piix4.o: Using Interrupt 9 for "
 			"SMBus.\n");
 	else if ((temp & 0x0E) == 0)
@@ -455,9 +435,15 @@ static struct i2c_adapter piix4_adapter = {
 	.dec_use	= piix4_dec,
 };
 
+#define PCI_DEVICE_ID_ATI_IXP200_SMBUS	0x4353
+#define PCI_DEVICE_ID_ATI_IXP300_SMBUS	0x4363
+#define PCI_DEVICE_ID_ATI_IXP400_SMBUS	0x4372
+
 #ifndef PCI_DEVICE_ID_SERVERWORKS_CSB6
 #define PCI_DEVICE_ID_SERVERWORKS_CSB6 0x0203
 #endif
+
+#define PCI_DEVICE_ID_SERVERWORKS_HT1000SB 0x0205
 
 static struct pci_device_id piix4_ids[] __devinitdata = {
 	{
@@ -466,6 +452,27 @@ static struct pci_device_id piix4_ids[] __devinitdata = {
 		.subvendor =	PCI_ANY_ID,
 		.subdevice =	PCI_ANY_ID,
 		.driver_data =	3
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_ATI,
+		.device =	PCI_DEVICE_ID_ATI_IXP200_SMBUS,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+		.driver_data =	0,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_ATI,
+		.device =	PCI_DEVICE_ID_ATI_IXP300_SMBUS,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+		.driver_data =	0,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_ATI,
+		.device =	PCI_DEVICE_ID_ATI_IXP400_SMBUS,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+		.driver_data =	0,
 	},
 	{
 		.vendor =	PCI_VENDOR_ID_SERVERWORKS,
@@ -484,6 +491,13 @@ static struct pci_device_id piix4_ids[] __devinitdata = {
 	{
 		.vendor =	PCI_VENDOR_ID_SERVERWORKS,
 		.device =	PCI_DEVICE_ID_SERVERWORKS_CSB6,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+		.driver_data =	0,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_SERVERWORKS,
+		.device =	PCI_DEVICE_ID_SERVERWORKS_HT1000SB,
 		.subvendor =	PCI_ANY_ID,
 		.subdevice =	PCI_ANY_ID,
 		.driver_data =	0,

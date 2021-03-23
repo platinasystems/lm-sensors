@@ -1,9 +1,36 @@
 LM_SENSORS QUICK INSTALLATION INSTRUCTIONS
 ------------------------------------------
 
-NOTE: PLEASE SKIM THE INSTALL DOCUMENT, OR BETTER YET READ IT CAREFULLY!
 The instructions in this document will generally work if you have a standard
 system, but not always!!
+
+The first part of document is for 2.6 kernel series, second part is for
+older 2.4 kernels.
+
+Quickstart for Kernel 2.6 
+-------------------------
+
+0) Just compile and install lm-sensors userspace tools. You can do that with:
+   'make user; make user_install'
+1) Make sure your kernel has support for all I2C bus drivers and
+   'i2c device interface'. If you are using a distribution kernel, all is
+   already prepared, you don't need to recompile it.
+2) Run 'sensors-detect' command, it will tell you what modules you need to load.
+3) Load them and run 'sensors' command, you should see some results.
+4) Find right section in /etc/sensors.conf, fix labels, limits, fan divisors
+5) Run 'sensors -s' to apply the changes.
+
+You may also try our installation wizard at:
+
+http://www.lm-sensors.org/wiki/iwizard/1
+
+We are aware that the documentation could be improved, please contact us if
+you want to help us with that.
+   
+Quickstart for Kernel 2.4
+-------------------------
+
+NOTE: PLEASE SKIM THE INSTALL DOCUMENT, OR BETTER YET READ IT CAREFULLY!
 
 Quickstart for i2c option 1 (modules) and lm_sensors option 1 (modules).
 This is by far the EASIEST METHOD.
@@ -11,12 +38,9 @@ Other methods are described in INSTALL.
 ------------------------------------------
 
   * Verify you are running a 2.4 kernel, 2.4.10 or later.
-    If you are running a 2.5/2.6 kernel, the ONLY thing you need to
-    do is 'make user' and 'make user_install'. Do NOT follow the rest
-    of these instructions.
 
   * Make sure you have the kernel tree corresponding to your current
-    kernel in /lib/modules/(uname -r)/build.
+    kernel in /lib/modules/$(uname -r)/build.
     Even if the source is there, it may not correspond to your running
     kernel. If so, you will have to recompile your kernel.
 
@@ -30,33 +54,22 @@ Other methods are described in INSTALL.
   * Download, build, and install the latest i2c package,
     (i2c-2.9.0 or later). The i2c subsystem found in the Linux 2.4
     kernel trees, even the latest ones, is outdated and won't work.
-    Quickstart for i2c: make; make install; depmod -a
+    Quickstart for i2c: make; (as root) make install
 
   * Go back to the lm_sensors directory. Do `make'.
     The warnings about .d files at the start are harmless.
-    If you have compile problems, you probably should not have skipped step 3.
-    Go back and install the latest i2c package.
-    If you still have compile problems, you probably should not
-    have skipped the i2c step above.
 
   * Do (as root) `make install'.
 
-  * Do (as root) `depmod -a'.
-
   * Verify that /usr/local/lib is listed in /etc/ld.so.conf;
-    add it if it isn't.
-
-  * Do (as root) `ldconfig'.
+    if it isn't, add it, then run (as root) `ldconfig'.
 
   * Run (as root) `prog/mkdev/mkdev.sh' to create the device files,
-    unless you already have them or are running devfs.
+    unless you already have them or are running devfs or udev.
 
   * Run (as root) `prog/detect/sensors-detect' to detect your hardware,
-    put the lines it suggests into /etc/modules.conf
-    and enter the modprobe lines sensors-detect suggests.
-    Add the line `sensors -s' after the modprobe lines.
-
-  * Reboot, or else type in the modprobe lines and `sensors -s'.
+    put the lines it suggests into /etc/modules.conf, and run all
+    the commands it suggests (`modprobe X', `sensors -s').
 
   * Run `sensors' to see your output.
 

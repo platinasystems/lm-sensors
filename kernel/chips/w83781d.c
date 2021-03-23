@@ -108,11 +108,21 @@ MODULE_PARM_DESC(init, "Set to zero to bypass chip initialization");
 #define W83781D_REG_BANK 0x4E
 
 #define W83781D_REG_CONFIG 0x40
+
+/* Interrupt status (W83781D, AS99127F) */
 #define W83781D_REG_ALARM1 0x41
 #define W83781D_REG_ALARM2 0x42
-#define W83781D_REG_ALARM3 0x450	/* not on W83781D */
 
-#define W83781D_REG_IRQ 0x4C
+/* Real-time status (W83782D, W83783S, W83627HF) */
+#define W83782D_REG_ALARM1 0x459
+#define W83782D_REG_ALARM2 0x45A
+#define W83782D_REG_ALARM3 0x45B
+
+/* Real-time status (W83791D) */
+#define W83791D_REG_ALARM1 0xA9
+#define W83791D_REG_ALARM2 0xAA
+#define W83791D_REG_ALARM3 0xAB
+
 #define W83781D_REG_BEEP_CONFIG 0x4D
 #define W83781D_REG_BEEP_INTS1 0x56
 #define W83781D_REG_BEEP_INTS2 0x57
@@ -125,7 +135,7 @@ MODULE_PARM_DESC(init, "Set to zero to bypass chip initialization");
 #define W83781D_REG_CHIPMAN 0x4F
 #define W83781D_REG_PIN 0x4B
 
-/* 782D/783S only */
+/* 782D/783S/791D only */
 #define W83781D_REG_VBAT 0x5D
 
 /* PWM 782D (1-4) and 783S (1-2) only */
@@ -377,14 +387,24 @@ static struct i2c_driver w83781d_driver = {
 #define W83781D_ALARM_IN6 0x0400
 #define W83782D_ALARM_IN7 0x10000
 #define W83782D_ALARM_IN8 0x20000
+#define W83791D_ALARM_IN7 0x080000	/* 791D only */
+#define W83791D_ALARM_IN8 0x100000	/* 791D only */
+#define W83791D_ALARM_IN9 0x004000	/* 791D only */
 #define W83781D_ALARM_FAN1 0x0040
 #define W83781D_ALARM_FAN2 0x0080
 #define W83781D_ALARM_FAN3 0x0800
+#define W83791D_ALARM_FAN4 0x200000	/* 791D only */
+#define W83791D_ALARM_FAN5 0x400000	/* 791D only */
 #define W83781D_ALARM_TEMP1 0x0010
 #define W83781D_ALARM_TEMP23 0x0020	/* 781D only */
-#define W83781D_ALARM_TEMP2 0x0020	/* 782D/783S */
-#define W83781D_ALARM_TEMP3 0x2000	/* 782D only */
-#define W83781D_ALARM_CHAS 0x1000
+#define W83781D_ALARM_TEMP2 0x0020	/* 782D/783S/791D */
+#define W83781D_ALARM_TEMP3 0x2000	/* 782D/791D */
+#define W83781D_ALARM_CHAS 0x1000	/* 782D/791D */
+
+#define W83791D_BEEP_IN1 0x002000	/* 791D only */
+#define W83791D_BEEP_IN7 0x010000	/* 791D only */
+#define W83791D_BEEP_IN8 0x020000	/* 791D only */
+#define W83791D_BEEP_TEMP3 0x000002	/* 791D only */
 
 /* -- SENSORS SYSCTL END -- */
 
@@ -1269,14 +1289,6 @@ static void w83781d_init_client(struct i2c_client *client)
 			w83781d_write_value(client, W83781D_REG_TEMP3_CONFIG,
 					    0x00);
 		}
-		if (type != w83781d) {
-			/* enable comparator mode for temp2 and temp3 so
-		           alarm indication will work correctly */
-			i = w83781d_read_value(client, W83781D_REG_IRQ);
-			if (!(i & 0x40))
-				w83781d_write_value(client, W83781D_REG_IRQ,
-						    i | 0x40);
-		}
 	}
 
 	/* Start monitoring */
@@ -1386,15 +1398,36 @@ static void w83781d_update_client(struct i2c_client *client)
                        data->fan_div[1] |= (i >> 4) & 0x04;
                        data->fan_div[2] |= (i >> 5) & 0x04;
                }
-               data->alarms =
-                   w83781d_read_value(client,
-                                      W83781D_REG_ALARM1) +
-                   (w83781d_read_value(client, W83781D_REG_ALARM2) << 8);
-               if ((data->type == w83782d) || (data->type == w83627hf)) {
-                       data->alarms |=
-                           w83781d_read_value(client,
-                                              W83781D_REG_ALARM3) << 16;
-               }
+
+		if ((data->type == w83782d) || (data->type == w83627hf)) {
+			data->alarms = w83781d_read_value(client,
+						W83782D_REG_ALARM1)
+				     | (w83781d_read_value(client,
+						W83782D_REG_ALARM2) << 8)
+				     | (w83781d_read_value(client,
+						W83782D_REG_ALARM3) << 16);
+		} else if (data->type == w83783s) {
+			/* Only two real-time status registers */
+			data->alarms = w83781d_read_value(client,
+						W83782D_REG_ALARM1)
+				     | (w83781d_read_value(client,
+						W83782D_REG_ALARM2) << 8);
+		} else if (data->type == w83791d) {
+			data->alarms = w83781d_read_value(client,
+						W83791D_REG_ALARM1)
+				     | (w83781d_read_value(client,
+						W83791D_REG_ALARM2) << 8)
+				     | (w83781d_read_value(client,
+						W83791D_REG_ALARM3) << 16);
+		} else {
+			/* No real-time status registers, fall back to
+			   interrupt status registers */
+			data->alarms = w83781d_read_value(client,
+						W83781D_REG_ALARM1)
+				     | (w83781d_read_value(client,
+						W83781D_REG_ALARM2) << 8);
+		}
+
                i = w83781d_read_value(client, W83781D_REG_BEEP_INTS2);
                data->beep_enable = i >> 7;
                data->beeps = ((i & 0x7f) << 8) +

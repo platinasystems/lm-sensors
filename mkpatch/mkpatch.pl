@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 #    mkpatch - Create patches against the Linux kernel
 #    Copyright (C) 1999  Frodo Looijaard <frodol@dds.nl>
@@ -153,7 +153,7 @@ CONFIG_I2C_MAINBOARD
 
   You will also want the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Acer Labs ALI 1535
 CONFIG_I2C_ALI1535
@@ -220,19 +220,20 @@ CONFIG_I2C_I810
   This can also be built as a module which can be inserted and removed
   while the kernel is running.
 
-Intel 82371AB PIIX4(E) / ServerWorks OSB4 and CSB5
+Intel 82371AB PIIX4(E), ServerWorks OSB4, CSB5, CSB6, HT-1000
 CONFIG_I2C_PIIX4
   If you say yes to this option, support will be included for the
-  Intel PIIX4, PIIX4E, and 443MX, Serverworks OSB4/CSB5,
-  and SMSC Victory66 mainboard
-  I2C interfaces. This can also be
-  built as a module which can be inserted and removed while the kernel
-  is running.
+  Intel PIIX4, PIIX4E, 443MX, Serverworks OSB4, CSB5, CSB6 and
+  HT-1000, ATI IXP200, IXP300 and IXP400, and SMSC Victory66 mainboard
+  I2C interfaces. This can also be built as a module which can be
+  inserted and removed while the kernel is running.
 
-Nvidia Nforce2/Nforce3 based Mainboard
+Nvidia Nforce2/3/4 based Mainboard
 CONFIG_I2C_NFORCE2
   If you say yes to this option, support will be included for the
-  Nvidia Nforce2 and Nforce3 families of mainboard I2C interfaces.
+  Nvidia Nforce2, Nforce3 and Nforce4 families of mainboard SMBus
+  interfaces.
+  
   This can also be built as a module which can be inserted and removed
   while the kernel is running.
 
@@ -263,7 +264,7 @@ CONFIG_I2C_VIA
   be built as a module which can be inserted and removed while the
   kernel is running.
 
-VIA Technologies, Inc. VT82C596, 596B, 686A/B, 8233, 8235
+VIA Technologies, Inc. VT82C596, 596B, 686A/B, 8233, 8235, 8237R/A, 8251
 CONFIG_I2C_VIAPRO
   If you say yes to this option, support will be included for the VIA
   Technologies I2C adapter on these chips. For integrated sensors on the
@@ -296,7 +297,7 @@ CONFIG_I2C_ISA
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Analog Devices ADM1021 and compatibles
 CONFIG_SENSORS_ADM1021
@@ -308,7 +309,7 @@ CONFIG_SENSORS_ADM1021
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Analog Devices ADM1024
 CONFIG_SENSORS_ADM1024
@@ -317,7 +318,7 @@ CONFIG_SENSORS_ADM1024
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Analog Devices ADM1025
 CONFIG_SENSORS_ADM1025
@@ -327,7 +328,7 @@ CONFIG_SENSORS_ADM1025
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Analog Devices ADM1026
 CONFIG_SENSORS_ADM1026
@@ -337,7 +338,7 @@ CONFIG_SENSORS_ADM1026
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Analog Devices ADM1030, ADM1031
 CONFIG_SENSORS_ADM1031
@@ -347,7 +348,7 @@ CONFIG_SENSORS_ADM1031
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Analog Devices ADM9240 and compatibles
 CONFIG_SENSORS_ADM9240
@@ -359,7 +360,7 @@ CONFIG_SENSORS_ADM9240
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Asus ASB100
 CONFIG_SENSORS_ASB100
@@ -368,7 +369,7 @@ CONFIG_SENSORS_ASB100
 
   You will also need the latest user-space utilities: you can find
   them in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Dallas DS1621 and DS1625
 CONFIG_SENSORS_DS1621
@@ -377,7 +378,7 @@ CONFIG_SENSORS_DS1621
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Fintek F71805F
 CONFIG_SENSORS_F71805F
@@ -387,7 +388,7 @@ CONFIG_SENSORS_F71805F
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Fujitsu-Siemens Hermes
 CONFIG_SENSORS_FSCHER
@@ -396,7 +397,7 @@ CONFIG_SENSORS_FSCHER
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Fujitsu-Siemens Poseidon
 CONFIG_SENSORS_FSCPOS
@@ -405,7 +406,7 @@ CONFIG_SENSORS_FSCPOS
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Fujitsu-Siemens Scylla
 CONFIG_SENSORS_FSCSCY
@@ -418,7 +419,7 @@ CONFIG_SENSORS_FSCSCY
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Genesys Logic GL518SM
 CONFIG_SENSORS_GL518SM
@@ -428,7 +429,7 @@ CONFIG_SENSORS_GL518SM
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Genesys Logic GL520SM
 CONFIG_SENSORS_GL520SM
@@ -438,7 +439,7 @@ CONFIG_SENSORS_GL520SM
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 HP Maxilife
 CONFIG_SENSORS_MAXILIFE
@@ -447,7 +448,7 @@ CONFIG_SENSORS_MAXILIFE
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Intel Xeon Thermal Sensor
 CONFIG_SENSORS_XEONTEMP
@@ -457,7 +458,7 @@ CONFIG_SENSORS_XEONTEMP
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 ITE 8705, 8712, Sis950
 CONFIG_SENSORS_IT87
@@ -466,7 +467,7 @@ CONFIG_SENSORS_IT87
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Maxim MAX1619
 CONFIG_SENSORS_MAX1619
@@ -475,7 +476,7 @@ CONFIG_SENSORS_MAX1619
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Maxim MAX6650, MAX6651
 CONFIG_SENSORS_MAX6650
@@ -484,7 +485,7 @@ CONFIG_SENSORS_MAX6650
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Myson MTP008
 CONFIG_SENSORS_MTP008
@@ -493,7 +494,7 @@ CONFIG_SENSORS_MTP008
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM63
 CONFIG_SENSORS_LM63
@@ -503,7 +504,7 @@ CONFIG_SENSORS_LM63
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM75 and compatibles
 CONFIG_SENSORS_LM75
@@ -515,7 +516,7 @@ CONFIG_SENSORS_LM75
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM78
 CONFIG_SENSORS_LM78
@@ -527,7 +528,7 @@ CONFIG_SENSORS_LM78
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM80
 CONFIG_SENSORS_LM80
@@ -537,16 +538,16 @@ CONFIG_SENSORS_LM80
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
-National Semiconductor LM83
+National Semiconductor LM83 and compatibles
 CONFIG_SENSORS_LM83
   If you say yes here you get support for the National Semiconductor
-  LM83 sensor chip.  This can also be built as a module.
+  LM82 and LM83 sensor chips.  This can also be built as a module.
 
   You will also need the latest user-space utilities: you can find
   them in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM85
 CONFIG_SENSORS_LM85
@@ -558,7 +559,7 @@ CONFIG_SENSORS_LM85
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM87
 CONFIG_SENSORS_LM87
@@ -568,7 +569,7 @@ CONFIG_SENSORS_LM87
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM90
 CONFIG_SENSORS_LM90
@@ -578,7 +579,7 @@ CONFIG_SENSORS_LM90
 
   You will also need the latest user-space utilities: you can find
   them in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM92
 CONFIG_SENSORS_LM92
@@ -588,7 +589,7 @@ CONFIG_SENSORS_LM92
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor LM93
 CONFIG_SENSORS_LM93
@@ -598,7 +599,7 @@ CONFIG_SENSORS_LM93
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 National Semiconductor PC8736x Sensors
 CONFIG_SENSORS_PC87360
@@ -610,7 +611,7 @@ CONFIG_SENSORS_PC87360
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Philips PCF8574
 CONFIG_SENSORS_PCF8574
@@ -621,7 +622,7 @@ CONFIG_SENSORS_PCF8574
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Philips PCF8591
 CONFIG_SENSORS_PCF8591
@@ -632,7 +633,7 @@ CONFIG_SENSORS_PCF8591
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Silicon Integrated Systems Corp. SiS5595 Sensor
 CONFIG_SENSORS_SIS5595
@@ -642,7 +643,7 @@ CONFIG_SENSORS_SIS5595
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 SMSC47M1xx Super I/O Fan Support
 CONFIG_SENSORS_SMSC47M1
@@ -653,7 +654,7 @@ CONFIG_SENSORS_SMSC47M1
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Texas Instruments THMC50 / Analog Devices ADM1022
 CONFIG_SENSORS_THMC50
@@ -664,7 +665,7 @@ CONFIG_SENSORS_THMC50
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Via VT82C686A/B
 CONFIG_SENSORS_VIA686A
@@ -674,7 +675,7 @@ CONFIG_SENSORS_VIA686A
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Via VT1211 Sensors
 CONFIG_SENSORS_VT1211
@@ -684,7 +685,7 @@ CONFIG_SENSORS_VT1211
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Via VT8231 Sensors
 CONFIG_SENSORS_VT8231
@@ -694,7 +695,7 @@ CONFIG_SENSORS_VT8231
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Winbond W83781D, W83782D, W83783S, W83627HF, AS99127F
 CONFIG_SENSORS_W83781D
@@ -705,7 +706,7 @@ CONFIG_SENSORS_W83781D
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Winbond W83792D
 CONFIG_SENSORS_W83792D
@@ -714,7 +715,7 @@ CONFIG_SENSORS_W83792D
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Winbond W83627HF, W83627THF, W83637HF, W83687THF, W83697HF
 CONFIG_SENSORS_W83627HF
@@ -725,7 +726,7 @@ CONFIG_SENSORS_W83627HF
 
   You will also need the latest user-space utilities: you can find
   them in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 Winbond W83L785TS-S
 CONFIG_SENSORS_W83L785TS
@@ -734,7 +735,7 @@ CONFIG_SENSORS_W83L785TS
 
   You will also need the latest user-space utilities: you can find
   them in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 EEprom (DIMM) reader
 CONFIG_SENSORS_EEPROM
@@ -746,7 +747,7 @@ CONFIG_SENSORS_EEPROM
 
   You will also need the latest user-space utilities: you can find them
   in the lm_sensors package, which you can download at
-  http://www.lm-sensors.nu/
+  http://www.lm-sensors.org/
 
 EOF
     }
@@ -815,7 +816,7 @@ EOF
   close INPUT;
   close OUTPUT;
   die "Automatic patch generation for main `Makefile' failed.\n".
-      "See our home page http://www.lm-sensors.nu/ for assistance!" if $pr1 == 0;
+      "See our home page http://www.lm-sensors.org/ for assistance!" if $pr1 == 0;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
@@ -893,7 +894,7 @@ EOF
   close INPUT;
   close OUTPUT;
   die "Automatic patch generation for `drivers/Makefile' failed.\n".
-      "See our home page http://www.lm-sensors.nu/ for assistance!" if $pr1 == 0 or $pr2 == 0;
+      "See our home page http://www.lm-sensors.org/ for assistance!" if $pr1 == 0 or $pr2 == 0;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
@@ -932,7 +933,7 @@ sub gen_drivers_char_Config_in
   close INPUT;
   close OUTPUT;
   die "Automatic patch generation for `drivers/char/Config.in' failed.\n".
-      "See our home page http://www.lm-sensors.nu/ for assistance!" if $pr1 == 0;
+      "See our home page http://www.lm-sensors.org/ for assistance!" if $pr1 == 0;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
@@ -975,16 +976,16 @@ sub gen_drivers_i2c_Config_in
     if [ "$CONFIG_ALPHA" = "y" ]; then
       dep_tristate '  DEC Tsunami I2C interface' CONFIG_I2C_TSUNAMI $CONFIG_I2C_ALGOBIT
     fi
-    dep_tristate '  Intel 82801AA, AB, BA, DB' CONFIG_I2C_I801 $CONFIG_I2C
+    dep_tristate '  Intel 82801 (ICH) and ESB' CONFIG_I2C_I801 $CONFIG_I2C
     dep_tristate '  Intel i810AA/AB/E and i815' CONFIG_I2C_I810 $CONFIG_I2C_ALGOBIT
     dep_tristate '  Intel 82371AB PIIX4(E), 443MX, ServerWorks OSB4/CSB5, SMSC Victory66' CONFIG_I2C_PIIX4 $CONFIG_I2C
-    dep_tristate '  Nvidia Nforce2/Nforce3' CONFIG_I2C_NFORCE2 $CONFIG_I2C
+    dep_tristate '  Nvidia Nforce2/3/4' CONFIG_I2C_NFORCE2 $CONFIG_I2C
     dep_tristate '  SiS 5595' CONFIG_I2C_SIS5595 $CONFIG_I2C
     dep_tristate '  SiS 630/730' CONFIG_I2C_SIS630 $CONFIG_I2C
     dep_tristate '  SiS 645/961,645DX/961,735' CONFIG_I2C_SIS645 $CONFIG_I2C $CONFIG_HOTPLUG
     dep_tristate '  Savage 4' CONFIG_I2C_SAVAGE4 $CONFIG_I2C_ALGOBIT
     dep_tristate '  VIA Technologies, Inc. VT82C586B' CONFIG_I2C_VIA $CONFIG_I2C_ALGOBIT
-    dep_tristate '  VIA Technologies, Inc. VT596A/B, 686A/B, 8231, 8233, 8233A, 8235' CONFIG_I2C_VIAPRO $CONFIG_I2C
+    dep_tristate '  VIA Technologies, Inc. VT596A/B, 686A/B, 8231, 8233, 8233A, 8235, 8237R/A, 8251' CONFIG_I2C_VIAPRO $CONFIG_I2C
     dep_tristate '  Voodoo3 I2C interface' CONFIG_I2C_VOODOO3 $CONFIG_I2C_ALGOBIT
     dep_tristate '  Pseudo ISA adapter (for some hardware sensors)' CONFIG_I2C_ISA $CONFIG_I2C
   fi
@@ -996,7 +997,7 @@ EOF
   close INPUT;
   close OUTPUT;
   die "Automatic patch generation for `drivers/i2c/Config.in' failed.\n".
-      "See our home page http://www.lm-sensors.nu/ for assistance!" if $pr1 != 1;
+      "See our home page http://www.lm-sensors.org/ for assistance!" if $pr1 != 1;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
@@ -1027,7 +1028,7 @@ obj-$(CONFIG_SENSORS_BT869)	+= bt869.o
 obj-$(CONFIG_SENSORS_DDCMON)	+= ddcmon.o
 obj-$(CONFIG_SENSORS_DS1621)	+= ds1621.o
 obj-$(CONFIG_SENSORS_EEPROM)	+= eeprom.o
-obj-$(CONFIG_SENSORS_FSCHER)	+= f71085f.o
+obj-$(CONFIG_SENSORS_F71805F)	+= f71805f.o
 obj-$(CONFIG_SENSORS_FSCHER)	+= fscher.o
 obj-$(CONFIG_SENSORS_FSCPOS)	+= fscpos.o
 obj-$(CONFIG_SENSORS_FSCSCY)	+= fscscy.o
@@ -1124,7 +1125,7 @@ EOF
   close INPUT;
   close OUTPUT;
   die "Automatic patch generation for `drivers/i2c/Makefile' failed.\n".
-      "See our home page http://www.lm-sensors.nu/ for assistance!" if $pr1 != 1;
+      "See our home page http://www.lm-sensors.org/ for assistance!" if $pr1 != 1;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
@@ -1152,7 +1153,7 @@ sub gen_MAINTAINERS
       print OUTPUT <<'EOF';
 SENSORS DRIVERS
 L:      lm-sensors@lm-sensors.org
-W:      http://www.lm-sensors.nu/
+W:      http://www.lm-sensors.org/
 S:      Maintained
 
 EOF
@@ -1163,7 +1164,7 @@ EOF
   close INPUT;
   close OUTPUT;
   die "Automatic patch generation for `MAINTAINERS' failed.\n".
-      "See our home page http://www.lm-sensors.nu/ for assistance!" if $done == 0;
+      "See our home page http://www.lm-sensors.org/ for assistance!" if $done == 0;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
@@ -1220,7 +1221,7 @@ EOF
   close INPUT;
   close OUTPUT;
   die "Automatic patch generation for `$kernel_file' failed.\n".
-      "See our home page http://www.lm-sensors.nu/ for assistance!" if $done != 3;
+      "See our home page http://www.lm-sensors.org/ for assistance!" if $done != 3;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 
   $kernel_file = "arch/i386/kernel/i386_ksyms.c";
@@ -1244,10 +1245,16 @@ EOF
   close INPUT;
   close OUTPUT;
   die "Automatic patch generation for `$kernel_file' failed.\n".
-      "See our home page http://www.lm-sensors.nu/ for assistance!" if $done != 1;
+      "See our home page http://www.lm-sensors.org/ for assistance!" if $done != 1;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
+
+sub usage
+{
+  print "Usage: $0 package_root kernel_root\n";
+  exit 1;
+}
 
 # Main function
 sub main
@@ -1255,11 +1262,13 @@ sub main
   my ($package_root,$kernel_root,%files,%includes,$package_file,$kernel_file);
   my ($diff_command,$dummy,$data0,$data1,$sedscript,$version_string);
 
-  # --> Read the command-lineo
+  # --> Read the command-line
   $package_root = $ARGV[0];
+  usage() unless defined $package_root;
   die "Package root `$package_root' is not found\n"
         unless -d "$package_root/mkpatch";
   $kernel_root = $ARGV[1];
+  usage() unless defined $kernel_root;
   die "Kernel root `$kernel_root' is not found\n"
         unless -f "$kernel_root/Rules.make";
 
@@ -1278,7 +1287,7 @@ sub main
   while (<INPUT>) {
     ($data0,$data1) = /(\S+)\s+(\S+)/;
     $includes{$data0} = $data1;
-    $sedscript .= 's,(#\s*include\s*)'.$data0.'(\s*),\1'."$data1".'\2, ; ';
+    $sedscript .= 's,(#\s*include\s*)'.$data0.'(\s*),$1'."$data1".'$2, ; ';
   }
   close INPUT;
 
