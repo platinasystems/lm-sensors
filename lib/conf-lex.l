@@ -3,19 +3,20 @@
     conf-lex.l - Part of libsensors, a Linux library for reading sensor data.
     Copyright (c) 1998, 1999  Frodo Looijaard <frodol@dds.nl> 
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA 02110-1301 USA.
 */
 
 #include <stdlib.h>
@@ -33,6 +34,7 @@ static char *buffer;
 
 char sensors_lex_error[100];
 
+const char *sensors_yyfilename;
 int sensors_yylineno;
 
 #define buffer_malloc() sensors_malloc_array(&buffer,&buffer_count,\
@@ -74,10 +76,6 @@ FLOAT   [[:digit:]]*\.?[[:digit:]]+
 
 NUM	0|([1-9][[:digit:]]*)
 
- /* Only number between 1 and 255, octally represented. */
-
-OCTESC		(1[0-7]{0,2})|([2-7][0-7]?)|(0[1-7][0-7]?)|(00[1-7])
-
 
 %%
 
@@ -113,37 +111,43 @@ OCTESC		(1[0-7]{0,2})|([2-7][0-7]?)|(0[1-7][0-7]?)|(00[1-7])
   */
 
 label{BLANK}*	{
-		  sensors_yylval.line = sensors_yylineno;
+		  sensors_yylval.line.filename = sensors_yyfilename;
+		  sensors_yylval.line.lineno = sensors_yylineno;
 		  BEGIN(MIDDLE);
 		  return LABEL;
 		}
 
 set{BLANK}*	{
-		  sensors_yylval.line = sensors_yylineno;
+		  sensors_yylval.line.filename = sensors_yyfilename;
+		  sensors_yylval.line.lineno = sensors_yylineno;
 		  BEGIN(MIDDLE);
 		  return SET;
 		}
 
 compute{BLANK}*	{
-		  sensors_yylval.line = sensors_yylineno;
+		  sensors_yylval.line.filename = sensors_yyfilename;
+		  sensors_yylval.line.lineno = sensors_yylineno;
 		  BEGIN(MIDDLE);
 		  return COMPUTE;
 		}
 
 bus{BLANK}*	{
-		  sensors_yylval.line = sensors_yylineno;
+		  sensors_yylval.line.filename = sensors_yyfilename;
+		  sensors_yylval.line.lineno = sensors_yylineno;
 		  BEGIN(MIDDLE);
 		  return BUS;
 		}
 
 chip{BLANK}*	{
-		  sensors_yylval.line = sensors_yylineno;
+		  sensors_yylval.line.filename = sensors_yyfilename;
+		  sensors_yylval.line.lineno = sensors_yylineno;
 		  BEGIN(MIDDLE);
 		  return CHIP;
 		}
 
 ignore{BLANK}*	{
-		  sensors_yylval.line = sensors_yylineno;
+		  sensors_yylval.line.filename = sensors_yyfilename;
+		  sensors_yylval.line.lineno = sensors_yylineno;
 		  BEGIN(MIDDLE);
 		  return IGNORE;
 		}
@@ -311,24 +315,10 @@ ignore{BLANK}*	{
 \\t		buffer_add_char("\t");
 \\v		buffer_add_char("\v");
 
- /* We can't support \0, this would cause havoc! */
-
-\\{OCTESC}	{
-		  int res;
-		  sscanf(sensors_yytext+1,"%o",&res);
-		  buffer_add_char(&res);
-		}
-
  /* Other escapes: just copy the character behind the slash */
 
 \\.		{
 		  buffer_add_char(&sensors_yytext[1]);
-		}
-
- /* This prevents backing up; it is otherwise purely redundant */
-
-\\00		{
-		  buffer_add_char("00");
 		}
 
  /* Anything else (including a bare '\' which may be followed by EOF) */
@@ -352,13 +342,14 @@ ignore{BLANK}*	{
 
 static YY_BUFFER_STATE scan_buf = (YY_BUFFER_STATE)0;
 
-int sensors_scanner_init(FILE *input)
+int sensors_scanner_init(FILE *input, const char *filename)
 {
 	BEGIN(0);
 	if (!(scan_buf = sensors_yy_create_buffer(input, YY_BUF_SIZE)))
 		return -1;
 
 	sensors_yy_switch_to_buffer(scan_buf);
+	sensors_yyfilename = filename;
 	sensors_yylineno = 1;
 	return 0;
 }
@@ -367,5 +358,15 @@ void sensors_scanner_exit(void)
 {
 	sensors_yy_delete_buffer(scan_buf);
 	scan_buf = (YY_BUFFER_STATE)0;
+
+/* As of flex 2.5.9, yylex_destroy() must be called when done with the
+   scaller, otherwise we'll leak memory. */
+#if defined(YY_FLEX_MAJOR_VERSION) && defined(YY_FLEX_MINOR_VERSION) && defined(YY_FLEX_SUBMINOR_VERSION)
+#if YY_FLEX_MAJOR_VERSION > 2 || \
+    (YY_FLEX_MAJOR_VERSION == 2 && (YY_FLEX_MINOR_VERSION > 5 || \
+				    (YY_FLEX_MINOR_VERSION == 5 && YY_FLEX_SUBMINOR_VERSION >= 9)))
+	sensors_yylex_destroy();
+#endif
+#endif
 }
 

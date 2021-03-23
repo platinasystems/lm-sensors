@@ -1,7 +1,6 @@
 /*
-    superio: Handle special I/O operations needed by most Super-I/O chips
-
-    Copyright (C) 2005  Jean Delvare <khali@linux-fr.org>
+    main.h - Part of sensors, a user-space program for hardware monitoring
+    Copyright (C) 2007       Jean Delvare <khali@linux-fr.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,13 +18,10 @@
     MA 02110-1301 USA.
 */
 
-#ifndef _SUPERIO_H
-#define _SUPERIO_H
+#ifndef PROG_SENSORS_MAIN_H
+#define PROG_SENSORS_MAIN_H
 
-#define SUPERIO_MAX_KEY	8
+extern int fahrenheit;
+extern char degstr[5];
 
-int superio_parse_key(unsigned char *key, const char *s);
-void superio_write_key(int addrreg, unsigned char *key);
-void superio_reset(int addrreg, int datareg);
-
-#endif /* _SUPERIO_H */
+#endif /* PROG_SENSORS_MAIN_H */

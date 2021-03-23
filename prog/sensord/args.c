@@ -17,7 +17,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301 USA.
  */
 
 #include <stdio.h>
@@ -26,282 +27,248 @@
 #include <getopt.h>
 #include <syslog.h>
 
+#include "args.h"
 #include "sensord.h"
 #include "lib/error.h"
 #include "version.h"
 
-#define MAX_CHIP_NAMES 32
+struct sensord_arguments sensord_args = {
+ 	.pidFile = "/var/run/sensord.pid",
+ 	.scanTime = 60,
+ 	.logTime = 30 * 60,
+ 	.rrdTime = 5 * 60,
+ 	.syslogFacility = LOG_DAEMON,
+};
 
-int isDaemon = 0;
-const char *sensorsCfgFile = "sensors.conf";
-const char *pidFile = "/var/run/sensord.pid";
-const char *rrdFile = NULL;
-const char *cgiDir = NULL;
-int scanTime = 60;
-int logTime = 30 * 60;
-int rrdTime = 5 * 60;
-int rrdNoAverage = 0;
-int syslogFacility = LOG_LOCAL4;
-int doScan = 0;
-int doSet = 0;
-int doCGI = 0;
-int doLoad = 0;
-int debug = 0;
-sensors_chip_name chipNames[MAX_CHIP_NAMES];
-int numChipNames = 0;
-
-static int
-parseTime
-(char *arg) {
-  char *end;
-  int value = strtoul (arg, &end, 10);
-  if ((end > arg) && (*end == 's')) {
-    ++ end;
-  } else if ((end > arg) && (*end == 'm')) {
-    value *= 60;
-    ++ end;
-  } else if ((end > arg) && (*end == 'h')) {
-    value *= 60 * 60;
-    ++ end;
-  }
-  if ((end == arg) || *end) {
-    fprintf (stderr, "Error parsing time value `%s'.\n", arg);
-    return -1;
-  }
-  return value;
+static int parseTime(char *arg)
+{
+	char *end;
+	int value = strtoul(arg, &end, 10);
+	if ((end > arg) && (*end == 's')) {
+		++ end;
+	} else if ((end > arg) && (*end == 'm')) {
+		value *= 60;
+		++ end;
+	} else if ((end > arg) && (*end == 'h')) {
+		value *= 60 * 60;
+		++ end;
+	}
+	if ((end == arg) || *end) {
+		fprintf(stderr, "Error parsing time value `%s'.\n", arg);
+		return -1;
+	}
+	return value;
 }
 
 static struct {
-  const char *name;
-  int id;
+	const char *name;
+	int id;
 } facilities[] = {
-  { "local0", LOG_LOCAL0 }, { "local1", LOG_LOCAL1 },
-  { "local2", LOG_LOCAL2 }, { "local3", LOG_LOCAL3 },
-  { "local4", LOG_LOCAL4 }, { "local5", LOG_LOCAL5 },
-  { "local6", LOG_LOCAL6 }, { "local7", LOG_LOCAL7 },
-  { "daemon", LOG_DAEMON }, { "user", LOG_USER },
-  { NULL, 0 }
+	{ "local0", LOG_LOCAL0 },
+	{ "local1", LOG_LOCAL1 },
+	{ "local2", LOG_LOCAL2 },
+	{ "local3", LOG_LOCAL3 },
+	{ "local4", LOG_LOCAL4 },
+	{ "local5", LOG_LOCAL5 },
+	{ "local6", LOG_LOCAL6 },
+	{ "local7", LOG_LOCAL7 },
+	{ "daemon", LOG_DAEMON },
+	{ "user", LOG_USER },
+	{ NULL, 0 }
 };
 
-static int
-parseFacility
-(char *arg) {
-  int i = 0;
-  while (facilities[i].name && strcasecmp (arg, facilities[i].name))
-    ++ i;
-  if (!facilities[i].name) {
-    fprintf (stderr, "Error parsing facility value `%s'.\n", arg);
-    return -1;
-  }
-  return facilities[i].id;
+static int parseFacility(char *arg)
+{
+	int i = 0;
+	while (facilities[i].name && strcasecmp(arg, facilities[i].name))
+		++ i;
+	if (!facilities[i].name) {
+		fprintf(stderr, "Error parsing facility value `%s'.\n", arg);
+		return -1;
+	}
+	return facilities[i].id;
 }
 
 static const char *daemonSyntax =
-  "  -i, --interval <time>     -- interval between scanning alarms (default 60s)\n"
-  "  -l, --log-interval <time> -- interval between logging sensors (default 30m)\n"
-  "  -t, --rrd-interval <time> -- interval between updating RRD file (default 5m)\n"
-  "  -T, --rrd-no-average      -- switch RRD in non-average mode\n"
-  "  -r, --rrd-file <file>     -- RRD file (default <none>)\n"
-  "  -c, --config-file <file>  -- configuration file (default sensors.conf)\n"
-  "  -p, --pid-file <file>     -- PID file (default /var/run/sensord.pid)\n"
-  "  -f, --syslog-facility <f> -- syslog facility to use (default local4)\n"
-  "  -g, --rrd-cgi <img-dir>   -- output an RRD CGI script and exit\n"
-  "  -a, --load-average        -- include load average in RRD file\n"
-  "  -d, --debug               -- display some debug information\n"
-  "  -v, --version             -- display version and exit\n"
-  "  -h, --help                -- display help and exit\n"
-  "\n"
-  "Specify a value of 0 for any interval to disable that operation;\n"
-  "for example, specify --log-interval 0 to only scan for alarms."
-  "\n"
-  "If no path is specified, a list of directories is examined for the config file;\n"
-  "specify the filename `-' to read the config file from stdin.\n"
-  "\n"
-  "If no chips are specified, all chip info will be printed.\n"
-  "\n"
-  "If unspecified, no RRD (round robin database) is used. If specified and the\n"
-  "file does not exist, it will be created. For RRD updates to be successful,\n"
-  "the RRD file configuration must EXACTLY match the sensors that are used. If\n"
-  "your configuration changes, delete the old RRD file and restart sensord.\n";
+	"  -i, --interval <time>     -- interval between scanning alarms (default 60s)\n"
+	"  -l, --log-interval <time> -- interval between logging sensors (default 30m)\n"
+	"  -t, --rrd-interval <time> -- interval between updating RRD file (default 5m)\n"
+	"  -T, --rrd-no-average      -- switch RRD in non-average mode\n"
+	"  -r, --rrd-file <file>     -- RRD file (default <none>)\n"
+	"  -c, --config-file <file>  -- configuration file\n"
+	"  -p, --pid-file <file>     -- PID file (default /var/run/sensord.pid)\n"
+	"  -f, --syslog-facility <f> -- syslog facility to use (default local4)\n"
+	"  -g, --rrd-cgi <img-dir>   -- output an RRD CGI script and exit\n"
+	"  -a, --load-average        -- include load average in RRD file\n"
+	"  -d, --debug               -- display some debug information\n"
+	"  -v, --version             -- display version and exit\n"
+	"  -h, --help                -- display help and exit\n"
+	"\n"
+	"Specify a value of 0 for any interval to disable that operation;\n"
+	"for example, specify --log-interval 0 to only scan for alarms."
+	"\n"
+	"Specify the filename `-' to read the config file from stdin.\n"
+	"\n"
+	"If no chips are specified, all chip info will be printed.\n"
+	"\n"
+	"If unspecified, no RRD (round robin database) is used. If specified and the\n"
+	"file does not exist, it will be created. For RRD updates to be successful,\n"
+	"the RRD file configuration must EXACTLY match the sensors that are used. If\n"
+	"your configuration changes, delete the old RRD file and restart sensord.\n";
 
-static const char *appSyntax =
-  "  -a, --alarm-scan          -- only scan for alarms\n"
-  "  -s, --set                 -- execute set statements (root only)\n"
-  "  -r, --rrd-file <file>     -- only update RRD file\n"
-  "  -c, --config-file <file>  -- configuration file (default sensors.conf)\n"
-  "  -d, --debug               -- display some debug information\n"
-  "  -v, --version             -- display version and exit\n"
-  "  -h, --help                -- display help and exit\n"
-  "\n"
-  "If no path is specified, a list of directories is examined for the config file;\n"
-  "specify the filename `-' to read the config file from stdin.\n"
-  "\n"
-  "If no chips are specified, all chip info will be printed.\n";
+static const char *shortOptions = "i:l:t:Tf:r:c:p:advhg:";
 
-static const char *daemonShortOptions = "i:l:t:Tf:r:c:p:advhg:";
-
-static const struct option daemonLongOptions[] = {
-  { "interval", required_argument, NULL, 'i' },
-  { "log-interval", required_argument, NULL, 'l' },
-  { "rrd-interval", required_argument, NULL, 't' },
-  { "rrd-no-average", no_argument, NULL, 'T' },
-  { "syslog-facility", required_argument, NULL, 'f' },
-  { "rrd-file", required_argument, NULL, 'r' },
-  { "config-file", required_argument, NULL, 'c' },
-  { "pid-file", required_argument, NULL, 'p' },
-  { "rrd-cgi", required_argument, NULL, 'g' },
-  { "load-average", no_argument, NULL, 'a' },
-  { "debug", no_argument, NULL, 'd' },
-  { "version", no_argument, NULL, 'v' },
-  { "help", no_argument, NULL, 'h' },
-  { NULL, 0, NULL, 0 }
+static const struct option longOptions[] = {
+	{ "interval", required_argument, NULL, 'i' },
+	{ "log-interval", required_argument, NULL, 'l' },
+	{ "rrd-interval", required_argument, NULL, 't' },
+	{ "rrd-no-average", no_argument, NULL, 'T' },
+	{ "syslog-facility", required_argument, NULL, 'f' },
+	{ "rrd-file", required_argument, NULL, 'r' },
+	{ "config-file", required_argument, NULL, 'c' },
+	{ "pid-file", required_argument, NULL, 'p' },
+	{ "rrd-cgi", required_argument, NULL, 'g' },
+	{ "load-average", no_argument, NULL, 'a' },
+	{ "debug", no_argument, NULL, 'd' },
+	{ "version", no_argument, NULL, 'v' },
+	{ "help", no_argument, NULL, 'h' },
+	{ NULL, 0, NULL, 0 }
 };
 
-static const char *appShortOptions = "asr:c:dvh";
+int parseArgs(int argc, char **argv)
+{
+	int c;
 
-static const struct option appLongOptions[] = {
-  { "alarm-scan", no_argument, NULL, 'a' },
-  { "set", no_argument, NULL, 's' },
-  { "rrd-file", required_argument, NULL, 'r' },
-  { "config-file", required_argument, NULL, 'c' },
-  { "debug", no_argument, NULL, 'd' },
-  { "version", no_argument, NULL, 'v' },
-  { "help", no_argument, NULL, 'h' },
-  { NULL, 0, NULL, 0 }
-};
+	sensord_args.isDaemon = (argv[0][strlen (argv[0]) - 1] == 'd');
+	if (!sensord_args.isDaemon) {
+		fprintf(stderr, "Sensord no longer runs as an commandline"
+			" application.\n");
+		return -1;
+  	}
 
-int
-parseArgs
-(int argc, char **argv) {
-  int c;
-  const char *shortOptions;
-  const struct option *longOptions;
+	while ((c = getopt_long(argc, argv, shortOptions, longOptions, NULL))
+	       != EOF) {
+		switch(c) {
+		case 'i':
+			if ((sensord_args.scanTime = parseTime(optarg)) < 0)
+				return -1;
+			break;
+		case 'l':
+			if ((sensord_args.logTime = parseTime(optarg)) < 0)
+				return -1;
+			break;
+		case 't':
+			if ((sensord_args.rrdTime = parseTime(optarg)) < 0)
+				return -1;
+			break;
+		case 'T':
+			sensord_args.rrdNoAverage = 1;
+			break;
+		case 'f':
+			sensord_args.syslogFacility = parseFacility(optarg);
+			if (sensord_args.syslogFacility < 0)
+				return -1;
+			break;
+		case 'a':
+			sensord_args.doLoad = 1;
+			break;
+		case 'c':
+			sensord_args.cfgFile = optarg;
+			break;
+		case 'p':
+			sensord_args.pidFile = optarg;
+			break;
+		case 'r':
+			sensord_args.rrdFile = optarg;
+			break;
+		case 'd':
+			sensord_args.debug = 1;
+			break;
+		case 'g':
+			sensord_args.doCGI = 1;
+			sensord_args.cgiDir = optarg;
+			break;
+		case 'v':
+			printf("sensord version %s\n", LM_VERSION);
+			exit(EXIT_SUCCESS);
+		case 'h':
+			printf("Syntax: %s {options} {chips}\n%s", argv[0],
+			       daemonSyntax);
+			exit(EXIT_SUCCESS);
+		case ':':
+		case '?':
+			printf("Try `%s --help' for more information.\n",
+			       argv[0]);
+			return -1;
+		default:
+			fprintf(stderr,
+				"Internal error while parsing options.\n");
+			return -1;
+		}
+	}
 
-  isDaemon = (argv[0][strlen (argv[0]) - 1] == 'd');
-  shortOptions = isDaemon ? daemonShortOptions : appShortOptions;
-  longOptions = isDaemon ? daemonLongOptions : appLongOptions;
+	if (sensord_args.doCGI && !sensord_args.rrdFile) {
+		fprintf(stderr,
+			"Error: Incompatible --rrd-cgi without --rrd-file.\n");
+		return -1;
+	}
 
-  while ((c = getopt_long (argc, argv, shortOptions, longOptions, NULL)) != EOF) {
-    switch(c) {
-      case 'i':
-        if ((scanTime = parseTime (optarg)) < 0)
-          return -1;
-        break;
-      case 'l':
-        if ((logTime = parseTime (optarg)) < 0)
-          return -1;
-        break;
-      case 't':
-        if ((rrdTime = parseTime (optarg)) < 0)
-          return -1;
-        break;
-      case 'T':
-        rrdNoAverage = 1;
-        break;
-      case 'f':
-        if ((syslogFacility = parseFacility (optarg)) < 0)
-          return -1;
-        break;
-      case 'a':
-        if (isDaemon)
-          doLoad = 1;
-        else
-          doScan = 1;
-        break;
-      case 's':
-        doSet = 1;
-        break;
-      case 'c':
-        sensorsCfgFile = optarg;
-        break;
-      case 'p':
-        pidFile = optarg;
-        break;
-      case 'r':
-        rrdFile = optarg;
-        break;
-      case 'd':
-        debug = 1;
-        break;
-      case 'g':
-        doCGI = 1;
-        cgiDir = optarg;
-        break;
-      case 'v':
-        printf ("sensord version %s\n", LM_VERSION);
-        exit (EXIT_SUCCESS);
-        break;
-      case 'h':
-        printf ("Syntax: %s {options} {chips}\n%s", argv[0], isDaemon ? daemonSyntax : appSyntax);
-        exit (EXIT_SUCCESS);
-        break;
-      case ':':
-      case '?':
-        printf ("Try `%s --help' for more information.\n", argv[0]);
-        return -1;
-        break;
-      default:
-        fprintf (stderr, "Internal error while parsing options.\n");
-        return -1;
-        break;
-    }
-  }
+	if (sensord_args.rrdFile && !sensord_args.rrdTime) {
+		fprintf(stderr,
+			"Error: Incompatible --rrd-file without --rrd-interval.\n");
+		return -1;
+	}
 
-  if (doScan && doSet) {
-    fprintf (stderr, "Error: Incompatible --set and --alarm-scan.\n");
-    return -1;
-  }
-  
-  if (rrdFile && doSet) {
-    fprintf (stderr, "Error: Incompatible --set and --rrd-file.\n");
-    return -1;
-  }
-  
-  if (doScan && rrdFile) {
-    fprintf (stderr, "Error: Incompatible --rrd-file and --alarm-scan.\n");
-    return -1;
-  }
+	if (!sensord_args.logTime && !sensord_args.scanTime &&
+	    !sensord_args.rrdFile) {
+		fprintf(stderr,
+			"Error: No logging, alarm or RRD scanning.\n");
+		return -1;
+	}
 
-  if (doCGI && !rrdFile) {
-    fprintf (stderr, "Error: Incompatible --rrd-cgi without --rrd-file.\n");
-    return -1;
-  }
-  
-  if (rrdFile && !rrdTime) {
-    fprintf (stderr, "Error: Incompatible --rrd-file without --rrd-interval.\n");
-    return -1;
-  }
-  
-  if (!logTime && !scanTime && !rrdFile) {
-    fprintf (stderr, "Error: No logging, alarm or RRD scanning.\n");
-    return -1;
-  }
-
-  return 0;
+	return 0;
 }
 
-int
-parseChips
-(int argc, char **argv) {
-  if (optind == argc) {
-    chipNames[0].prefix = SENSORS_CHIP_NAME_PREFIX_ANY;
-    chipNames[0].bus = SENSORS_CHIP_NAME_BUS_ANY;
-    chipNames[0].addr = SENSORS_CHIP_NAME_ADDR_ANY;
-    numChipNames = 1;
-  } else {
-    int i, n = argc - optind, err;
-    if (n > MAX_CHIP_NAMES) {
-      fprintf (stderr, "Too many chip names.\n");
-      return -1;
-    }
-    for (i = 0; i < n; ++ i) {
-      char *arg = argv[optind + i];
-      if ((err = sensors_parse_chip_name (arg, chipNames + i))) {
-        fprintf (stderr, "Invalid chip name `%s': %s\n", arg, sensors_strerror (err));
-        return -1;
-      }
-    }
-    numChipNames = n;
-  }
-  return 0;
+int parseChips(int argc, char **argv)
+{
+	int i, n = argc - optind, err;
+
+	if (n == 0) {
+		sensord_args.chipNames[0].prefix =
+			SENSORS_CHIP_NAME_PREFIX_ANY;
+		sensord_args.chipNames[0].bus.type = SENSORS_BUS_TYPE_ANY;
+		sensord_args.chipNames[0].bus.nr = SENSORS_BUS_NR_ANY;
+		sensord_args.chipNames[0].addr = SENSORS_CHIP_NAME_ADDR_ANY;
+		sensord_args.numChipNames = 1;
+
+		return 0;
+	}
+
+	if (n > MAX_CHIP_NAMES) {
+		fprintf(stderr, "Too many chip names.\n");
+		return -1;
+	}
+	for (i = 0; i < n; ++i) {
+		char *arg = argv[optind + i];
+
+		err = sensors_parse_chip_name(arg, sensord_args.chipNames + i);
+		if (err) {
+			fprintf(stderr,	"Invalid chip name `%s': %s\n", arg,
+				sensors_strerror(err));
+			for (i--; i >= 0; i--)
+				sensors_free_chip_name(sensord_args.chipNames + i);
+			return -1;
+		}
+	}
+	sensord_args.numChipNames = n;
+
+	return 0;
+}
+
+void freeChips()
+{
+	int i;
+
+	for (i = 0; i < sensord_args.numChipNames; i++)
+		sensors_free_chip_name(sensord_args.chipNames + i);
 }

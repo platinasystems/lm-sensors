@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: fancontrol.init 2607 2004-06-23 19:36:49Z khali $
+# $Id: fancontrol.init 5180 2008-04-16 14:29:01Z khali $
 #
 # fancontrol
 #
@@ -34,7 +34,6 @@ stop()
    echo -n "Stopping fancontrol daemon"
    killproc $FANCONTROL
    RETVAL=$?
-   rm -f $PIDFILE
    rm -f /var/lock/subsys/fancontrol
    echo
 }

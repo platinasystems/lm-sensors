@@ -1,5 +1,5 @@
 This directory contains files useful for initialization
-scripts, especially for RedHat and SuSE.
+scripts, especially for RedHat.
 
 There are two choices, lm_sensors.init and sensord.init.
 Use one or the other but not both!
@@ -20,14 +20,10 @@ Once the script is done detecting the hardware monitoring devices, it will
 list all the required modules in that file, so that they can be loaded
 automatically at boot time.
 
-SuSE users will want to use lm_sensors.init.suse instead, which is
-more specifically designed for this distribution. Changes were contributed
-by Marc Rieffel <marc@paracel.com>.
-
 ----------------
 
 The script sensord.init also loads the modules, and then
-starts the sensord daemon. See the directory ../sensord for
+starts the sensord daemon. See the manual page sensord(8) for
 more information on the daemon.
 
 The sensord.init file should be copied to /etc/rc.d/init.d/sensord.
