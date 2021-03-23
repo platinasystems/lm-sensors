@@ -1,6 +1,58 @@
 lm_sensors CHANGES file
 -----------------------
 
+2.10.6 "Welcome Home Lina" (20080306)
+  Library: Fix fschrc and fschmd support
+           Fix sysfs presence detection
+           Don't choke on unrecognized devices (#2087)
+           Fix lm93 vid2 access (#2295)
+           No in1 on w83783s
+           Support DOS-style configuration files again (#2284)
+  Makefile: Revert changeset 4738, fix bug #2187 differently
+  Module adm1026: Various cleanups
+  Module eeprom: Hide Sony Vaio serial numbers to regular users (2.6 backport)
+                 Drop useless debugging log messages
+                 Recognize VGN as a valid Sony Vaio name prefix (2.6 backport)
+  Module gl518sm: Fix fan speed reading (2.6 backport)
+  Module gl520sm: Fix fan speed reading (2.6 backport)
+  Module lm90: Use generic i2c reads during detection (2.6 backport)
+  Module w83627hf: Enable VBAT monitoring (#2282, 2.6 backport)
+  Program decode-dimms.pl: Fix DDR2 SDRAM module speed decoding
+                           Update manufacturer IDs.
+  Program decode-vaio.pl: Private data might not be readable by non-root users
+                          Print the asset tag
+                          Fix the timestamp decoding
+  Program i2cdump: Fix I2C block mode error code
+  Program fancontrol: Detect improperly formatted FCTEMPS value (#2293)
+  Program pwmconfig: Better diagnostics in pwmdisable
+                     Give the fans some time to spin up
+                     Really hide errors on sysfs writes
+                     Deal gracefully with read-only pwm_enable files
+                     Warn about outputs found in automatic mode
+                     Fix duplicate warning message when config file is broken
+  Program sensord: Add lm85 support
+  Program sensors: Hide spurious errors on missing f71872f voltage inputs
+                   Hide spurious errors on missing adm1026 inputs
+                   Fix W83783S prefix matching
+  Program sensors-detect: Add Texas Instruments TMP401 detection
+                          Mention the f75375s driver
+                          Add SMSC LPC47B367-NC detection (no sensors)
+                          Reduce w83781d/lm78 I2C address probing range
+                          Drop PCA9540 detection
+                          Add Intel Celeron 4xx and Penryn (CPU on 45nm)
+                           detection
+                          Improve sysconfig and modprobe.d integration
+                          Add SMSC SCH5514D-NS detection (no sensors)
+                          Lower the confidence of MAX6650/MAX6651
+                          Add Fintek F71858DG detection
+                          Add Fintek F81216D detection (no sensors)
+                          Add SMSC SCH5027D detection
+                          Do not access I/O ports on PPC
+                          Move south bridge sensor detection to the right
+                           section
+                          Run chip_special_cases() earlier
+  Program unhide_ICH_SMBus: Add support for the 82801AA (ICH)
+
 2.10.5 (20071024)
   File i2c-dev.h: Rename I2C_FUNC_SMBUS_HWPEC_CALC to I2C_FUNC_SMBUS_PEC
   File sensors.conf.eg: Add a thmc50 section

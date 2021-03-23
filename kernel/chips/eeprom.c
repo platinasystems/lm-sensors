@@ -200,14 +200,18 @@ static int eeprom_detect(struct i2c_adapter *adapter, int address,
 		goto ERROR3;
 
 	/* Detect the Vaio nature of EEPROMs.
-	   We use the "PCG-" prefix as the signature. */
+	   We use the "PCG-" or "VGN-" prefix as the signature. */
 	if (address == 0x57) {
-		if (i2c_smbus_read_byte_data(new_client, 0x80) == 'P'
-		 && i2c_smbus_read_byte(new_client) == 'C'
-		 && i2c_smbus_read_byte(new_client) == 'G'
-		 && i2c_smbus_read_byte(new_client) == '-') {
+		char name[4];
+
+		name[0] = i2c_smbus_read_byte_data(new_client, 0x80);
+		name[1] = i2c_smbus_read_byte(new_client);
+		name[2] = i2c_smbus_read_byte(new_client);
+		name[3] = i2c_smbus_read_byte(new_client);
+
+		if (!memcmp(name, "PCG-", 4) || !memcmp(name, "VGN-", 4)) {
 			printk(KERN_INFO "Vaio EEPROM detected, "
-			       "enabling password protection\n");
+			       "enabling privacy protection\n");
 			data->nature = NATURE_VAIO;
 		}
 	}
@@ -308,25 +312,19 @@ void eeprom_contents(struct i2c_client *client, int operation,
 		*nrels_mag = 0;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		eeprom_update_client(client, nr >> 1);
-		/* Hide Vaio security settings to regular users */
-		if (nr == 0 && data->nature == NATURE_VAIO
-		 && !capable(CAP_SYS_ADMIN))
+		/* Hide Vaio private settings to regular users:
+		   - BIOS passwords: bytes 0x00 to 0x0f (row 0)
+		   - UUID: bytes 0x10 to 0x1f (row 1)
+		   - Serial number: 0xc0 to 0xdf (rows 12 and 13) */
+		if (data->nature == NATURE_VAIO
+		 && !capable(CAP_SYS_ADMIN)
+		 && (nr == 0 || nr == 1 || nr == 12 || nr == 13))
 			for (i = 0; i < 16; i++)
 				results[i] = 0;
 		else
 			for (i = 0; i < 16; i++)
 				results[i] = data->data[i + nr * 16];
-#ifdef DEBUG
-		printk(KERN_DEBUG "eeprom.o: 0x%X EEPROM contents (row %d):",
-		       client->addr, nr + 1);
-		if (nr == 0 && data->nature == NATURE_VAIO)
-		 	printk(" <hidden for security reasons>\n");
-		else {
-			for (i = 0; i < 16; i++)
-				printk(" 0x%02X", data->data[i + nr * 16]);
-			printk("\n");
-		}
-#endif
+
 		*nrels_mag = 16;
 	}
 }
