@@ -1,7 +1,7 @@
 Source: lm-sensors
 Section: utils
 Priority: optional
-Build-Depends: debhelper-compat (= 13), bison, flex
+Build-Depends: debhelper (>= 10), bison, flex
 Rules-Requires-Root: no
 Standards-Version: 4.5.1
 Maintainer: Aurelien Jarno <aurel32@debian.org>
