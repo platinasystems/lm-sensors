@@ -1,0 +1,9 @@
+drivers/char/bttv.c
+drivers/char/bttv.h
+drivers/char/buz.c
+drivers/char/msp3400.c
+drivers/char/saa5249.c
+drivers/char/saa7111.c
+drivers/char/saa7185.c
+drivers/char/tuner.c
+drivers/char/i2c-parport.c

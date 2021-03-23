@@ -1,0 +1,6 @@
+"i2c.h"			<linux/i2c.h>
+"i2c-dev.h"		<linux/i2c-dev.h>
+"i2c-algo-bit.h"	<linux/i2c-algo-bit.h>
+"i2c-algo-pcf.h"	<linux/i2c-algo-pcf.h>
+"i2c-elektor.h"		<linux/i2c-elektor.h>
+"i2c-id.h"		<linux/i2c-id.h>

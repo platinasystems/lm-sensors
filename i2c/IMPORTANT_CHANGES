@@ -1,0 +1,16 @@
+As you may have noticed, some things have changed in this package.
+
+The directory layout is completely different. See DIRECTORIES if you want
+to know more.
+
+Kernel modules have changed their name. Here is the mapping from old to new:
+  algo_bit  => i2c-algo-bit
+  algo_pcf  => i2c-algo-pcf
+  bit_elv   => i2c-elv
+  bit_par   => i2c-philips-par
+  bit_velle => i2c-velleman
+  pcf_isa   => i2c-elektor
+
+The build system has changed. The default system now is one which does not
+write access to your kernel tree. At the top of the global Makefile is 
+an option BUILD_SYSTEM which you can set to `i2c' to return to the old way.

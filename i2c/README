@@ -1,0 +1,35 @@
+These are the updated i2c drivers, also known as the `Simon Vogl' drivers.
+
+Updated means: more updated than the ones found in the current kernels.
+
+If you have used this package before, please read IMPORTANT_CHANGES!
+
+There are basically two kinds of i2c drivers: drivers for busses and drivers
+for chips. Both are cut in two, to isolate common parts: bus drivers are
+separated into algorithm drivers and adapter drivers, and chip drivers
+are separated into `driver' drivers and client drivers.
+
+This package contains all the basic i2c code, as well as a few bus drivers
+(both the algorithm and the adapter drivers). There are no real chip
+drivers, so on its own it is not very useful. Lots of chip drivers, as
+well as more bus drivers and some additional basic code (for SMBus
+emulation over i2c) are found in the lm_sensors package, which is
+distributed separately from this package, mainly for historical reasons.
+Another place at which I2C is used is the video4linux project.
+
+You can install this package in several ways. One way is by patching your
+current kernel. There are some automated scripts in here which can generate
+diffs against any (relatively recent) kernel. On the website, there are
+also some pre-made diffs available, usually against the latest 2.0,
+2.2 and 2.3 kernels.
+The second way is by making it directly, which will add some files to your 
+current kernel tree. As this is not always welcome, a third way is by making
+it completely in the current kernel tree. This will disable versioned
+symboling for the symbols in the package modules; this is usually no
+problem.
+Whichever way you choose, you can always compile the supporting programs
+separately.
+Please read INSTALL for detailed information.
+
+You can reach the developers of this package at their mailing list, at
+linux-i2c@pelican.tk.uni-linz.ac.at.

@@ -1,0 +1,2 @@
+This driver has been moved to the lm_sensors project, and renamed to
+i2c-via.
