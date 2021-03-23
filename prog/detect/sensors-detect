@@ -41,7 +41,7 @@ use constant NO_CACHE => 1;
 use vars qw(@pci_adapters @chip_ids @ipmi_ifs @non_hwmon_chip_ids
 	    $i2c_addresses_to_scan $revision @i2c_byte_cache);
 
-$revision = '$Revision: 6085 $ ($Date: 2012-10-30 18:18:45 +0100 (mar. 30 oct. 2012) $)';
+$revision = '$Revision: 6170 $ ($Date: 2013-05-20 21:25:22 +0200 (lun. 20 mai 2013) $)';
 $revision =~ s/\$\w+: (.*?) \$/$1/g;
 $revision =~ s/ \([^()]*\)//;
 
@@ -637,8 +637,8 @@ use vars qw(@i2c_adapter_names);
 		i2c_addrs => [0x2c..0x2e],
 		i2c_detect => sub { adt7490_detect(@_); },
 	}, {
-		name => "Analog Devices ADT7410",
-		driver => "to-be-written",
+		name => "Analog Devices ADT7410/ADT7420",
+		driver => "adt7410",
 		i2c_addrs => [0x48..0x4b],
 		i2c_detect => sub { adt7410_detect(@_); },
 	}, {
@@ -802,11 +802,6 @@ use vars qw(@i2c_adapter_names);
 		driver => "adm9240",
 		i2c_addrs => [0x2c..0x2f],
 		i2c_detect => sub { adm9240_detect(@_, 0); },
-	}, {
-		name => "Dallas Semiconductor DS1621/DS1631",
-		driver => "ds1621",
-		i2c_addrs => [0x48..0x4f],
-		i2c_detect => sub { ds1621_detect(@_); },
 	}, {
 		name => "Dallas Semiconductor DS1780",
 		driver => "adm9240",
@@ -1023,6 +1018,16 @@ use vars qw(@i2c_adapter_names);
 		i2c_addrs => [0x4c, 0x4d],
 		i2c_detect => sub { tmp42x_detect(@_, 2); },
 	}, {
+		name => "Texas Instruments TMP431",
+		driver => "to-be-written",		# tmp401
+		i2c_addrs => [0x4c, 0x4d],
+		i2c_detect => sub { lm90_detect(@_, 16); },
+	}, {
+		name => "Texas Instruments TMP432",
+		driver => "to-be-written",		# tmp401
+		i2c_addrs => [0x4c, 0x4d],
+		i2c_detect => sub { lm90_detect(@_, 17); },
+	}, {
 		name => "Texas Instruments AMC6821",
 		driver => "amc6821",
 		i2c_addrs => [0x18..0x1a, 0x2c..0x2e, 0x4c..0x4e],
@@ -1032,6 +1037,11 @@ use vars qw(@i2c_adapter_names);
 		driver => "lm95241",
 		i2c_addrs => [0x2b, 0x19, 0x2a],
 		i2c_detect => sub { lm95231_detect(@_, 0); },
+	}, {
+		name => "National Semiconductor LM95234",
+		driver => "to-be-written",		# lm95234
+		i2c_addrs => [0x18, 0x4d, 0x4e],
+		i2c_detect => sub { lm95231_detect(@_, 3); },
 	}, {
 		name => "National Semiconductor LM95241",
 		driver => "lm95241",
@@ -1399,6 +1409,11 @@ use vars qw(@i2c_adapter_names);
 		driver => "jc42",
 		i2c_addrs => [0x18..0x1f],
 		i2c_detect => sub { jedec_JC42_4_detect(@_, 7); },
+	}, {
+		name => "Microchip MCP98244",
+		driver => "jc42",
+		i2c_addrs => [0x18..0x1f],
+		i2c_detect => sub { jedec_JC42_4_detect(@_, 15); },
 	}, {
 		name => "Microchip MCP9843",
 		driver => "jc42",
@@ -1945,6 +1960,10 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		logdev => 0x0b,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
+		name => "Winbond W83627SF/GF Super IO",
+		driver => "not-a-sensor",
+		devid => 0x59,
+	}, {
 		name => "Winbond W83627THF/THG Super IO Sensors",
 		driver => "w83627hf",
 		devid => 0x82,
@@ -2019,7 +2038,7 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		logdev => 0x0b,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
-		name => "Nuvoton W83677HG-I (NCT6771F/NCT6772F/NCT6775F) Super IO Sensors",
+		name => "Nuvoton W83677HG-I (NCT5572D/NCT6771F/NCT6772F/NCT6775F) Super IO Sensors",
 		driver => "w83627ehf",
 		devid => 0xB470,
 		devid_mask => 0xFFF0,
@@ -2030,27 +2049,24 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		driver => "not-a-sensor",
 		devid => 0x61,
 	}, {
-		name => "Nuvoton NCT5577D Super IO Sensors",
-		driver => "to-be-written",
-		devid => 0xC331,
+		name => "Nuvoton NCT5577D/NCT6776F Super IO Sensors",
+		driver => "nct6775",
+		devid => 0xC330,
+		devid_mask => 0xFFF0,
 		logdev => 0x0b,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
-		name => "Nuvoton NCT6776F Super IO Sensors",
-		driver => "w83627ehf",
-		devid => 0xC333,
+		name => "Nuvoton NCT5532D/NCT6779D Super IO Sensors",
+		driver => "nct6775",
+		devid => 0xC560,
+		devid_mask => 0xFFF0,
 		logdev => 0x0b,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
-		name => "Nuvoton NCT6779D Super IO Sensors",
-		driver => "to-be-written",	# nct6775, new driver
-		devid => 0xC562,
-		logdev => 0x0b,
-		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
-	}, {
-		name => "Nuvoton NCT6102D/NCT6106D Super IO Sensors",
-		driver => "to-be-written",	# nct6775, new driver
-		devid => 0x1061,
+		name => "Nuvoton NCT6102D/NCT6104D/NCT6106D Super IO Sensors",
+		driver => "to-be-written",	# nct6775
+		devid => 0xC450,
+		devid_mask => 0xFFF0,
 		logdev => 0x0b,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
@@ -2220,14 +2236,20 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		logdev => 0x04,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
-		name => "ITE IT8771E Super IO Sensors",
+		name => "ITE IT8752F Super IO Sensors",
 		driver => "to-be-written",	# it87
+		devid => 0x8752,
+		logdev => 0x04,
+		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
+	}, {
+		name => "ITE IT8771E Super IO Sensors",
+		driver => "it87",
 		devid => 0x8771,
 		logdev => 0x04,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
 		name => "ITE IT8772E Super IO Sensors",
-		driver => "to-be-written",	# it87
+		driver => "it87",
 		devid => 0x8772,
 		logdev => 0x04,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
@@ -2239,13 +2261,13 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
 		name => "ITE IT8782F Super IO Sensors",
-		driver => "to-be-written",	# it87
+		driver => "it87",
 		devid => 0x8782,
 		logdev => 0x04,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
 	}, {
 		name => "ITE IT8783F Super IO Sensors",
-		driver => "to-be-written",	# it87
+		driver => "it87",
 		devid => 0x8783,
 		logdev => 0x04,
 		features => FEAT_IN | FEAT_FAN | FEAT_TEMP,
@@ -2348,6 +2370,10 @@ use vars qw(@cpu_ids);
 		name => "AMD Family 15h power sensors",
 		driver => "fam15h_power",
 		detect => sub { amd_pci_detect('1604') },
+	}, {
+		name => "AMD Family 16h power sensors",
+		driver => "fam15h_power",
+		detect => sub { amd_pci_detect('1534') },
 	}, {
 		name => "Intel digital thermal sensor",
 		driver => "coretemp",
@@ -2463,9 +2489,12 @@ sub overlay_hash
 
 sub initialize_ioports
 {
-	sysopen(IOPORTS, "/dev/port", O_RDWR)
-		or die "/dev/port: $!\n";
-	binmode(IOPORTS);
+	if (sysopen(IOPORTS, "/dev/port", O_RDWR)) {
+		binmode(IOPORTS);
+		return 1;
+	}
+	print STDERR "/dev/port: $!\n";
+	return 0;
 }
 
 sub close_ioports
@@ -2765,9 +2794,19 @@ sub initialize_modules_list
 {
 	local $_;
 
+	# /sys/module contains built-in drivers too, but doesn't exist on
+	# older kernels (added in kernel 2.6.7)
+	if (opendir(local *MODULES, "$sysfs_root/module")) {
+		while (defined($_ = readdir(MODULES))) {
+			next if m/^\./;
+			$modules_list{$1} = 1 if m/^(\S*)/;
+		}
+		return;
+	}
+
+	# Fall back to /proc/modules as it is always available
 	open(local *INPUTFILE, "/proc/modules") or return;
 	while (<INPUTFILE>) {
-		tr/-/_/; # Probably not needed
 		$modules_list{$1} = 1 if m/^(\S*)/;
 	}
 }
@@ -3493,13 +3532,14 @@ sub find_aliases
 				print("Can't set I2C address for $dev\n"),
 				next;
 
-			initialize_ioports();
-			$alias_detect = $detected->[$isa]->{alias_detect};
-			$is_alias = &$alias_detect($detected->[$isa]->{isa_addr},
-						   \*FILE,
-						   $detected->[$i2c]->{i2c_addr});
+			if (initialize_ioports()) {
+				$alias_detect = $detected->[$isa]->{alias_detect};
+				$is_alias = &$alias_detect($detected->[$isa]->{isa_addr},
+							   \*FILE,
+							   $detected->[$i2c]->{i2c_addr});
+				close_ioports();
+			}
 			close(FILE);
-			close_ioports();
 
 			next unless $is_alias;
 			# This is an alias: copy the I2C data into the ISA
@@ -4312,47 +4352,6 @@ sub lm92_detect
 	return ($chip == 0) ? 4 : 2;
 }
 
-# Registers used:
-#   0xAA: Temperature
-#   0xA1: High limit
-#   0xA2: Low limit
-#   0xA8: Counter
-#   0xA9: Slope
-#   0xAC: Configuration
-# Detection is weak. We check if bit 4 (NVB) is clear, because it is
-# unlikely to be set (would mean that EEPROM is currently being accessed).
-# We also check the value of the counter and slope registers, the datasheet
-# doesn't mention the possible values but the conversion formula together
-# with experimental evidence suggest possible sanity checks.
-# Not all devices enjoy SMBus read word transactions, so we do as much as
-# possible with read byte transactions first, and only use read word
-# transactions second.
-sub ds1621_detect
-{
-	my ($file, $addr) = @_;
-
-	my $conf = i2c_smbus_read_byte_data($file, 0xAC);
-	return if ($conf & 0x10);
-
-	my $temp = i2c_smbus_read_word_data($file, 0xAA);
-	return if $temp < 0 || ($temp & 0x0f00);
-	# On the DS1631, the following two checks are too strict in theory,
-	# but in practice I very much doubt that anyone will set temperature
-	# limits not a multiple of 0.5 degrees C.
-	my $high = i2c_smbus_read_word_data($file, 0xA1);
-	return if $high < 0 || ($high & 0x7f00);
-	my $low = i2c_smbus_read_word_data($file, 0xA2);
-	return if $low < 0 || ($low & 0x7f00);
-
-	return if ($temp == 0 && $high == 0 && $low == 0 && $conf == 0);
-
-	# Old versions of the DS1621 apparently don't have the counter and
-	# slope registers (or they return crap)
-	my $counter = i2c_smbus_read_byte_data($file, 0xA8);
-	my $slope = i2c_smbus_read_byte_data($file, 0xA9);
-	return ($slope == 0x10 && $counter <= $slope) ? 3 : 2;
-}
-
 # Chip to detect: 0 = LM80, 1 = LM96080
 # Registers used:
 #   0x00: Configuration register
@@ -4499,7 +4498,7 @@ sub max6680_95_detect
 #		  8 = W83L771W/G, 9 = TMP401, 10 = TMP411,
 #		  11 = W83L771AWG/ASG, 12 = MAX6690,
 #		  13 = ADT7461A/NCT1008, 14 = SA56004,
-#		  15 = G781
+#		  15 = G781, 16 = TMP431, 17 = TMP432
 # Registers used:
 #   0x03: Configuration
 #   0x04: Conversion rate
@@ -4617,6 +4616,18 @@ sub lm90_detect
 		return if $mid != 0x47;		# GMT
 		return 8 if $cid == 0x01;	# G781
 	}
+	if ($chip == 16) {
+		return if ($conf & 0x1B) != 0;
+		return if $rate > 0x0F;
+		return if $mid != 0x55;		# Texas Instruments
+		return 6 if ($cid == 0x31);	# TMP431A/B/C/D
+	}
+	if ($chip == 17) {
+		return if ($conf & 0x1B) != 0;
+		return if $rate > 0x0F;
+		return if $mid != 0x55;		# Texas Instruments
+		return 6 if ($cid == 0x32);	# TMP432A/B
+	}
 	return;
 }
 
@@ -4688,14 +4699,17 @@ sub max6657_detect
 	return 5;
 }
 
-# Chip to detect: 0 = LM95231, 1 = LM95241, 2 = LM95245
+# Chip to detect: 0 = LM95231, 1 = LM95241, 2 = LM95245, 3 = LM95234
 # Registers used:
 #   0x02: Status (3 unused bits)
 #   0x03: Configuration (3 unused bits)
+#   0x04: Conversion rate (6 unused bits, LM95234)
 #   0x06: Remote diode filter control (6 unused bits, LM95231 and LM95241)
 #   0x30: Remote diode model type select (6 unused bits, LM95231 and LM95241)
 #   0x30: Local Temperature LSB (5 unused bits, LM95245)
+#   0x30: Diode model (4 unused bits, LM95234)
 #   0x33: Status register 2 (6 unused bits, LM95245)
+#   0x38: Diode model status (4 unused bits, LM95234)
 #   0xfe: Manufacturer ID
 #   0xff: Revision ID
 sub lm95231_detect
@@ -4719,6 +4733,13 @@ sub lm95231_detect
 		return if i2c_smbus_read_byte_data($file, 0x03) & 0xa1;
 		return if i2c_smbus_read_byte_data($file, 0x30) & 0x1f;
 		return if i2c_smbus_read_byte_data($file, 0x33) & 0x3f;
+	} elsif ($chip == 3) {
+		return if $cid != 0x79;			# LM95234
+		return if i2c_smbus_read_byte_data($file, 0x02) & 0x30;
+		return if i2c_smbus_read_byte_data($file, 0x03) & 0xbc;
+		return if i2c_smbus_read_byte_data($file, 0x04) & 0xfc;
+		return if i2c_smbus_read_byte_data($file, 0x30) & 0xe1;
+		return if i2c_smbus_read_byte_data($file, 0x38) & 0xe1;
 	}
 
 	return 6;
@@ -6030,7 +6051,7 @@ sub max6655_detect
 #                 4 = TS3000/TSE2002, 5 = MAX6604, 6 = MCP98242,
 #                 7 = MCP98243, 8 = MCP9843, 9 = CAT6095 / CAT34TS02,
 #                 10 = STTS424E, 11 = STTS2002, 12 = STTS3000
-#                 13 = MCP9804, 14 = AT30TS00
+#                 13 = MCP9804, 14 = AT30TS00, 15 = MCP98244
 # Registers used:
 #   0x00: Capabilities
 #   0x01: Configuration
@@ -6099,6 +6120,9 @@ sub jedec_JC42_4_detect
 	} elsif ($chip == 14) {
 		return unless $manid == 0x00;		# Atmel
 		return unless $devid == 0x82;		# AT30TS00
+	} elsif ($chip == 15) {
+		return unless $manid == 0x00;		# MCP
+		return unless $devid == 0x22;		# MCP98244
 	}
 
 	# Now, do it all again with words. Note that we get
@@ -6156,6 +6180,9 @@ sub jedec_JC42_4_detect
 	} elsif ($chip == 14) {
 		return unless $manid == 0x1f00;		# Atmel
 		return unless ($devid & 0xfeff) == 0x0082; # AT30TS00
+	} elsif ($chip == 15) {
+		return unless $manid == 0x5400;		# MCP
+		return unless ($devid & 0xfcff) == 0x0022; # MCP98244
 	}
 
 	return 5;
@@ -6677,19 +6704,6 @@ EOT
 		print SYSCONFIG "BUS_MODULES=\"", join(" ", @{$bus_modules}), "\"\n"
 			if @{$bus_modules};
 		print SYSCONFIG "HWMON_MODULES=\"", join(" ", @{$hwmon_modules}), "\"\n";
-
-		print SYSCONFIG <<'EOT';
-
-# For compatibility reasons, modules are also listed individually as variables
-#    MODULE_0, MODULE_1, MODULE_2, etc.
-# You should use BUS_MODULES and HWMON_MODULES instead if possible.
-
-EOT
-		my $i = 0;
-		foreach (@{$bus_modules}, @{$hwmon_modules}) {
-			print SYSCONFIG "MODULE_$i=$_\n";
-			$i++;
-		}
 		close(SYSCONFIG);
 
 		if (-x "/bin/systemctl" && -d "/lib/systemd/system" &&
@@ -6814,10 +6828,11 @@ sub main
 		      "standard I/O ports to probe them. This is usually safe.\n";
 		print "Do you want to scan for Super I/O sensors? (YES/no): ";
 		unless (<STDIN> =~ /^\s*n/i) {
-			initialize_ioports();
-			$superio_features |= scan_superio(0x2e, 0x2f);
-			$superio_features |= scan_superio(0x4e, 0x4f);
-			close_ioports();
+			if (initialize_ioports()) {
+				$superio_features |= scan_superio(0x2e, 0x2f);
+				$superio_features |= scan_superio(0x4e, 0x4f);
+				close_ioports();
+			}
 		}
 		print "\n";
 
@@ -6830,9 +6845,10 @@ sub main
 			      "interfaces? (YES/no): ";
 			unless (<STDIN> =~ /^\s*n/i) {
 				if (!ipmi_from_smbios()) {
-					initialize_ioports();
-					scan_isa_bus(\@ipmi_ifs);
-					close_ioports();
+					if (initialize_ioports()) {
+						scan_isa_bus(\@ipmi_ifs);
+						close_ioports();
+					}
 				}
 			}
 			print "\n";
@@ -6846,9 +6862,10 @@ sub main
 		$input = <STDIN>;
 		unless ($input =~ /^\s*n/i
 		     || ($superio_features && $input !~ /^\s*y/i)) {
-			initialize_ioports();
-			scan_isa_bus(\@chip_ids);
-			close_ioports();
+			if (initialize_ioports()) {
+				scan_isa_bus(\@chip_ids);
+				close_ioports();
+			}
 		}
 		print "\n";
 	}

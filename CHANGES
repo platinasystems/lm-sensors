@@ -1,6 +1,25 @@
 lm-sensors CHANGES file
 -----------------------
 
+3.3.4 (2013-05-27)
+  sensors.conf.5: Mention "sensors -u" to get the raw feature names
+  sensors: Clarify what option -u is good for
+  fancontrol: Fix handling of absolute paths in config
+  pwmconfig: Print the initial PWM values
+             Raise the detection threshold to 3/4
+             Properly deal with multiple fan control
+  sensors-detect: Add detection of AMD family 16h power sensors
+                  Map IT8771E, IT8772E, IT8782F and IT8783F to it87
+                  Use /sys/module instead of /proc/modules where available
+                  Drop legacy sysconfig configuration file syntax
+                  Stay alive when /dev/port is missing
+                  Add detection of IT8752F
+                  Add detection of MCP98244
+                  Add detection of LM95234
+                  Add detection of TMP431/TMP432
+                  Update Nuvoton chip information and NCT6106D chip detection
+                  Drop unreliable DS1621/DS1631 detection
+
 3.3.3 "Happy Birthday Sophie" (2012-11-06)
   documentation: Update fan-divisors, fan divisors are optional
   libsensors: Fix warning about library path not in /etc/ld.so.conf
