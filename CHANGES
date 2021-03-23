@@ -1,6 +1,35 @@
 lm-sensors CHANGES file
 -----------------------
 
+3.3.2 (2012-03-14)
+  libsensors: Added support for new sysfs attributes
+              Change sysfs detection to survive upcoming kernel changes
+  sensord: Fix memory leaks revealed by valgrind
+           Minor performance improvements
+  sensors: Added support for new sysfs attributes
+           Display both instantaneous and average power if available.
+           Report thermal sensor type 1 as CPU diode
+           Align power values better
+           Fix power interval output
+  fancontrol: Support setup where one PWM output controls several fans
+              Output error messages to stderr
+  sensors-detect: Stop calling for PIIX5 SMBus testers
+                  Improve filtering of fake DMI data
+                  Print DMI system/product version if available
+                  Fix loading of the cpuid module
+                  Make LM73 detection less problematic
+                  Add detection of National Semiconductor LM96163
+                  Add detection of GMT G781
+                  Properly handle Super-I/O chips without logical device
+                  Add detection of National Semiconductor LM96080
+                  Add detection of ITE IT8771E
+                  Add detection of ITE IT8781F, IT8782F and IT8783F
+                  Add detection of ITE IT8510E/TE/G, IT8511E/TE/G,
+                         IT8513E/F/G, and IT8518E
+                  Add detection of ST Microelectronics STTS2002 and STTS3000
+                  Add detection of IDT TSE2002GB2, TS3000GB2, Microchip MCP9804,
+                         and Atmel AT30TS00
+
 3.3.1 (2011-07-21)
   isadump: Add support for word (16-bit) and long (32-bit) reads
   isaset: Add support for word (16-bit) and long (32-bit) writes
