@@ -32,27 +32,30 @@ $temp = "mkpatch/.temp";
 sub print_diff
 {
   my ($package_root,$kernel_root,$kernel_file,$package_file) = @_;
-  my ($diff_command,$dummy);
+  my ($diff_command,$package_mtime,$kernel_mtime);
 
-  $diff_command = "diff -u2";
+  $diff_command = "diff -u";
   if ( -e "$kernel_root/$kernel_file") {
-    $diff_command .= " $kernel_root/$kernel_file ";
-  } else {
-    $diff_command .= " /dev/null ";
-  }
-  if ( -e "$package_root/$package_file") {
-    $diff_command .= " $package_root/$package_file ";
+    $diff_command .= " $kernel_root/$kernel_file";
+    $kernel_mtime = (stat("$kernel_root/$kernel_file"))[9];
   } else {
     $diff_command .= " /dev/null";
+    $kernel_mtime = 0;
+  }
+  if ( -e "$package_root/$package_file") {
+    $diff_command .= " $package_root/$package_file";
+    $package_mtime = (stat("$package_root/$package_file"))[9];
+  } else {
+    $diff_command .= " /dev/null";
+    $package_mtime = 0;
   }
   open INPUT, "$diff_command|" or die "Can't execute `$diff_command'";
-  $dummy = <INPUT>;
-  $dummy = <INPUT>;
-  print "--- linux-old/$kernel_file\t".`date`;
-  print "+++ linux/$kernel_file\t".`date`;
-    
-  while (<INPUT>) {
-    print;
+  if (<INPUT>) {
+    <INPUT>;
+    print "--- linux-old/$kernel_file\t".gmtime($kernel_mtime)."\n".
+          "+++ linux/$kernel_file\t".gmtime($package_mtime)."\n";
+
+    print while <INPUT>;
   }
   close INPUT;
 }
@@ -79,11 +82,14 @@ sub gen_Documentation_Configure_help
     if (m@I2C mainboard interfaces@ or
            m@Acer Labs ALI 1535@ or
            m@Acer Labs ALI 1533 and 1543C@ or
-           m@AMD 756/766@ or
+           m@AMD 756/766/768/8111@ or
+           m@SMBus multiplexing on the Tyan S4882@ or
+           m@AMD 8111 SMBus 2.0@ or
            m@Apple Hydra Mac I/O@ or
            m@Intel I801@ or
            m@Intel I810/I815 based Mainboard@ or
            m@Intel 82371AB PIIX4\(E\)@ or
+           m@Nvidia Nforce2@ or
            m@Silicon Integrated Systems Corp. SiS5595 based Mainboard@ or
            m@VIA Technologies, Inc. VT82C586B@ or
            m@VIA Technologies, Inc. VT82C596, 596B, 686A/B, 8233@ or
@@ -93,23 +99,34 @@ sub gen_Documentation_Configure_help
            m@Analog Devices ADM1021 and compatibles@ or
            m@Analog Devices ADM1024@ or
            m@Analog Devices ADM1025@ or
+           m@Analog Devices ADM1026@ or
            m@Analog Devices ADM9240 and compatibles@ or
+           m@Asus ASB100@ or
            m@Dallas DS1621 and DS1625@ or
            m@Fujitsu-Siemens Poseidon@ or
            m@Fujitsu-Siemens Scylla@ or
            m@Genesys Logic GL518SM@ or
            m@Genesys Logic GL520SM@ or
            m@HP Maxilife@ or
+           m@Intel Xeon Thermal Sensor@ or
            m@ITE 8705, 8712, Sis950@ or
+           m@Maxim MAX6650, MAX6651@ or
            m@Myson MTP008@ or
-           m@National Semiconductors LM75 and compatibles@ or
-           m@National Semiconductors LM78@ or
-           m@National Semiconductors LM80@ or
-           m@National Semiconductors LM87@ or
+           m@National Semiconductor LM75 and compatibles@ or
+           m@National Semiconductor LM78@ or
+           m@National Semiconductor LM80@ or
+           m@National Semiconductor LM83@ or
+           m@National Semiconductor LM85@ or
+           m@National Semiconductor LM87@ or
+           m@National Semiconductor LM90@ or
+           m@National Semiconductor LM92@ or
+           m@National Semiconductor PC8736x@ or
            m@Silicon Integrated Systems Corp. SiS5595 Sensor@ or
            m@Texas Instruments THMC50 / Analog Devices ADM1022@ or
            m@Via VT82C686A/B@ or
            m@Winbond W83781D, W83782D, W83783S, W83627HF, AS99127F@ or
+           m@Winbond W83627HF, W83627THF, W83697HF@ or
+           m@Winbond W83L785TS-S@ or
            m@EEprom \(DIMM\) reader@) {
       $_ = <INPUT>;
       $_ = <INPUT>;
@@ -142,10 +159,25 @@ CONFIG_I2C_ALI15X3
   built as a module which can be inserted and removed while the kernel
   is running.
 
-AMD 756/766/768
+AMD 756/766/768/8111 and nVidia nForce
 CONFIG_I2C_AMD756
   If you say yes to this option, support will be included for the AMD
-  756/766/768 mainboard I2C interfaces. This can also be 
+  756/766/768/8111 and nVidia nForce mainboard I2C interfaces. This can
+  also be built as a module which can be inserted and removed while the
+  kernel is running.
+
+SMBus multiplexing on the Tyan S4882
+CONFIG_I2C_AMD756_S4882
+  Enabling this option will add specific SMBus support for the Tyan
+  S4882 motherboard. On this 4-CPU board, the SMBus is multiplexed
+  over 8 different channels, where the various memory module EEPROMs
+  and temperature sensors live. Saying yes here will give you access
+  to these in addition to the trunk.
+
+AMD 8111 SMBus 2.0
+CONFIG_I2C_AMD8111
+  If you say yes to this option, support will be included for the AMD
+  8111 mainboard SMBus 2.0 interface. This can also be 
   built as a module which can be inserted and removed while the kernel
   is running.
 
@@ -181,6 +213,13 @@ CONFIG_I2C_PIIX4
   built as a module which can be inserted and removed while the kernel
   is running.
 
+Nvidia Nforce2/Nforce3 based Mainboard
+CONFIG_I2C_NFORCE2
+  If you say yes to this option, support will be included for the 
+  Nvidia Nforce2 and Nforce3 families of mainboard I2C interfaces.
+  This can also be built as a module which can be inserted and removed
+  while the kernel is running.
+
 Silicon Integrated Systems Corp. SiS5595 based Mainboard
 CONFIG_I2C_SIS5595
   If you say yes to this option, support will be included for the 
@@ -189,6 +228,18 @@ CONFIG_I2C_SIS5595
   built as a module which can be inserted and removed while the kernel
   is running.
 
+Silicon Integrated Systems Corp. SiS630/730 based Mainboard
+CONFIG_I2C_SIS630
+  If you say yes to this option, support will be included for the SiS 630
+  and 730 mainboard I2C interfaces. This can also be built as a module 
+  which can be inserted and removed while the kernel is running.
+
+Silicon Integrated Systems Corp. SiS645/961,645DX/961,735 based Mainboard
+CONFIG_I2C_SIS645
+  If you say yes to this option, support will be included for the SiS 645/961,
+  645DX/961 and 735 mainboard I2C interfaces. This can also be built as a module
+  which can be inserted and removed while the kernel is running.
+
 VIA Technologies, Inc. VT82C586B
 CONFIG_I2C_VIA
   If you say yes to this option, support will be included for the VIA
@@ -196,7 +247,7 @@ CONFIG_I2C_VIA
   be built as a module which can be inserted and removed while the 
   kernel is running.
 
-VIA Technologies, Inc. VT82C596, 596B, 686A/B, 8233
+VIA Technologies, Inc. VT82C596, 596B, 686A/B, 8233, 8235
 CONFIG_I2C_VIAPRO
   If you say yes to this option, support will be included for the VIA
   Technologies I2C adapter on these chips. For integrated sensors on the
@@ -232,13 +283,12 @@ CONFIG_I2C_ISA
   http://www.lm-sensors.nu
 
 Analog Devices ADM1021 and compatibles
-CONFIG_SENSORS_ADM1021 
+CONFIG_SENSORS_ADM1021
   If you say yes here you get support for Analog Devices ADM1021 
   and ADM1023 sensor chips and clones: Maxim MAX1617 and MAX1617A,
-  Genesys Logic GL523SM, National Semi LM84, TI THMC10,
-  and the XEON processor built-in sensor. This can also 
-  be built as a module which can be inserted and removed while the 
-  kernel is running.
+  Genesys Logic GL523SM, National Semi LM84, TI THMC10 and Onsemi
+  MC1066. This can also be built as a module which can be inserted
+  and removed while the kernel is running.
 
   You will also need the latest user-space utilties: you can find them
   in the lm_sensors package, which you can download at 
@@ -263,6 +313,16 @@ CONFIG_SENSORS_ADM1025
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
 
+Analog Devices ADM1026
+CONFIG_SENSORS_ADM1026
+  If you say yes here you get support for Analog Devices ADM1026 sensor
+  chips.  This can also be built as a module which can be inserted and
+  removed while the kernel is running.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
 Analog Devices ADM9240 and compatibles
 CONFIG_SENSORS_ADM9240
   If you say yes here you get support for Analog Devices ADM9240 
@@ -274,6 +334,15 @@ CONFIG_SENSORS_ADM9240
   You will also need the latest user-space utilties: you can find them
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
+
+Asus ASB100
+CONFIG_SENSORS_ASB100
+  If you say yes here you get support for the Asus ASB100 (aka
+  "Bach") sensor chip.  This can also be built as a module.
+
+  You will also need the latest user-space utilities: you can find
+  them in the lm_sensors package, which you can download at
+  http://www.lm-sensors.nu/
 
 Dallas DS1621 and DS1625
 CONFIG_SENSORS_DS1621
@@ -335,10 +404,29 @@ CONFIG_SENSORS_MAXILIFE
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
 
+Intel Xeon Thermal Sensor
+CONFIG_SENSORS_XEONTEMP
+  If you say yes here you get support for the Intel Xeon processor
+  built-in thermal sensor. This can also be built as a module which
+  can be inserted and removed while the kernel is running.
+
+  You will also need the latest user-space utilities: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu/
+
 ITE 8705, 8712, Sis950
 CONFIG_SENSORS_IT87
   If you say yes here you get support for the ITE 8705 and 8712 and
   SiS950 sensor chips.  This can also be built as a module.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
+Maxim MAX6650, MAX6651
+CONFIG_SENSORS_MAX6650
+  If you say yes here you get support for the Maxim MAX6650 and
+  MAX6651 sensor chips.  This can also be built as a module.
 
   You will also need the latest user-space utilties: you can find them
   in the lm_sensors package, which you can download at 
@@ -353,18 +441,19 @@ CONFIG_SENSORS_MTP008
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
 
-National Semiconductors LM75 and compatibles
+National Semiconductor LM75 and compatibles
 CONFIG_SENSORS_LM75 
   If you say yes here you get support for National Semiconductor LM75
-  sensor chips and clones: Dallas Semi DS75 and DS1775, TelCon
-  TCN75, and National Semi LM77. This can also be built as a module which
-  can be inserted and removed while the kernel is running.
+  sensor chips and clones: Dallas Semiconductor DS75 and DS1775 (in
+  9-bit precision mode), and TelCom (now Microchip) TCN75. This can
+  also be built as a module which can be inserted and removed while
+  the kernel is running.
 
   You will also need the latest user-space utilties: you can find them
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
 
-National Semiconductors LM78
+National Semiconductor LM78
 CONFIG_SENSORS_LM78
   If you say yes here you get support for National Semiconductor LM78
   sensor chips family: the LM78-J and LM79. Many clone chips will
@@ -376,7 +465,7 @@ CONFIG_SENSORS_LM78
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
 
-National Semiconductors LM80
+National Semiconductor LM80
 CONFIG_SENSORS_LM80
   If you say yes here you get support for National Semiconductor LM80
   sensor chips. This can also be built as a module which can be 
@@ -386,10 +475,85 @@ CONFIG_SENSORS_LM80
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
 
-National Semiconductors LM87
+National Semiconductor LM83
+CONFIG_SENSORS_LM83
+  If you say yes here you get support for the National Semiconductor
+  LM83 sensor chip.  This can also be built as a module.
+
+  You will also need the latest user-space utilities: you can find
+  them in the lm_sensors package, which you can download at
+  http://www.lm-sensors.nu/
+
+National Semiconductor LM85
+CONFIG_SENSORS_LM85
+  If you say yes here you get support for National Semiconductor LM85
+  sensor chips and compatibles.  Compatible chips include the Analog
+  Devices ADM1027 and ADT7463 and SMSC EMC6D100 and EMC6D101.  This
+  can also be built as a module which can be inserted and removed
+  while the kernel is running.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
+National Semiconductor LM87
 CONFIG_SENSORS_LM87
   If you say yes here you get support for National Semiconductor LM87
   sensor chips. This can also be built as a module which can be 
+  inserted and removed while the kernel is running.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
+National Semiconductor LM90
+CONFIG_SENSORS_LM90
+  If you say yes here you get support for the National Semiconductor
+  LM90, LM89 and LM99, and Analog Devices ADM1032 sensor chips.  This
+  can also be built as a module.
+
+  You will also need the latest user-space utilities: you can find
+  them in the lm_sensors package, which you can download at
+  http://www.lm-sensors.nu/
+
+National Semiconductor LM92
+CONFIG_SENSORS_LM92
+  If you say yes here you get support for National Semiconductor LM92
+  sensor chips. This can also be built as a module which can be 
+  inserted and removed while the kernel is running.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
+National Semiconductor PC8736x Sensors
+CONFIG_SENSORS_PC87360
+  If you say yes here you get support for the integrated hardware
+  monitoring in the National Semicoductor PC87360, PC87363, PC87364,
+  PC87365 and PC87366 Super I/O chips. This can also be built as a
+  module which can be inserted and removed while the kernel is
+  running.
+
+  You will also need the latest user-space utilities: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu/
+
+Philips PCF8574
+CONFIG_SENSORS_PCF8574
+  If you say yes here you get support for the Philips PCF8574
+  I2C 8-bit Parallel I/O device.
+  This can also be built as a module which can be 
+  inserted and removed while the kernel is running.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
+Philips PCF8591
+CONFIG_SENSORS_PCF8591
+  If you say yes here you get support for the Philips PCF8591
+  I2C Quad D/A + Single A/D I/O device.
+  This can also be built as a module which can be 
   inserted and removed while the kernel is running.
 
   You will also need the latest user-space utilties: you can find them
@@ -400,6 +564,17 @@ Silicon Integrated Systems Corp. SiS5595 Sensor
 CONFIG_SENSORS_SIS5595
   If you say yes here you get support for the integrated sensors in 
   SiS5595 South Bridges. This can also be built as a module 
+  which can be inserted and removed while the kernel is running.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
+SMSC47M1xx Super I/O Fan Support
+CONFIG_SENSORS_SMSC47M1
+  If you say yes here you get support for the integrated fan
+  monitoring and control in the SMSC 47M1xx Super I/O chips.
+  This can also be built as a module 
   which can be inserted and removed while the kernel is running.
 
   You will also need the latest user-space utilties: you can find them
@@ -427,6 +602,26 @@ CONFIG_SENSORS_VIA686A
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
 
+Via VT1211 Sensors
+CONFIG_SENSORS_VT1211
+  If you say yes here you get support for the integrated sensors in 
+  the Via VT1211 Super I/O device. This can also be built as a module 
+  which can be inserted and removed while the kernel is running.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
+Via VT8231 Sensors
+CONFIG_SENSORS_VT8231
+  If you say yes here you get support for the integrated sensors in 
+  the Via VT8231 device. This can also be built as a module 
+  which can be inserted and removed while the kernel is running.
+
+  You will also need the latest user-space utilties: you can find them
+  in the lm_sensors package, which you can download at 
+  http://www.lm-sensors.nu
+
 Winbond W83781D, W83782D, W83783S, W83627HF, AS99127F
 CONFIG_SENSORS_W83781D
   If you say yes here you get support for the Winbond W8378x series 
@@ -438,6 +633,26 @@ CONFIG_SENSORS_W83781D
   You will also need the latest user-space utilties: you can find them
   in the lm_sensors package, which you can download at 
   http://www.lm-sensors.nu
+
+Winbond W83627HF, W83627THF, W83697HF
+CONFIG_SENSORS_W83627HF
+  If you say yes here you get support for the Winbond W836x7 series 
+  of sensor chips: the Winbond W83627HF, W83627THF and W83697HF. This
+  can also be built as a module which can be inserted and removed
+  while the kernel is running.
+
+  You will also need the latest user-space utilities: you can find
+  them in the lm_sensors package, which you can download at
+  http://www.lm-sensors.nu/
+
+Winbond W83L785TS-S
+CONFIG_SENSORS_W83L785TS
+  If you say yes here you get support for the Winbond W83L785TS-S
+  sensor chip.  This can also be built as a module.
+
+  You will also need the latest user-space utilities: you can find
+  them in the lm_sensors package, which you can download at
+  http://www.lm-sensors.nu/
 
 EEprom (DIMM) reader
 CONFIG_SENSORS_EEPROM
@@ -517,7 +732,7 @@ EOF
   }
   close INPUT;
   close OUTPUT;
-  die "Automatic patch generation for `Makefile' failed.\n".
+  die "Automatic patch generation for main `Makefile' failed.\n".
       "See our home page http://www.lm-sensors.nu for assistance!" if $pr1 == 0;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
@@ -634,77 +849,11 @@ sub gen_drivers_char_Config_in
   }
   close INPUT;
   close OUTPUT;
-  die "Automatic patch generation for `drivers/Makefile' failed.\n".
+  die "Automatic patch generation for `drivers/char/Config.in' failed.\n".
       "See our home page http://www.lm-sensors.nu for assistance!" if $pr1 == 0;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
  
-
-# This generates diffs for drivers/char/mem.c They are a bit intricate.
-# Lines are generated at the beginning to declare sensors_init_all
-# At the bottom, a call to sensors_init_all is added when the
-# new lm_sensors stuff is configured in.
-# Of course, care is taken old lines are removed.
-# $_[0]: sensors package root (like /tmp/sensors)
-# $_[1]: Linux kernel tree (like /usr/src/linux)
-sub gen_drivers_char_mem_c
-{
-  my ($package_root,$kernel_root) = @_;
-  my $kernel_file = "drivers/char/mem.c";
-  my $package_file = $temp;
-  my $right_place = 0;
-  my $done = 0;
-  my $atstart = 1;
-  my $pr1 = 0;
-  my $pr2 = 0;
-
-  open INPUT,"$kernel_root/$kernel_file"
-        or die "Can't open `$kernel_root/$kernel_file'";
-  open OUTPUT,">$package_root/$package_file"
-        or die "Can't open $package_root/$package_file";
-  MAIN: while(<INPUT>) {
-    if ($atstart and m@#ifdef@) {
-      $pr1 = 1;
-      print OUTPUT << 'EOF';
-#ifdef CONFIG_SENSORS
-extern void sensors_init_all(void);
-#endif
-EOF
-      $atstart = 0;
-    }
-    if (not $right_place and m@CONFIG_SENSORS@) {
-      $_ = <INPUT> while not m@#endif@;
-      $_ = <INPUT>;
-      redo MAIN;
-    }
-    $right_place = 1 if (m@lp_m68k_init\(\);@);
-    if ($right_place and not $done and
-        m@CONFIG_SENSORS@) {
-      $_ = <INPUT> while not m@#endif@;
-      $_ = <INPUT>;
-      $_ = <INPUT> if m@^$@;
-      redo MAIN;
-    }
-    if ($right_place and not $done and m@return 0;@) {
-      $pr2 = 1;
-      print OUTPUT <<'EOF';
-#ifdef CONFIG_SENSORS
-	sensors_init_all();
-#endif
-
-EOF
-      $done = 1;
-    }
-    print OUTPUT;
-  }
-  close INPUT;
-  close OUTPUT;
-  die "Automatic patch generation for `drivers/char/mem.c' failed.\n".
-      "See our home page http://www.lm-sensors.nu for assistance!" if $pr1 == 0 or $pr2 == 0;
-  print_diff $package_root,$kernel_root,$kernel_file,$package_file;
-}
-
-
 # This generates diffs for drivers/i2c/Config.in
 # Several adapter drivers that are included in the lm_sensors package are
 # added at the first and onlu sensors marker.
@@ -732,19 +881,29 @@ sub gen_drivers_i2c_Config_in
       print OUTPUT << 'EOF';
   bool 'I2C mainboard interfaces' CONFIG_I2C_MAINBOARD 
   if [ "$CONFIG_I2C_MAINBOARD" = "y" ]; then
-    tristate '  Acer Labs ALI 1535' CONFIG_I2C_ALI1535 
-    tristate '  Acer Labs ALI 1533 and 1543C' CONFIG_I2C_ALI15X3 
+    dep_tristate '  Acer Labs ALI 1535' CONFIG_I2C_ALI1535 $CONFIG_I2C
+    dep_tristate '  Acer Labs ALI 1533 and 1543C' CONFIG_I2C_ALI15X3 $CONFIG_I2C
     dep_tristate '  Apple Hydra Mac I/O' CONFIG_I2C_HYDRA $CONFIG_I2C_ALGOBIT
-    tristate '  AMD 756/766/768' CONFIG_I2C_AMD756
-    dep_tristate '  DEC Tsunami I2C interface' CONFIG_I2C_TSUNAMI $CONFIG_I2C_ALGOBIT
-    tristate '  Intel 82801AA, 82801AB and 82801BA' CONFIG_I2C_I801
+    dep_tristate '  AMD 756/766/768/8111 and nVidia nForce' CONFIG_I2C_AMD756 $CONFIG_I2C
+    if [ "$CONFIG_I2C_AMD756" != "n" ]; then
+      dep_mbool '  SMBus multiplexing on the Tyan S4882' CONFIG_I2C_AMD756_S4882 $CONFIG_I2C_AMD756
+    fi
+    dep_tristate '  AMD 8111 SMBus 2.0' CONFIG_I2C_AMD8111 $CONFIG_I2C
+    if [ "$CONFIG_ALPHA" = "y" ]; then
+      dep_tristate '  DEC Tsunami I2C interface' CONFIG_I2C_TSUNAMI $CONFIG_I2C_ALGOBIT
+    fi
+    dep_tristate '  Intel 82801AA, AB, BA, DB' CONFIG_I2C_I801 $CONFIG_I2C
     dep_tristate '  Intel i810AA/AB/E and i815' CONFIG_I2C_I810 $CONFIG_I2C_ALGOBIT
-    tristate '  Intel 82371AB PIIX4(E), 443MX, ServerWorks OSB4/CSB5, SMSC Victory66' CONFIG_I2C_PIIX4
-    tristate '  SiS 5595' CONFIG_I2C_SIS5595
+    dep_tristate '  Intel 82371AB PIIX4(E), 443MX, ServerWorks OSB4/CSB5, SMSC Victory66' CONFIG_I2C_PIIX4 $CONFIG_I2C
+    dep_tristate '  Nvidia Nforce2/Nforce3' CONFIG_I2C_NFORCE2 $CONFIG_I2C
+    dep_tristate '  SiS 5595' CONFIG_I2C_SIS5595 $CONFIG_I2C
+    dep_tristate '  SiS 630/730' CONFIG_I2C_SIS630 $CONFIG_I2C
+    dep_tristate '  SiS 645/961,645DX/961,735' CONFIG_I2C_SIS645 $CONFIG_I2C $CONFIG_HOTPLUG
+    dep_tristate '  Savage 4' CONFIG_I2C_SAVAGE4 $CONFIG_I2C_ALGOBIT
     dep_tristate '  VIA Technologies, Inc. VT82C586B' CONFIG_I2C_VIA $CONFIG_I2C_ALGOBIT
-    tristate '  VIA Technologies, Inc. VT596A/B, 686A/B, 8233' CONFIG_I2C_VIAPRO
+    dep_tristate '  VIA Technologies, Inc. VT596A/B, 686A/B, 8231, 8233, 8233A, 8235' CONFIG_I2C_VIAPRO $CONFIG_I2C
     dep_tristate '  Voodoo3 I2C interface' CONFIG_I2C_VOODOO3 $CONFIG_I2C_ALGOBIT
-    tristate '  Pseudo ISA adapter (for some hardware sensors)' CONFIG_I2C_ISA 
+    dep_tristate '  Pseudo ISA adapter (for some hardware sensors)' CONFIG_I2C_ISA $CONFIG_I2C
   fi
 
 EOF
@@ -763,14 +922,10 @@ sub gen_drivers_sensors_Makefile
   my ($package_root,$kernel_root) = @_;
   my $kernel_file = "drivers/sensors/Makefile";
   my $package_file = $temp;
-  my $use_new_format;
-  `grep -q -s 'i2c\.o' "$kernel_root/drivers/i2c/Makefile"`;
-  $use_new_format = ! $?;
 
   open OUTPUT,">$package_root/$package_file"
         or die "Can't open $package_root/$package_file";
-  if ($use_new_format) {
-    print OUTPUT <<'EOF';
+  print OUTPUT <<'EOF';
 #
 # Makefile for the kernel hardware sensors drivers.
 #
@@ -778,13 +933,12 @@ sub gen_drivers_sensors_Makefile
 MOD_LIST_NAME := SENSORS_MODULES
 O_TARGET := sensor.o
 
-export-objs	:= sensors.o
-
-obj-$(CONFIG_SENSORS)		+= sensors.o
 obj-$(CONFIG_SENSORS_ADM1021)	+= adm1021.o
 obj-$(CONFIG_SENSORS_ADM1024)	+= adm1024.o
 obj-$(CONFIG_SENSORS_ADM1025)	+= adm1025.o
+obj-$(CONFIG_SENSORS_ADM1026)	+= adm1026.o
 obj-$(CONFIG_SENSORS_ADM9240)	+= adm9240.o
+obj-$(CONFIG_SENSORS_ASB100)	+= asb100.o
 obj-$(CONFIG_SENSORS_BT869)	+= bt869.o
 obj-$(CONFIG_SENSORS_DDCMON)	+= ddcmon.o
 obj-$(CONFIG_SENSORS_DS1621)	+= ds1621.o
@@ -797,233 +951,31 @@ obj-$(CONFIG_SENSORS_IT87)	+= it87.o
 obj-$(CONFIG_SENSORS_LM75)	+= lm75.o
 obj-$(CONFIG_SENSORS_LM78)	+= lm78.o
 obj-$(CONFIG_SENSORS_LM80)	+= lm80.o
+obj-$(CONFIG_SENSORS_LM83)	+= lm83.o
+obj-$(CONFIG_SENSORS_LM85)	+= lm85.o
 obj-$(CONFIG_SENSORS_LM87)	+= lm87.o
+obj-$(CONFIG_SENSORS_LM90)	+= lm90.o
+obj-$(CONFIG_SENSORS_LM92)	+= lm92.o
+obj-$(CONFIG_SENSORS_MAX6650)	+= max6650.o
 obj-$(CONFIG_SENSORS_MAXILIFE)	+= maxilife.o
 obj-$(CONFIG_SENSORS_MTP008)	+= mtp008.o
+obj-$(CONFIG_SENSORS_PC87360)	+= pc87360.o
+obj-$(CONFIG_SENSORS_PCF8574)	+= pcf8574.o
+obj-$(CONFIG_SENSORS_PCF8591)	+= pcf8591.o
 obj-$(CONFIG_SENSORS_SIS5595)	+= sis5595.o
+obj-$(CONFIG_SENSORS_SMSC47M1)	+= smsc47m1.o
 obj-$(CONFIG_SENSORS_THMC50)	+= thmc50.o
 obj-$(CONFIG_SENSORS_VIA686A)	+= via686a.o
+obj-$(CONFIG_SENSORS_VT1211)	+= vt1211.o
+obj-$(CONFIG_SENSORS_VT8231)	+= vt8231.o
 obj-$(CONFIG_SENSORS_W83781D)	+= w83781d.o
+obj-$(CONFIG_SENSORS_W83627HF)	+= w83627hf.o
+obj-$(CONFIG_SENSORS_W83L785TS)	+= w83l785ts.o
+obj-$(CONFIG_SENSORS_XEONTEMP)	+= xeontemp.o
 
 include $(TOPDIR)/Rules.make
 
 EOF
-  } else {
-    print OUTPUT <<'EOF';
-#
-# Makefile for the kernel hardware sensors drivers.
-#
-
-SUB_DIRS     :=
-MOD_SUB_DIRS := $(SUB_DIRS)
-ALL_SUB_DIRS := $(SUB_DIRS)
-MOD_LIST_NAME := SENSORS_MODULES
-
-L_TARGET := sensors.a
-MX_OBJS :=  
-M_OBJS  := 
-LX_OBJS :=
-L_OBJS  := 
-
-# -----
-# i2c core components
-# -----
-
-ifeq ($(CONFIG_SENSORS),y)
-  LX_OBJS += sensors.o
-else
-  ifeq ($(CONFIG_SENSORS),m)
-    MX_OBJS += sensors.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_ADM1021),y)
-  L_OBJS += adm1021.o
-else
-  ifeq ($(CONFIG_SENSORS_ADM1021),m)
-    M_OBJS += adm1021.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_ADM1024),y)
-  L_OBJS += adm1024.o
-else
-  ifeq ($(CONFIG_SENSORS_ADM1024),m)
-    M_OBJS += adm1024.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_ADM1025),y)
-  L_OBJS += adm1025.o
-else
-  ifeq ($(CONFIG_SENSORS_ADM1025),m)
-    M_OBJS += adm1025.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_ADM9240),y)
-  L_OBJS += adm9240.o
-else
-  ifeq ($(CONFIG_SENSORS_ADM9240),m)
-    M_OBJS += adm9240.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_DDCMON),y)
-  L_OBJS += ddcmon.o
-else
-  ifeq ($(CONFIG_SENSORS_DDCMON),m)
-    M_OBJS += ddcmon.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_DS1621),y)
-  L_OBJS += ds1621.o
-else
-  ifeq ($(CONFIG_SENSORS_DS1621),m)
-    M_OBJS += ds1621.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_EEPROM),y)
-  L_OBJS += eeprom.o
-else
-  ifeq ($(CONFIG_SENSORS_EEPROM),m)
-    M_OBJS += eeprom.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_FSCPOS),y)
-  L_OBJS += fscpos.o
-else
-  ifeq ($(CONFIG_SENSORS_FSCPOS),m)
-    M_OBJS += fscpos.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_FSCSCY),y)
-  L_OBJS += fscscy.o
-else
-  ifeq ($(CONFIG_SENSORS_FSCSCY),m)
-    M_OBJS += fscscy.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_GL518SM),y)
-  L_OBJS += gl518sm.o
-else
-  ifeq ($(CONFIG_SENSORS_GL518SM),m)
-    M_OBJS += gl518sm.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_GL520SM),y)
-  L_OBJS += gl520sm.o
-else
-  ifeq ($(CONFIG_SENSORS_GL520SM),m)
-    M_OBJS += gl520sm.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_IT87),y)
-  L_OBJS += it87.o
-else
-  ifeq ($(CONFIG_SENSORS_IT87),m)
-    M_OBJS += it87.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_LM75),y)
-  L_OBJS += lm75.o
-else
-  ifeq ($(CONFIG_SENSORS_LM75),m)
-    M_OBJS += lm75.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_LM78),y)
-  L_OBJS += lm78.o
-else
-  ifeq ($(CONFIG_SENSORS_LM78),m)
-    M_OBJS += lm78.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_LM80),y)
-  L_OBJS += lm80.o
-else
-  ifeq ($(CONFIG_SENSORS_LM80),m)
-    M_OBJS += lm80.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_LM87),y)
-  L_OBJS += lm87.o
-else
-  ifeq ($(CONFIG_SENSORS_LM87),m)
-    M_OBJS += lm87.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_MATORB),y)
-  L_OBJS += matorb.o
-else
-  ifeq ($(CONFIG_SENSORS_MATORB),m)
-    M_OBJS += matorb.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_MAXILIFE),y)
-  L_OBJS += maxilife.o
-else
-  ifeq ($(CONFIG_SENSORS_MAXILIFE),m)
-    M_OBJS += maxilife.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_MTP008),y)
-  L_OBJS += mtp008.o
-else
-  ifeq ($(CONFIG_SENSORS_MTP008),m)
-    M_OBJS += mtp008.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_SIS5595),y)
-  L_OBJS += sis5595.o
-else
-  ifeq ($(CONFIG_SENSORS_SIS5595),m)
-    M_OBJS += sis5595.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_THMC50),y)
-  L_OBJS += thmc50.o
-else
-  ifeq ($(CONFIG_SENSORS_THMC50),m)
-    M_OBJS += thmc50.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_VIA686A),y)
-  L_OBJS += via686a.o
-else
-  ifeq ($(CONFIG_SENSORS_VIA686A),m)
-    M_OBJS += via686a.o
-  endif
-endif
-
-ifeq ($(CONFIG_SENSORS_W83781D),y)
-  L_OBJS += w83781d.o
-else
-  ifeq ($(CONFIG_SENSORS_W83781D),m)
-    M_OBJS += w83781d.o
-  endif
-endif
-
-include $(TOPDIR)/Rules.make
-EOF
-  }  
   close OUTPUT;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
@@ -1040,144 +992,38 @@ sub gen_drivers_i2c_Makefile
   my $kernel_file = "drivers/i2c/Makefile";
   my $package_file = $temp;
   my $pr1 = 0;
-  my $new_format = 0;
 
   open INPUT,"$kernel_root/$kernel_file"
         or die "Can't open `$kernel_root/$kernel_file'";
   open OUTPUT,">$package_root/$package_file"
         or die "Can't open $package_root/$package_file";
   while(<INPUT>) {
-    $new_format = 1 if m@i2c\.o@;
     if (m@sensors code starts here@) {
       $pr1 ++;
       print OUTPUT;
       while (<INPUT>) {
         last if m@sensors code ends here@;
       }
-      if ($new_format) {
-        print OUTPUT << 'EOF';
+      print OUTPUT <<'EOF';
 obj-$(CONFIG_I2C_ALI1535)		+= i2c-ali1535.o
 obj-$(CONFIG_I2C_ALI15X3)		+= i2c-ali15x3.o
 obj-$(CONFIG_I2C_AMD756)		+= i2c-amd756.o
+obj-$(CONFIG_I2C_AMD8111)		+= i2c-amd8111.o
 obj-$(CONFIG_I2C_HYDRA)			+= i2c-hydra.o
 obj-$(CONFIG_I2C_I801)			+= i2c-i801.o
 obj-$(CONFIG_I2C_I810)			+= i2c-i810.o
 obj-$(CONFIG_I2C_ISA)			+= i2c-isa.o
+obj-$(CONFIG_I2C_NFORCE2)		+= i2c-nforce2.o
 obj-$(CONFIG_I2C_PIIX4)			+= i2c-piix4.o
 obj-$(CONFIG_I2C_SIS5595)		+= i2c-sis5595.o
+obj-$(CONFIG_I2C_SIS630)		+= i2c-sis630.o
+obj-$(CONFIG_I2C_SIS645)		+= i2c-sis645.o
+obj-$(CONFIG_I2C_SAVAGE4)		+= i2c-savage4.o
 obj-$(CONFIG_I2C_TSUNAMI)		+= i2c-tsunami.o
 obj-$(CONFIG_I2C_VIA)			+= i2c-via.o
 obj-$(CONFIG_I2C_VIAPRO)		+= i2c-viapro.o
 obj-$(CONFIG_I2C_VOODOO3)		+= i2c-voodoo3.o
 EOF
-      } else {
-        print OUTPUT << 'EOF';
-ifeq ($(CONFIG_I2C_ALI1535),y)
-  L_OBJS += i2c-ali1535.o
-else 
-  ifeq ($(CONFIG_I2C_ALI1535),m)
-    M_OBJS += i2c-ali1535.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_ALI15X3),y)
-  L_OBJS += i2c-ali15x3.o
-else 
-  ifeq ($(CONFIG_I2C_ALI15X3),m)
-    M_OBJS += i2c-ali15x3.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_AMD756),y)
-  L_OBJS += i2c-amd756.o
-else 
-  ifeq ($(CONFIG_I2C_AMD756),m)
-    M_OBJS += i2c-amd756.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_HYDRA),y)
-  L_OBJS += i2c-hydra.o
-else 
-  ifeq ($(CONFIG_I2C_HYDRA),m)
-    M_OBJS += i2c-hydra.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_I801),y)
-  L_OBJS += i2c-i801.o
-else 
-  ifeq ($(CONFIG_I2C_I801),m)
-    M_OBJS += i2c-i801.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_I810),y)
-  L_OBJS += i2c-i810.o
-else 
-  ifeq ($(CONFIG_I2C_I810),m)
-    M_OBJS += i2c-i810.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_ISA),y)
-  L_OBJS += i2c-isa.o
-else 
-  ifeq ($(CONFIG_I2C_ISA),m)
-    M_OBJS += i2c-isa.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_PIIX4),y)
-  L_OBJS += i2c-piix4.o
-else 
-  ifeq ($(CONFIG_I2C_PIIX4),m)
-    M_OBJS += i2c-piix4.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_SIS5595),y)
-  L_OBJS += i2c-sis5595.o
-else 
-  ifeq ($(CONFIG_I2C_SIS5595),m)
-    M_OBJS += i2c-sis5595.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_TSUNAMI),y)
-  L_OBJS += i2c-tsunami.o
-else 
-  ifeq ($(CONFIG_I2C_TSUNAMI),m)
-    M_OBJS += i2c-tsunami.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_VIA),y)
-  L_OBJS += i2c-via.o
-else 
-  ifeq ($(CONFIG_I2C_VIA),m)
-    M_OBJS += i2c-via.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_VIAPRO),y)
-  L_OBJS += i2c-viapro.o
-else 
-  ifeq ($(CONFIG_I2C_VIAPRO),m)
-    M_OBJS += i2c-viapro.o
-  endif
-endif
-
-ifeq ($(CONFIG_I2C_VOODOO3),y)
-  L_OBJS += i2c-voodoo3.o
-else 
-  ifeq ($(CONFIG_I2C_VOODOO3),m)
-    M_OBJS += i2c-voodoo3.o
-  endif
-endif
-
-EOF
-      }
     }
     print OUTPUT;
   }
@@ -1185,125 +1031,6 @@ EOF
   close OUTPUT;
   die "Automatic patch generation for `drivers/i2c/Makefile' failed.\n".
       "See our home page http://www.lm-sensors.nu for assistance!" if $pr1 != 1;
-  print_diff $package_root,$kernel_root,$kernel_file,$package_file;
-}
-
-# This generates diffs for drivers/i2c/i2c-core.c
-# Lines are generated at the beginning to declare several *_init functions.
-# At the bottom, calls to them are added when the sensors stuff is configured
-# in.
-# $_[0]: sensors package root (like /tmp/sensors)
-# $_[1]: Linux kernel tree (like /usr/src/linux)
-sub gen_drivers_i2c_i2c_core_c
-{
-  my ($package_root,$kernel_root) = @_;
-  my $kernel_file = "drivers/i2c/i2c-core.c";
-  my $package_file = $temp;
-  my $patch_nr = 1;
-
-  open INPUT,"$kernel_root/$kernel_file"
-        or die "Can't open `$kernel_root/$kernel_file'";
-  open OUTPUT,">$package_root/$package_file"
-        or die "Can't open $package_root/$package_file";
-  while(<INPUT>) {
-    if (m@sensors code starts here@) {
-      print OUTPUT;
-      while (<INPUT>) {
-        last if m@sensors code ends here@;
-      }
-      if ($patch_nr == 1) {
-        print OUTPUT << 'EOF';
-#ifdef CONFIG_I2C_ALI1535
-	extern int i2c_ali1535_init(void);
-#endif
-#ifdef CONFIG_I2C_ALI15X3
-	extern int i2c_ali15x3_init(void);
-#endif
-#ifdef CONFIG_I2C_AMD756
-	extern int i2c_amd756_init(void);
-#endif
-#ifdef CONFIG_I2C_HYDRA
-	extern int i2c_hydra_init(void);
-#endif
-#ifdef CONFIG_I2C_I801
-	extern int i2c_i801_init(void);
-#endif
-#ifdef CONFIG_I2C_I810
-	extern int i2c_i810_init(void);
-#endif
-#ifdef CONFIG_I2C_ISA
-	extern int i2c_isa_init(void);
-#endif
-#ifdef CONFIG_I2C_PIIX4
-	extern int i2c_piix4_init(void);
-#endif
-#ifdef CONFIG_I2C_SIS5595
-	extern int i2c_sis5595_init(void);
-#endif
-#ifdef CONFIG_I2C_TSUNAMI
-	extern int i2c_tsunami_init(void);
-#endif
-#ifdef CONFIG_I2C_VIA
-	extern int i2c_via_init(void);
-#endif
-#ifdef CONFIG_I2C_VIAPRO
-	extern int i2c_vt596_init(void);
-#endif
-#ifdef CONFIG_I2C_VOODOO3
-	extern int i2c_voodoo3_init(void);
-#endif
-EOF
-      } elsif ($patch_nr == 2) {
-      print OUTPUT << 'EOF';
-#ifdef CONFIG_I2C_ALI1535
-	i2c_ali1535_init();
-#endif
-#ifdef CONFIG_I2C_ALI15X3
-	i2c_ali15x3_init();
-#endif
-#ifdef CONFIG_I2C_AMD756
-	i2c_amd756_init();
-#endif
-#ifdef CONFIG_I2C_HYDRA
-	i2c_hydra_init();
-#endif
-#ifdef CONFIG_I2C_I801
-	i2c_i801_init();
-#endif
-#ifdef CONFIG_I2C_I810
-	i2c_i810_init();
-#endif
-#ifdef CONFIG_I2C_PIIX4
-	i2c_piix4_init();
-#endif
-#ifdef CONFIG_I2C_SIS5595
-	i2c_sis5595_init();
-#endif
-#ifdef CONFIG_I2C_TSUNAMI
-	i2c_tsunami_init();
-#endif
-#ifdef CONFIG_I2C_VIA
-	i2c_via_init();
-#endif
-#ifdef CONFIG_I2C_VIAPRO
-	i2c_vt596_init();
-#endif
-#ifdef CONFIG_I2C_VOODOO3
-	i2c_voodoo3_init();
-#endif
-#ifdef CONFIG_I2C_ISA
-	i2c_isa_init();
-#endif
-EOF
-      }
-      $patch_nr ++;
-    }
-    print OUTPUT;
-  }
-  close INPUT;
-  close OUTPUT;
-  die "Automatic patch generation for `drivers/i2c/i2c-core.c' failed.\n".
-      "See our home page http://www.lm-sensors.nu for assistance!" if $patch_nr != 3;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
@@ -1330,10 +1057,6 @@ sub gen_MAINTAINERS
     if (not $done and (m@SGI VISUAL WORKSTATION 320 AND 540@)) {
       print OUTPUT <<'EOF';
 SENSORS DRIVERS
-P:      Frodo Looijaard
-M:      frodol@dds.nl
-P:      Philip Edelbrock
-M:      phil@netroedge.com
 L:      sensors@stimpy.netroedge.com
 W:      http://www.lm-sensors.nu/
 S:      Maintained
@@ -1347,6 +1070,87 @@ EOF
   close OUTPUT;
   die "Automatic patch generation for `MAINTAINERS' failed.\n".
       "See our home page http://www.lm-sensors.nu for assistance!" if $done == 0;
+  print_diff $package_root,$kernel_root,$kernel_file,$package_file;
+}
+
+# Generate the diffs for dmi_scan.c and i386_ksyms.c
+# $_[0]: i2c package root (like /tmp/i2c)
+# $_[1]: Linux kernel tree (like /usr/src/linux)
+sub gen_dmi_scan
+{
+  my ($package_root,$kernel_root) = @_;
+  my $kernel_file = "arch/i386/kernel/dmi_scan.c";
+  my $package_file = $temp;
+  my $done = 0;
+
+  open INPUT,"$kernel_root/$kernel_file"
+        or die "Can't open `$kernel_root/$kernel_file'";
+  open OUTPUT,">$package_root/$package_file"
+        or die "Can't open $package_root/$package_file";
+  MAIN: while(<INPUT>) {
+    if ($done == 0 && m/^\s*int is_sony_vaio_laptop;\s*$/) {
+      print OUTPUT <<'EOF';
+int is_unsafe_smbus;
+EOF
+      $done++;
+    }
+    if ($done == 1 && m/^\s*\* Check for a Sony Vaio system\s*$/) {
+      print OUTPUT <<'EOF';
+ * Don't access SMBus on IBM systems which get corrupted eeproms 
+ */
+
+static __init int disable_smbus(struct dmi_blacklist *d)
+{   
+	if (is_unsafe_smbus == 0) {
+		is_unsafe_smbus = 1;
+		printk(KERN_INFO "%s machine detected. Disabling SMBus accesses.\n", d->ident);
+	}
+	return 0;
+}
+
+/*
+EOF
+      $done++;
+    }
+    if ($done == 2 && m/^\s*\{ sony_vaio_laptop, "Sony Vaio", \{ \/\* This is a Sony Vaio laptop \*\/\s*$/) {
+      print OUTPUT <<'EOF';
+	{ disable_smbus, "IBM", {
+			MATCH(DMI_SYS_VENDOR, "IBM"),
+			NO_MATCH, NO_MATCH, NO_MATCH
+			} },
+EOF
+      $done++;
+    }
+    print OUTPUT;
+  }
+  close INPUT;
+  close OUTPUT;
+  die "Automatic patch generation for `$kernel_file' failed.\n".
+      "See our home page http://www.lm-sensors.nu for assistance!" if $done != 3;
+  print_diff $package_root,$kernel_root,$kernel_file,$package_file;
+
+  $kernel_file = "arch/i386/kernel/i386_ksyms.c";
+  $done = 0;
+
+  open INPUT,"$kernel_root/$kernel_file"
+        or die "Can't open `$kernel_root/$kernel_file'";
+  open OUTPUT,">$package_root/$package_file"
+        or die "Can't open $package_root/$package_file";
+  MAIN: while(<INPUT>) {
+    if ($done == 0 && m/^\s*extern int is_sony_vaio_laptop;\s*$/) {
+      print OUTPUT <<'EOF';
+extern int is_unsafe_smbus;
+EXPORT_SYMBOL(is_unsafe_smbus);
+
+EOF
+      $done++;
+    }
+    print OUTPUT;
+  }
+  close INPUT;
+  close OUTPUT;
+  die "Automatic patch generation for `$kernel_file' failed.\n".
+      "See our home page http://www.lm-sensors.nu for assistance!" if $done != 1;
   print_diff $package_root,$kernel_root,$kernel_file,$package_file;
 }
 
@@ -1418,12 +1222,11 @@ sub main
   gen_drivers_Makefile $package_root, $kernel_root;
   gen_drivers_sensors_Makefile $package_root, $kernel_root;
   gen_drivers_char_Config_in $package_root, $kernel_root;
-  gen_drivers_char_mem_c $package_root, $kernel_root;
   gen_drivers_i2c_Config_in $package_root, $kernel_root;
   gen_drivers_i2c_Makefile $package_root, $kernel_root;
-  gen_drivers_i2c_i2c_core_c $package_root, $kernel_root;
   gen_Documentation_Configure_help $package_root, $kernel_root;
   gen_MAINTAINERS $package_root, $kernel_root;
+  gen_dmi_scan $package_root, $kernel_root;
 }
 
 main;

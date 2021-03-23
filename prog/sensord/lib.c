@@ -3,7 +3,7 @@
  *
  * A daemon that periodically logs sensor information to syslog.
  *
- * Copyright (c) 1999-2001 Merlin Hughes <merlin@merlin.org>
+ * Copyright (c) 1999-2002 Merlin Hughes <merlin@merlin.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@
 #include "lib/error.h"
 
 static const char *sensorsCfgPaths[] = {
-  "/etc", "/usr/lib/sensors", "/usr/local/lib/sensors", "/usr/lib", "/usr/local/lib", NULL
+  "/etc", "/usr/local/etc", "/usr/lib/sensors", "/usr/local/lib/sensors", "/usr/lib", "/usr/local/lib", NULL
 };
 
 #define CFG_PATH_LEN 4096

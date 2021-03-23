@@ -7,7 +7,7 @@ Supported chips:
   * Via VT82C686A, VT82C686B  Southbridge Integrated Hardware Monitor
     Prefix: via686a
     Addresses scanned: ISA in PCI-space encoded address
-    Datasheet: Publicly available at the Via site http://www.via.com.tw.
+    Datasheet: Sometimes available at the Via site http://www.via.com.tw.
 
 Authors: Kyösti Mälkki <kmalkki@cc.hut.fi>,
          Mark D. Studebaker <mdsxyz123@yahoo.com>
@@ -23,14 +23,14 @@ force_addr=0xaddr	Set the I/O base address. Useful for Asus A7V boards
 			PCI force; the via686a must still be present in lspci.
 			Don't use this unless the driver complains that the
 			base address is not set.
-			Example: 'modprobe via686a force_addr=0x290'
+			Example: 'modprobe via686a force_addr=0x6000'
 
 
 Description
 -----------
 
-The driver does not distinguish between a 686A or 686B and reports
-both as a 686A.
+The driver does not distinguish between the chips and reports
+all as a 686A.
 
 The Via 686a southbridge has integrated hardware monitor functionality.
 It also has an I2C bus, but this driver only supports the hardware monitor.

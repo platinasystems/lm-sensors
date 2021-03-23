@@ -31,32 +31,23 @@
     type at module load time.
 */
 
-#include <linux/version.h>
+/*
+    michael.hufer@gmx.de Michael Hufer 09/07/03
+    Modified configure (enable/disable) chip reset at module load time.
+    Added ability to read and set fan pwm registers and the smart
+    guardian (sg) features of the chip.
+*/
+
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
 #include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include <asm/io.h>
+#include "version.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -68,14 +59,54 @@ static unsigned int normal_isa_range[] = { SENSORS_ISA_END };
 SENSORS_INSMOD_4(it87, it8705, it8712, sis950);
 
 
+#define	REG	0x2e	/* The register to read/write */
+#define	DEV	0x07	/* Register: Logical device select */
+#define	VAL	0x2f	/* The value to read/write */
+#define PME	0x04	/* The device with the fan registers in it */
+#define	DEVID	0x20	/* Register: Device ID */
+
+static inline int
+superio_inb(int reg)
+{
+	outb(reg, REG);
+	return inb(VAL);
+}
+
+static inline void
+superio_select(void)
+{
+	outb(DEV, REG);
+	outb(PME, VAL);
+}
+
+static inline void
+superio_enter(void)
+{
+	outb(0x87, REG);
+	outb(0x01, REG);
+	outb(0x55, REG);
+	outb(0x55, REG);
+}
+
+static inline void
+superio_exit(void)
+{
+	outb(0x02, REG);
+	outb(0x02, VAL);
+}
+
+/* just IT8712F for now - this should be extended to support the other
+   chips as well */
+#define IT87_DEVID_MATCH(id) ((id) == 0x8712)
+
+#define IT87_ACT_REG  0x30
+#define IT87_BASE_REG 0x60
+
 /* Update battery voltage after every reading if true */
 static int update_vbat = 0;
 
-
-/* Enable Temp1 as thermal resistor */
-/* Enable Temp2 as thermal diode */
-/* Enable Temp3 as thermal resistor */
-static int temp_type = 0x2a;
+/* Reset the registers on init */
+static int reset = 0;
 
 /* Many IT87 constants specified below */
 
@@ -97,11 +128,24 @@ static int temp_type = 0x2a;
 #define IT87_REG_VID           0x0a
 #define IT87_REG_FAN_DIV       0x0b
 
-/* Monitors: 9 voltage (0 to 7, battery), 3 temp (1 to 3), 3 fan (1 to 3) */
-
 #define IT87_REG_FAN(nr)       (0x0c + (nr))
 #define IT87_REG_FAN_MIN(nr)   (0x0f + (nr))
 #define IT87_REG_FAN_CTRL      0x13
+
+/* pwm and smart guardian registers */
+
+#define IT87_REG_FAN_ONOFF     0x14
+#define IT87_REG_PWM(nr)       (0x14 + (nr))
+#define IT87_REG_SG_TL_OFF(nr) (0x58 + (nr)*8)
+#define IT87_REG_SG_TL_LOW(nr) (0x59 + (nr)*8)
+#define IT87_REG_SG_TL_MED(nr) (0x5a + (nr)*8)
+#define IT87_REG_SG_TL_HI(nr)  (0x5b + (nr)*8)
+#define IT87_REG_SG_TL_OVR(nr) (0x5c + (nr)*8)
+#define IT87_REG_SG_PWM_LOW(nr) (0x5d + (nr)*8)
+#define IT87_REG_SG_PWM_MED(nr) (0x5e + (nr)*8)
+#define IT87_REG_SG_PWM_HI(nr)  (0x5f + (nr)*8)
+
+/* Monitors: 9 voltage (0 to 7, battery), 3 temp (1 to 3), 3 fan (1 to 3) */
 
 #define IT87_REG_VIN(nr)       (0x20 + (nr))
 #define IT87_REG_TEMP(nr)      (0x28 + (nr))
@@ -118,15 +162,19 @@ static int temp_type = 0x2a;
 
 #define IT87_REG_CHIPID        0x58
 
+/* sensor pin types */
+#define UNUSED		0
+#define THERMISTOR	2
+#define PIIDIODE	3
 
-/* Conversions. Rounding and limit checking is only done on the TO_REG 
+/* Conversions. Limit checking is only done on the TO_REG 
    variants. Note that you should be a bit careful with which arguments
    these macros are called: arguments may be evaluated more than once.
    Fixing this is just not worth it. */
 #define IN_TO_REG(val)  (SENSORS_LIMIT((((val) * 10 + 8)/16),0,255))
-#define IN_FROM_REG(val) (((val) *  16) / 10)
+#define IN_FROM_REG(val) (((val) *  16 + 5) / 10)
 
-extern inline u8 FAN_TO_REG(long rpm, int div)
+static inline u8 FAN_TO_REG(long rpm, int div)
 {
 	if (rpm == 0)
 		return 255;
@@ -138,82 +186,31 @@ extern inline u8 FAN_TO_REG(long rpm, int div)
 #define FAN_FROM_REG(val,div) ((val)==0?-1:(val)==255?0:1350000/((val)*(div)))
 
 #define TEMP_TO_REG(val) (SENSORS_LIMIT(((val)<0?(((val)-5)/10):\
-                                                 ((val)+5)/10),0,255))
+                                                 ((val)+5)/10),-127,127))
 #define TEMP_FROM_REG(val) (((val)>0x80?(val)-0x100:(val))*10)
 
 #define VID_FROM_REG(val) ((val)==0x1f?0:(val)>=0x10?510-(val)*10:\
                            205-(val)*5)
 #define ALARMS_FROM_REG(val) (val)
 
-#define DIV_TO_REG(val) ((val)==8?3:(val)==4?2:(val)==1?0:1)
+extern inline u8 DIV_TO_REG(long val)
+{
+	u8 i;
+	for( i = 0; i <= 7; i++ )
+	{
+		if( val>>i == 1 )
+			return i;
+	}
+	return 1;
+}
 #define DIV_FROM_REG(val) (1 << (val))
-
-/* Initial limits. Use the config file to set better limits. */
-#define IT87_INIT_IN_0 170
-#define IT87_INIT_IN_1 250
-#define IT87_INIT_IN_2 (330 / 2)
-#define IT87_INIT_IN_3 (((500)   * 100)/168)
-#define IT87_INIT_IN_4 (((1200)  * 10)/38)
-#define IT87_INIT_IN_5 (((1200)  * 10)/72)
-#define IT87_INIT_IN_6 (((500)   * 10)/56)
-#define IT87_INIT_IN_7 (((500)   * 100)/168)
-
-#define IT87_INIT_IN_PERCENTAGE 10
-
-#define IT87_INIT_IN_MIN_0 \
-        (IT87_INIT_IN_0 - IT87_INIT_IN_0 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MAX_0 \
-        (IT87_INIT_IN_0 + IT87_INIT_IN_0 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MIN_1 \
-        (IT87_INIT_IN_1 - IT87_INIT_IN_1 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MAX_1 \
-        (IT87_INIT_IN_1 + IT87_INIT_IN_1 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MIN_2 \
-        (IT87_INIT_IN_2 - IT87_INIT_IN_2 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MAX_2 \
-        (IT87_INIT_IN_2 + IT87_INIT_IN_2 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MIN_3 \
-        (IT87_INIT_IN_3 - IT87_INIT_IN_3 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MAX_3 \
-        (IT87_INIT_IN_3 + IT87_INIT_IN_3 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MIN_4 \
-        (IT87_INIT_IN_4 - IT87_INIT_IN_4 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MAX_4 \
-        (IT87_INIT_IN_4 + IT87_INIT_IN_4 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MIN_5 \
-        (IT87_INIT_IN_5 - IT87_INIT_IN_5 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MAX_5 \
-        (IT87_INIT_IN_5 + IT87_INIT_IN_5 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MIN_6 \
-        (IT87_INIT_IN_6 - IT87_INIT_IN_6 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MAX_6 \
-        (IT87_INIT_IN_6 + IT87_INIT_IN_6 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MIN_7 \
-        (IT87_INIT_IN_7 - IT87_INIT_IN_7 * IT87_INIT_IN_PERCENTAGE / 100)
-#define IT87_INIT_IN_MAX_7 \
-        (IT87_INIT_IN_7 + IT87_INIT_IN_7 * IT87_INIT_IN_PERCENTAGE / 100)
-
-#define IT87_INIT_FAN_MIN_1 3000
-#define IT87_INIT_FAN_MIN_2 3000
-#define IT87_INIT_FAN_MIN_3 3000
-
-#define IT87_INIT_TEMP_HIGH_1 600
-#define IT87_INIT_TEMP_LOW_1  200
-#define IT87_INIT_TEMP_HIGH_2 600
-#define IT87_INIT_TEMP_LOW_2  200
-#define IT87_INIT_TEMP_HIGH_3 600 
-#define IT87_INIT_TEMP_LOW_3  200
-
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
 
 /* For each registered IT87, we need to keep some data in memory. That
    data is pointed to by it87_list[NR]->data. The structure itself is
    dynamically allocated, at the same time when a new it87 client is
    allocated. */
 struct it87_data {
+	struct i2c_client client;
 	struct semaphore lock;
 	int sysctl_id;
 	enum chips type;
@@ -233,25 +230,20 @@ struct it87_data {
 	u8 fan_div[3];		/* Register encoding, shifted right */
 	u8 vid;			/* Register encoding, combined */
 	u32 alarms;		/* Register encoding, combined */
+	u8 pwm[3];		/* Register value */
+	u8 fan_ctl[2];		/* Register encoding */
+	u8 sg_tl[3][5];		/* Register value */
+	u8 sg_pwm[3][3];	/* Register value */
+	u8 sens[3];		/* 2 = Thermistor,
+				   3 = PII/Celeron diode */
 };
 
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_it87_init(void);
-static int __init it87_cleanup(void);
-
 static int it87_attach_adapter(struct i2c_adapter *adapter);
+static int it87_find(int *address);
 static int it87_detect(struct i2c_adapter *adapter, int address,
 		       unsigned short flags, int kind);
 static int it87_detach_client(struct i2c_client *client);
-static int it87_command(struct i2c_client *client, unsigned int cmd,
-			void *arg);
-static void it87_inc_use(struct i2c_client *client);
-static void it87_dec_use(struct i2c_client *client);
 
 static int it87_read_value(struct i2c_client *client, u8 register);
 static int it87_write_value(struct i2c_client *client, u8 register,
@@ -272,24 +264,75 @@ static void it87_alarms(struct i2c_client *client, int operation,
 			    int ctl_name, int *nrels_mag, long *results);
 static void it87_fan_div(struct i2c_client *client, int operation,
 			 int ctl_name, int *nrels_mag, long *results);
+static void it87_fan_ctl(struct i2c_client *client, int operation,
+			 int ctl_name, int *nrels_mag, long *results);
+static void it87_pwm(struct i2c_client *client, int operation,
+			 int ctl_name, int *nrels_mag, long *results);
+static void it87_sgpwm(struct i2c_client *client, int operation,
+			 int ctl_name, int *nrels_mag, long *results);
+static void it87_sgtl(struct i2c_client *client, int operation,
+			 int ctl_name, int *nrels_mag, long *results);
+static void it87_sens(struct i2c_client *client, int operation,
+			 int ctl_name, int *nrels_mag, long *results);
 
 static struct i2c_driver it87_driver = {
-	/* name */ "IT87xx sensor driver",
-	/* id */ I2C_DRIVERID_IT87,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &it87_attach_adapter,
-	/* detach_client */ &it87_detach_client,
-	/* command */ &it87_command,
-	/* inc_use */ &it87_inc_use,
-	/* dec_use */ &it87_dec_use
+	.name		= "IT87xx sensor driver",
+	.id		= I2C_DRIVERID_IT87,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= it87_attach_adapter,
+	.detach_client	= it87_detach_client,
 };
-
-/* Used by it87_init/cleanup */
-static int __initdata it87_initialized = 0;
 
 static int it87_id = 0;
 
 /* The /proc/sys entries */
+
+/* -- SENSORS SYSCTL START -- */
+#define IT87_SYSCTL_IN0 1000    /* Volts * 100 */
+#define IT87_SYSCTL_IN1 1001
+#define IT87_SYSCTL_IN2 1002
+#define IT87_SYSCTL_IN3 1003
+#define IT87_SYSCTL_IN4 1004
+#define IT87_SYSCTL_IN5 1005
+#define IT87_SYSCTL_IN6 1006
+#define IT87_SYSCTL_IN7 1007
+#define IT87_SYSCTL_IN8 1008
+#define IT87_SYSCTL_FAN1 1101   /* Rotations/min */
+#define IT87_SYSCTL_FAN2 1102
+#define IT87_SYSCTL_FAN3 1103
+#define IT87_SYSCTL_TEMP1 1200  /* Degrees Celcius * 10 */
+#define IT87_SYSCTL_TEMP2 1201  /* Degrees Celcius * 10 */
+#define IT87_SYSCTL_TEMP3 1202  /* Degrees Celcius * 10 */
+#define IT87_SYSCTL_VID 1300    /* Volts * 100 */
+#define IT87_SYSCTL_FAN_DIV 2000        /* 1, 2, 4 or 8 */
+#define IT87_SYSCTL_ALARMS 2004    /* bitvector */
+
+#define IT87_SYSCTL_PWM1 1401
+#define IT87_SYSCTL_PWM2 1402
+#define IT87_SYSCTL_PWM3 1403
+#define IT87_SYSCTL_FAN_CTL  1501
+#define IT87_SYSCTL_FAN_ON_OFF  1502
+#define IT87_SYSCTL_SENS1 1601	/* 1, 2, or Beta (3000-5000) */
+#define IT87_SYSCTL_SENS2 1602
+#define IT87_SYSCTL_SENS3 1603
+
+#define IT87_ALARM_IN0 0x000100
+#define IT87_ALARM_IN1 0x000200
+#define IT87_ALARM_IN2 0x000400
+#define IT87_ALARM_IN3 0x000800
+#define IT87_ALARM_IN4 0x001000
+#define IT87_ALARM_IN5 0x002000
+#define IT87_ALARM_IN6 0x004000
+#define IT87_ALARM_IN7 0x008000
+#define IT87_ALARM_FAN1 0x0001
+#define IT87_ALARM_FAN2 0x0002
+#define IT87_ALARM_FAN3 0x0004
+#define IT87_ALARM_TEMP1 0x00010000
+#define IT87_ALARM_TEMP2 0x00020000
+#define IT87_ALARM_TEMP3 0x00040000
+
+/* -- SENSORS SYSCTL END -- */
+
 /* These files are created for each detected IT87. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -332,6 +375,34 @@ static ctl_table it87_dir_table_template[] = {
 	 &i2c_sysctl_real, NULL, &it87_fan_div},
 	{IT87_SYSCTL_ALARMS, "alarms", NULL, 0, 0444, NULL, &i2c_proc_real,
 	 &i2c_sysctl_real, NULL, &it87_alarms},
+	{IT87_SYSCTL_FAN_CTL, "fan_ctl", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_fan_ctl},
+	{IT87_SYSCTL_FAN_ON_OFF, "fan_on_off", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_fan_ctl},
+	{IT87_SYSCTL_PWM1, "pwm1", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_pwm},
+	{IT87_SYSCTL_PWM2, "pwm2", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_pwm},
+	{IT87_SYSCTL_PWM3, "pwm3", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_pwm},
+	{IT87_SYSCTL_PWM1, "sg_pwm1", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sgpwm},
+	{IT87_SYSCTL_PWM2, "sg_pwm2", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sgpwm},
+	{IT87_SYSCTL_PWM3, "sg_pwm3", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sgpwm},
+	{IT87_SYSCTL_PWM1, "sg_tl1", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sgtl},
+	{IT87_SYSCTL_PWM2, "sg_tl2", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sgtl},
+	{IT87_SYSCTL_PWM3, "sg_tl3", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sgtl},
+	{IT87_SYSCTL_SENS1, "sensor1", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sens},
+	{IT87_SYSCTL_SENS2, "sensor2", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sens},
+	{IT87_SYSCTL_SENS3, "sensor3", NULL, 0, 0644, NULL, &i2c_proc_real,
+	 &i2c_sysctl_real, NULL, &it87_sens},
 	{0}
 };
 
@@ -340,9 +411,32 @@ static ctl_table it87_dir_table_template[] = {
      * it87_driver is inserted (when this module is loaded), for each
        available adapter
      * when a new adapter is inserted (and it87_driver is still present) */
-int it87_attach_adapter(struct i2c_adapter *adapter)
+static int it87_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, it87_detect);
+}
+
+static int it87_find(int *address)
+{
+	u16 val;
+
+	superio_enter();
+	val = (superio_inb(DEVID) << 8) |
+	       superio_inb(DEVID + 1);
+	if (!IT87_DEVID_MATCH(val)) {
+		superio_exit();
+		return -ENODEV;
+	}
+
+	superio_select();
+	val = (superio_inb(IT87_BASE_REG) << 8) |
+	       superio_inb(IT87_BASE_REG + 1);
+	superio_exit();
+	*address = val & ~(IT87_EXTENT - 1);
+	if (*address == 0) {
+		return -ENODEV;
+	}
+	return 0;
 }
 
 /* This function is called by i2c_detect */
@@ -358,39 +452,32 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 	int is_isa = i2c_is_isa_adapter(adapter);
 
 	if (!is_isa
-	    && !i2c_check_functionality(adapter,
-					I2C_FUNC_SMBUS_BYTE_DATA)) goto
-		    ERROR0;
+	 && !i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
+	 	return 0;
 
-	if (is_isa) {
-		if (check_region(address, IT87_EXTENT))
-			goto ERROR0;
-	}
+	if (is_isa
+	 && check_region(address, IT87_EXTENT))
+	 	return 0;
 
 	/* Probe whether there is anything available on this address. Already
 	   done for SMBus clients */
-	if (kind < 0) {
-		if (is_isa) {
-
+	if (is_isa && kind < 0) {
 #define REALLY_SLOW_IO
-			/* We need the timeouts for at least some IT87-like chips. But only
-			   if we read 'undefined' registers. */
-			i = inb_p(address + 1);
-			if (inb_p(address + 2) != i)
-				goto ERROR0;
-			if (inb_p(address + 3) != i)
-				goto ERROR0;
-			if (inb_p(address + 7) != i)
-				goto ERROR0;
+		/* We need the timeouts for at least some IT87-like chips.
+		   But only if we read 'undefined' registers. */
+		i = inb_p(address + 1);
+		if (inb_p(address + 2) != i
+		 || inb_p(address + 3) != i
+		 || inb_p(address + 7) != i)
+			return -ENODEV;
 #undef REALLY_SLOW_IO
 
-			/* Let's just hope nothing breaks here */
-			i = inb_p(address + 5) & 0x7f;
-			outb_p(~i & 0x7f, address + 5);
-			if ((inb_p(address + 5) & 0x7f) != (~i & 0x7f)) {
-				outb_p(i, address + 5);
-				return 0;
-			}
+		/* Let's just hope nothing breaks here */
+		i = inb_p(address + 5) & 0x7f;
+		outb_p(~i & 0x7f, address + 5);
+		if ((inb_p(address + 5) & 0x7f) != (~i & 0x7f)) {
+			outb_p(i, address + 5);
+			return -ENODEV;
 		}
 	}
 
@@ -398,14 +485,12 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access it87_{read,write}_value. */
 
-	if (!(new_client = kmalloc((sizeof(struct i2c_client)) +
-				   sizeof(struct it87_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct it87_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct it87_data *) (new_client + 1);
+	new_client = &data->client;
 	if (is_isa)
 		init_MUTEX(&data->lock);
 	new_client->addr = address;
@@ -417,11 +502,12 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 	/* Now, we do the remaining detection. */
 
 	if (kind < 0) {
-		if (it87_read_value(new_client, IT87_REG_CONFIG) & 0x80)
-			goto ERROR1;
-		if (!is_isa
-		    && (it87_read_value(new_client, IT87_REG_I2C_ADDR) !=
-			address)) goto ERROR1;
+		if ((it87_read_value(new_client, IT87_REG_CONFIG) & 0x80)
+		 || (!is_isa
+		  && it87_read_value(new_client, IT87_REG_I2C_ADDR) != address)) {
+		  	err = -ENODEV;
+		 	goto ERROR1;
+		}
 	}
 
 	/* Determine the chip type. */
@@ -436,6 +522,7 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 				    ("it87.o: Ignoring 'force' parameter for unknown chip at "
 				     "adapter %d, address 0x%02x\n",
 				     i2c_adapter_id(adapter), address);
+			err = -ENODEV;
 			goto ERROR1;
 		}
 	}
@@ -493,12 +580,12 @@ int it87_detect(struct i2c_adapter *adapter, int address,
 	if (is_isa)
 		release_region(address, IT87_EXTENT);
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int it87_detach_client(struct i2c_client *client)
+static int it87_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -513,33 +600,10 @@ int it87_detach_client(struct i2c_client *client)
 
 	if(i2c_is_isa_client(client))
 		release_region(client->addr, IT87_EXTENT);
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
-
-/* No commands defined yet */
-int it87_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-/* Nothing here yet */
-void it87_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-/* Nothing here yet */
-void it87_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
 
 /* The SMBus locks itself, but ISA access must be locked explicitely! 
    We don't want to lock the whole ISA bus, so we lock each client
@@ -548,7 +612,7 @@ void it87_dec_use(struct i2c_client *client)
    would slow down the IT87 access and should not be necessary. 
    There are some ugly typecasts here, but the good new is - they should
    nowhere else be necessary! */
-int it87_read_value(struct i2c_client *client, u8 reg)
+static int it87_read_value(struct i2c_client *client, u8 reg)
 {
 	int res;
 	if (i2c_is_isa_client(client)) {
@@ -568,7 +632,7 @@ int it87_read_value(struct i2c_client *client, u8 reg)
    would slow down the IT87 access and should not be necessary. 
    There are some ugly typecasts here, but the good new is - they should
    nowhere else be necessary! */
-int it87_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int it87_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	if (i2c_is_isa_client(client)) {
 		down(&(((struct it87_data *) (client->data))->lock));
@@ -580,87 +644,50 @@ int it87_write_value(struct i2c_client *client, u8 reg, u8 value)
 		return i2c_smbus_write_byte_data(client, reg, value);
 }
 
-/* Called when we have found a new IT87. It should set limits, etc. */
-void it87_init_client(struct i2c_client *client)
+/* Called when we have found a new IT87. */
+static void it87_init_client(struct i2c_client *client)
 {
-	/* Reset all except Watchdog values and last conversion values
-	   This sets fan-divs to 2, among others */
-	it87_write_value(client, IT87_REG_CONFIG, 0x80);
-	it87_write_value(client, IT87_REG_VIN_MIN(0),
-			 IN_TO_REG(IT87_INIT_IN_MIN_0));
-	it87_write_value(client, IT87_REG_VIN_MAX(0),
-			 IN_TO_REG(IT87_INIT_IN_MAX_0));
-	it87_write_value(client, IT87_REG_VIN_MIN(1),
-			 IN_TO_REG(IT87_INIT_IN_MIN_1));
-	it87_write_value(client, IT87_REG_VIN_MAX(1),
-			 IN_TO_REG(IT87_INIT_IN_MAX_1));
-	it87_write_value(client, IT87_REG_VIN_MIN(2),
-			 IN_TO_REG(IT87_INIT_IN_MIN_2));
-	it87_write_value(client, IT87_REG_VIN_MAX(2),
-			 IN_TO_REG(IT87_INIT_IN_MAX_2));
-	it87_write_value(client, IT87_REG_VIN_MIN(3),
-			 IN_TO_REG(IT87_INIT_IN_MIN_3));
-	it87_write_value(client, IT87_REG_VIN_MAX(3),
-			 IN_TO_REG(IT87_INIT_IN_MAX_3));
-	it87_write_value(client, IT87_REG_VIN_MIN(4),
-			 IN_TO_REG(IT87_INIT_IN_MIN_4));
-	it87_write_value(client, IT87_REG_VIN_MAX(4),
-			 IN_TO_REG(IT87_INIT_IN_MAX_4));
-	it87_write_value(client, IT87_REG_VIN_MIN(5),
-			 IN_TO_REG(IT87_INIT_IN_MIN_5));
-	it87_write_value(client, IT87_REG_VIN_MAX(5),
-			 IN_TO_REG(IT87_INIT_IN_MAX_5));
-	it87_write_value(client, IT87_REG_VIN_MIN(6),
-			 IN_TO_REG(IT87_INIT_IN_MIN_6));
-	it87_write_value(client, IT87_REG_VIN_MAX(6),
-			 IN_TO_REG(IT87_INIT_IN_MAX_6));
-	it87_write_value(client, IT87_REG_VIN_MIN(7),
-			 IN_TO_REG(IT87_INIT_IN_MIN_7));
-	it87_write_value(client, IT87_REG_VIN_MAX(7),
-			 IN_TO_REG(IT87_INIT_IN_MAX_7));
-        /* Note: Battery voltage does not have limit registers */
-	it87_write_value(client, IT87_REG_FAN_MIN(1),
-			 FAN_TO_REG(IT87_INIT_FAN_MIN_1, 2));
-	it87_write_value(client, IT87_REG_FAN_MIN(2),
-			 FAN_TO_REG(IT87_INIT_FAN_MIN_2, 2));
-	it87_write_value(client, IT87_REG_FAN_MIN(3),
-			 FAN_TO_REG(IT87_INIT_FAN_MIN_3, 2));
-	it87_write_value(client, IT87_REG_TEMP_HIGH(1),
-			 TEMP_TO_REG(IT87_INIT_TEMP_HIGH_1));
-	it87_write_value(client, IT87_REG_TEMP_LOW(1),
-			 TEMP_TO_REG(IT87_INIT_TEMP_LOW_1));
-	it87_write_value(client, IT87_REG_TEMP_HIGH(2),
-			 TEMP_TO_REG(IT87_INIT_TEMP_HIGH_2));
-	it87_write_value(client, IT87_REG_TEMP_LOW(2),
-			 TEMP_TO_REG(IT87_INIT_TEMP_LOW_2));
-	it87_write_value(client, IT87_REG_TEMP_HIGH(3),
-			 TEMP_TO_REG(IT87_INIT_TEMP_HIGH_3));
-	it87_write_value(client, IT87_REG_TEMP_LOW(3),
-			 TEMP_TO_REG(IT87_INIT_TEMP_LOW_3));
+	int tmp;
 
-	/* Enable voltage monitors */
-	it87_write_value(client, IT87_REG_VIN_ENABLE, 0xff);
+	if (reset) {
+		/* Reset all except Watchdog values and last conversion values
+		   This sets fan-divs to 2, among others */
+		it87_write_value(client, IT87_REG_CONFIG, 0x80);
+	}
 
-	/* Enable Temp1-Temp3 */
-	it87_write_value(client, IT87_REG_TEMP_ENABLE,
-			(it87_read_value(client, IT87_REG_TEMP_ENABLE) & 0xc0)
-			| (temp_type & 0x3f));
+	/* Check if temperature channnels are reset manually or by some reason */
+	tmp = it87_read_value(client, IT87_REG_TEMP_ENABLE);
+	if ((tmp & 0x3f) == 0) {
+		/* Temp1,Temp3=thermistor; Temp2=thermal diode */
+		tmp = (tmp & 0xc0) | 0x2a;
+		it87_write_value(client, IT87_REG_TEMP_ENABLE, tmp);
+	}
 
-	/* Enable fans */
-	it87_write_value(client, IT87_REG_FAN_CTRL,
-			(it87_read_value(client, IT87_REG_FAN_CTRL) & 0x8f)
-			| 0x70);
+	/* Check if voltage monitors are reset manually or by some reason */
+	tmp = it87_read_value(client, IT87_REG_VIN_ENABLE);
+	if ((tmp & 0xff) == 0) {
+		/* Enable all voltage monitors */
+		it87_write_value(client, IT87_REG_VIN_ENABLE, 0xff);
+	}
+
+	/* Check if tachometers are reset manually or by some reason */
+	tmp = it87_read_value(client, IT87_REG_FAN_CTRL);
+	if ((tmp & 0x70) == 0) {
+		/* Enable all fan tachometers */
+		tmp = (tmp & 0x8f) | 0x70;
+		it87_write_value(client, IT87_REG_FAN_CTRL, tmp);
+	}
 
 	/* Start monitoring */
 	it87_write_value(client, IT87_REG_CONFIG,
-			 (it87_read_value(client, IT87_REG_CONFIG) & 0xb7)
+			 (it87_read_value(client, IT87_REG_CONFIG) & 0x36)
 			 | (update_vbat ? 0x41 : 0x01));
 }
 
-void it87_update_client(struct i2c_client *client)
+static void it87_update_client(struct i2c_client *client)
 {
 	struct it87_data *data = client->data;
-	int i;
+	int i, tmp, tmp2;
 
 	down(&data->update_lock);
 
@@ -668,8 +695,8 @@ void it87_update_client(struct i2c_client *client)
 	    (jiffies < data->last_updated) || !data->valid) {
 
 		if (update_vbat) {
-                	/* Cleared after each update, so reenable.  Value
-		   	  returned by this read will be previous value */	
+	/* Cleared after each update, so reenable.  Value
+	   returned by this read will be previous value */
 			it87_write_value(client, IT87_REG_CONFIG,
 			   it87_read_value(client, IT87_REG_CONFIG) | 0x40);
 		}
@@ -683,7 +710,7 @@ void it87_update_client(struct i2c_client *client)
 		}
 		data->in[8] =
 		    it87_read_value(client, IT87_REG_VIN(8));
-		/* Temperature sensor doesn't have limit registers, set
+		/* VBAT sensor doesn't have limit registers, set
 		   to min and max value */
 		data->in_min[8] = 0;
 		data->in_max[8] = 255;
@@ -715,12 +742,36 @@ void it87_update_client(struct i2c_client *client)
 		i = it87_read_value(client, IT87_REG_FAN_DIV);
 		data->fan_div[0] = i & 0x07;
 		data->fan_div[1] = (i >> 3) & 0x07;
-		data->fan_div[2] = 1;
+		data->fan_div[2] = ( (i&0x40)==0x40 ? 3 : 1 );
 
+		for( i = 1; i <= 3; i++ ) {
+			data->pwm[i-1] = it87_read_value(client, IT87_REG_PWM(i));
+			data->sg_tl[i-1][0] = it87_read_value(client, IT87_REG_SG_TL_OFF(i));
+			data->sg_tl[i-1][1] = it87_read_value(client, IT87_REG_SG_TL_LOW(i));
+			data->sg_tl[i-1][2] = it87_read_value(client, IT87_REG_SG_TL_MED(i));
+			data->sg_tl[i-1][3] = it87_read_value(client, IT87_REG_SG_TL_HI(i));
+			data->sg_tl[i-1][4] = it87_read_value(client, IT87_REG_SG_TL_OVR(i));
+			data->sg_pwm[i-1][0] = it87_read_value(client, IT87_REG_SG_PWM_LOW(i));
+			data->sg_pwm[i-1][1] = it87_read_value(client, IT87_REG_SG_PWM_MED(i));
+			data->sg_pwm[i-1][2] = it87_read_value(client, IT87_REG_SG_PWM_HI(i));
+		}
 		data->alarms =
 			it87_read_value(client, IT87_REG_ALARM1) |
 			(it87_read_value(client, IT87_REG_ALARM2) << 8) |
 			(it87_read_value(client, IT87_REG_ALARM3) << 16);
+		data->fan_ctl[0] = it87_read_value(client, IT87_REG_FAN_CTRL);
+		data->fan_ctl[1] = it87_read_value(client, IT87_REG_FAN_ONOFF);
+
+		tmp = it87_read_value(client, IT87_REG_TEMP_ENABLE);
+		for(i = 0; i < 3; i++) {
+			tmp2 = (tmp >> i) & 0x09;
+			if(tmp2 == 0x01)
+				data->sens[i] = PIIDIODE;
+			else if(tmp2 == 0x08)
+				data->sens[i] = THERMISTOR;
+			else
+				data->sens[i] = UNUSED;
+		}
 
 		data->last_updated = jiffies;
 		data->valid = 1;
@@ -783,19 +834,14 @@ void it87_fan(struct i2c_client *client, int operation, int ctl_name,
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		it87_update_client(client);
 		results[0] = FAN_FROM_REG(data->fan_min[nr - 1],
-					  DIV_FROM_REG(data->
-						       fan_div[nr - 1]));
-		results[1] =
-		    FAN_FROM_REG(data->fan[nr - 1],
+					  DIV_FROM_REG(data->fan_div[nr - 1]));
+		results[1] = FAN_FROM_REG(data->fan[nr - 1],
 				 DIV_FROM_REG(data->fan_div[nr - 1]));
 		*nrels_mag = 2;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		if (*nrels_mag >= 1) {
 			data->fan_min[nr - 1] = FAN_TO_REG(results[0],
-							   DIV_FROM_REG
-							   (data->
-							    fan_div[nr -
-								    1]));
+							   DIV_FROM_REG(data->fan_div[nr - 1]));
 			it87_write_value(client, IT87_REG_FAN_MIN(nr),
 					 data->fan_min[nr - 1]);
 		}
@@ -826,6 +872,93 @@ void it87_temp(struct i2c_client *client, int operation, int ctl_name,
 			data->temp_low[nr - 1] = TEMP_TO_REG(results[1]);
 			it87_write_value(client, IT87_REG_TEMP_LOW(nr),
 					 data->temp_low[nr - 1]);
+		}
+	}
+}
+
+void it87_pwm(struct i2c_client *client, int operation, int ctl_name,
+	       int *nrels_mag, long *results)
+{
+	struct it87_data *data = client->data;
+	int nr = ctl_name - IT87_SYSCTL_PWM1 + 1;
+	if (operation == SENSORS_PROC_REAL_INFO)
+		*nrels_mag = 0;
+	else if (operation == SENSORS_PROC_REAL_READ) {
+		it87_update_client(client);
+		results[0] = data->pwm[nr - 1];
+		*nrels_mag = 1;
+	} else if (operation == SENSORS_PROC_REAL_WRITE) {
+		if (*nrels_mag >= 1) {
+			data->pwm[nr - 1] = results[0];
+			it87_write_value(client, IT87_REG_PWM(nr), data->pwm[nr - 1]);
+		}
+	}
+}
+
+void it87_sgpwm(struct i2c_client *client, int operation, int ctl_name,
+	       int *nrels_mag, long *results)
+{
+	struct it87_data *data = client->data;
+	int nr = ctl_name - IT87_SYSCTL_PWM1 + 1;
+	if (operation == SENSORS_PROC_REAL_INFO)
+		*nrels_mag = 0;
+	else if (operation == SENSORS_PROC_REAL_READ) {
+		it87_update_client(client);
+		results[0] = data->sg_pwm[nr - 1][0];
+		results[1] = data->sg_pwm[nr - 1][1];
+		results[2] = data->sg_pwm[nr - 1][2];
+		*nrels_mag = 3;
+	} else if (operation == SENSORS_PROC_REAL_WRITE) {
+		if (*nrels_mag >= 1) {
+			data->sg_pwm[nr - 1][0] = results[0];
+			it87_write_value(client, IT87_REG_SG_PWM_LOW(nr), data->sg_pwm[nr - 1][0]);
+		}
+		if (*nrels_mag >= 2) {
+			data->sg_pwm[nr - 1][1] = results[1];
+			it87_write_value(client, IT87_REG_SG_PWM_MED(nr), data->sg_pwm[nr - 1][1]);
+		}
+		if (*nrels_mag >= 3) {
+			data->sg_pwm[nr - 1][2] = results[2];
+			it87_write_value(client, IT87_REG_SG_PWM_HI(nr), data->sg_pwm[nr - 1][2]);
+		}
+	}
+}
+
+void it87_sgtl(struct i2c_client *client, int operation, int ctl_name,
+	       int *nrels_mag, long *results)
+{
+	struct it87_data *data = client->data;
+	int nr = ctl_name - IT87_SYSCTL_PWM1 + 1;
+	if (operation == SENSORS_PROC_REAL_INFO)
+		*nrels_mag = 1;
+	else if (operation == SENSORS_PROC_REAL_READ) {
+		it87_update_client(client);
+		results[0] = TEMP_FROM_REG(data->sg_tl[nr - 1][0]);
+		results[1] = TEMP_FROM_REG(data->sg_tl[nr - 1][1]);
+		results[2] = TEMP_FROM_REG(data->sg_tl[nr - 1][2]);
+		results[3] = TEMP_FROM_REG(data->sg_tl[nr - 1][3]);
+		results[4] = TEMP_FROM_REG(data->sg_tl[nr - 1][4]);
+		*nrels_mag = 5;
+	} else if (operation == SENSORS_PROC_REAL_WRITE) {
+		if (*nrels_mag >= 1) {
+			data->sg_tl[nr - 1][0] = TEMP_TO_REG(results[0]);
+			it87_write_value(client, IT87_REG_SG_TL_OFF(nr), data->sg_tl[nr - 1][0]);
+		}
+		if (*nrels_mag >= 2) {
+			data->sg_tl[nr - 1][1] = TEMP_TO_REG(results[1]);
+			it87_write_value(client, IT87_REG_SG_TL_LOW(nr), data->sg_tl[nr - 1][1]);
+		}
+		if (*nrels_mag >= 3) {
+			data->sg_tl[nr - 1][2] = TEMP_TO_REG(results[2]);
+			it87_write_value(client, IT87_REG_SG_TL_MED(nr), data->sg_tl[nr - 1][2]);
+		}
+		if (*nrels_mag >= 4) {
+			data->sg_tl[nr - 1][3] = TEMP_TO_REG(results[3]);
+			it87_write_value(client, IT87_REG_SG_TL_HI(nr), data->sg_tl[nr - 1][3]);
+		}
+		if (*nrels_mag >= 5) {
+			data->sg_tl[nr - 1][4] = TEMP_TO_REG(results[4]);
+			it87_write_value(client, IT87_REG_SG_TL_OVR(nr), data->sg_tl[nr - 1][4]);
 		}
 	}
 }
@@ -868,10 +1001,19 @@ void it87_fan_div(struct i2c_client *client, int operation, int ctl_name,
 		it87_update_client(client);
 		results[0] = DIV_FROM_REG(data->fan_div[0]);
 		results[1] = DIV_FROM_REG(data->fan_div[1]);
-		results[2] = 2;
+		results[2] = DIV_FROM_REG(data->fan_div[2]);;
 		*nrels_mag = 3;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		old = it87_read_value(client, IT87_REG_FAN_DIV);
+		if (*nrels_mag >= 3) {
+			data->fan_div[2] = DIV_TO_REG(results[2]);
+			if( data->fan[2]!=3 ) {
+				data->fan_div[2] = 1;
+				old = (old & 0xbf);
+			} else {
+				old = (old | 0x40);
+			}
+		}
 		if (*nrels_mag >= 2) {
 			data->fan_div[1] = DIV_TO_REG(results[1]);
 			old = (old & 0xc3) | (data->fan_div[1] << 3);
@@ -884,57 +1026,95 @@ void it87_fan_div(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_it87_init(void)
+void it87_fan_ctl(struct i2c_client *client, int operation, int ctl_name,
+	       int *nrels_mag, long *results)
 {
-	int res;
+	struct it87_data *data = client->data;
+	int index = ctl_name - IT87_SYSCTL_FAN_CTL;
+	if (operation == SENSORS_PROC_REAL_INFO)
+		*nrels_mag = 0;
+	else if (operation == SENSORS_PROC_REAL_READ) {
+		it87_update_client(client);
+		results[0] = data->fan_ctl[index];
+		*nrels_mag = 1;
+	} else if (operation == SENSORS_PROC_REAL_WRITE) {
+		if (*nrels_mag >= 1) {
+			data->fan_ctl[index] = results[0];
+			if( index == 0 )
+				it87_write_value(client, IT87_REG_FAN_CTRL, data->fan_ctl[index] );
+			else
+				it87_write_value(client, IT87_REG_FAN_ONOFF, data->fan_ctl[index] );
+		}
+	}
+}
+
+void it87_sens(struct i2c_client *client, int operation, int ctl_name,
+		  int *nrels_mag, long *results)
+{
+	struct it87_data *data = client->data;
+	int nr = 1 + ctl_name - IT87_SYSCTL_SENS1;
+	u8 tmp, val1, val2;
+
+	if (operation == SENSORS_PROC_REAL_INFO)
+		*nrels_mag = 0;
+	else if (operation == SENSORS_PROC_REAL_READ) {
+		results[0] = data->sens[nr - 1];
+		*nrels_mag = 1;
+	} else if (operation == SENSORS_PROC_REAL_WRITE) {
+		if (*nrels_mag >= 1) {
+			val1 = 0x01 << (nr - 1);
+			val2 = 0x08 << (nr - 1);
+			tmp = it87_read_value(client, IT87_REG_TEMP_ENABLE);
+			switch (results[0]) {
+			case PIIDIODE:
+				tmp &= ~ val2;
+				tmp |= val1;
+				break;
+			case THERMISTOR:
+				tmp &= ~ val1;
+				tmp |= val2;
+				break;
+			case UNUSED:
+				tmp &= ~ val1;
+				tmp &= ~ val2;
+				break;
+			default:
+				printk(KERN_ERR "it87.o: Invalid sensor type %ld; "
+				       "must be 0 (unused), 2 (thermistor) "
+				       "or 3 (diode)\n", results[0]);
+				return;
+			}
+			it87_write_value(client,
+					 IT87_REG_TEMP_ENABLE, tmp);
+			data->sens[nr - 1] = results[0];
+		}
+	}
+}
+
+static int __init sm_it87_init(void)
+{
+	int addr;
 
 	printk("it87.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	it87_initialized = 0;
-
-	if ((res = i2c_add_driver(&it87_driver))) {
-		printk
-		    ("it87.o: Driver registration failed, module not inserted.\n");
-		it87_cleanup();
-		return res;
+	if (!it87_find(&addr)) {
+		normal_isa[0] = addr;
 	}
-	it87_initialized++;
-	return 0;
+	return i2c_add_driver(&it87_driver);
 }
 
-int __init it87_cleanup(void)
+static void __exit sm_it87_exit(void)
 {
-	int res;
-
-	if (it87_initialized >= 1) {
-		if ((res = i2c_del_driver(&it87_driver))) {
-			printk
-			    ("it87.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		it87_initialized--;
-	}
-	return 0;
+	i2c_del_driver(&it87_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR("Chris Gauthron <chrisg@0-in.com>");
 MODULE_DESCRIPTION("IT8705F, IT8712F, Sis950 driver");
 MODULE_PARM(update_vbat, "i");
 MODULE_PARM_DESC(update_vbat, "Update vbat if set else return powerup value");
-MODULE_PARM(temp_type, "i");
-MODULE_PARM_DESC(temp_type, "Temperature sensor type, normally leave unset");
+MODULE_PARM(reset, "i");
+MODULE_PARM_DESC(reset, "Reset the chip's registers, default no");
 
-int init_module(void)
-{
-	return sensors_it87_init();
-}
-
-int cleanup_module(void)
-{
-	return it87_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_it87_init);
+module_exit(sm_it87_exit);

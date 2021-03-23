@@ -28,6 +28,7 @@
 #define SENSORS_CHIP_NAME_BUS_ISA -1
 #define SENSORS_CHIP_NAME_BUS_ANY -2
 #define SENSORS_CHIP_NAME_BUS_ANY_I2C -3
+#define SENSORS_CHIP_NAME_BUS_DUMMY -4
 #define SENSORS_CHIP_NAME_ADDR_ANY -1
 
 #ifdef __cplusplus
@@ -39,6 +40,7 @@ typedef struct sensors_chip_name {
   char *prefix;
   int bus;
   int addr;
+  char *busname;	/* if dummy */
 } sensors_chip_name;
 
 /* (Re)load the configuration file and the detected chips list. If this 
@@ -46,7 +48,7 @@ typedef struct sensors_chip_name {
     assume anything will be initialized properly. */
 extern int sensors_init(FILE *input);
 
-/* Strictly optional clean-up function: You can't access anything after
+/* Clean-up function: You can't access anything after
    this, until the next sensors_init() call! */
 extern void sensors_cleanup(void);
 

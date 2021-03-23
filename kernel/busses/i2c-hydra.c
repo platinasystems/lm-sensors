@@ -24,24 +24,20 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/pci.h>
-#include <asm/io.h>
-#include <asm/system.h>
 #include <linux/types.h>
 #include <linux/i2c.h>
 #include <linux/i2c-algo-bit.h>
 #include <linux/init.h>
+#include <asm/io.h>
+#include <asm/system.h>
+#include <asm/param.h>	/* for HZ */
+#include "sensors_compat.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
 
-/* PCI device */
-#define VENDOR		PCI_VENDOR_ID_APPLE
-#define DEVICE		PCI_DEVICE_ID_APPLE_HYDRA
 
 #define HYDRA_CACHE_PD	0x00000030
 
@@ -78,6 +74,7 @@ static void bit_hydra_setscl(void *data, int state)
 		val |= HYDRA_SCLK_OE;
 	}
 	pdregw(val);
+	pdregr();	/* flush posted write */
 }
 
 static void bit_hydra_setsda(void *data, int state)
@@ -90,6 +87,7 @@ static void bit_hydra_setsda(void *data, int state)
 		val |= HYDRA_SDAT_OE;
 	}
 	pdregw(val);
+	pdregr();	/* flush posted write */
 }
 
 static int bit_hydra_getscl(void *data)
@@ -104,103 +102,90 @@ static int bit_hydra_getsda(void *data)
 
 static void bit_hydra_inc(struct i2c_adapter *adap)
 {
+#ifdef MODULE
 	MOD_INC_USE_COUNT;
+#endif
 }
 
 static void bit_hydra_dec(struct i2c_adapter *adap)
 {
+#ifdef MODULE
 	MOD_DEC_USE_COUNT;
+#endif
 }
 
 /* ------------------------------------------------------------------------ */
 
 static struct i2c_algo_bit_data bit_hydra_data = {
-	NULL,
-	bit_hydra_setsda,
-	bit_hydra_setscl,
-	bit_hydra_getsda,
-	bit_hydra_getscl,
-	5, 5, 100,		/*waits, timeout */
+	.setsda		= bit_hydra_setsda,
+	.setscl		= bit_hydra_setscl,
+	.getsda		= bit_hydra_getsda,
+	.getscl		= bit_hydra_getscl,
+	.udelay		= 5,
+	.mdelay		= 5,
+	.timeout	= HZ
 };
 
 static struct i2c_adapter bit_hydra_ops = {
-	"Hydra i2c",
-	I2C_HW_B_HYDRA,
-	NULL,
-	&bit_hydra_data,
-	bit_hydra_inc,
-	bit_hydra_dec,
-	NULL,
-	NULL,
+	.name		= "Hydra i2c",
+	.id		= I2C_HW_B_HYDRA,
+	.algo_data	= &bit_hydra_data,
+	.inc_use	= bit_hydra_inc,
+	.dec_use	= bit_hydra_dec,
 };
 
+static struct pci_device_id hydra_ids[] __devinitdata = {
+	{
+		.vendor =	PCI_VENDOR_ID_APPLE,
+		.device =	PCI_DEVICE_ID_APPLE_HYDRA,
+		.subvendor =	PCI_ANY_ID,
+		.subdevice =	PCI_ANY_ID,
+	},
+	{ 0, }
+};
 
-static int find_hydra(void)
+static int __devinit hydra_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
-	struct pci_dev *dev;
 	unsigned int base_addr;
 
-	if (!pci_present())
-		return -ENODEV;
-
-	dev = pci_find_device(VENDOR, DEVICE, NULL);
-	if (!dev) {
-		printk("Hydra not found\n");
-		return -ENODEV;
-	}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,3,13)
 	base_addr = dev->resource[0].start;
-#else
-	base_addr = dev->base_address[0];
-#endif
 	hydra_base = (unsigned long) ioremap(base_addr, 0x100);
 
-	return 0;
-}
-
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init i2c_hydra_init(void)
-{
-	if (find_hydra() < 0) {
-		printk("Error while reading PCI configuration\n");
-		return -ENODEV;
-	}
-
 	pdregw(0);		/* clear SCLK_OE and SDAT_OE */
-
-	if (i2c_bit_add_bus(&bit_hydra_ops) == 0) {
-		printk("Hydra i2c: Module succesfully loaded\n");
-		return 0;
-	} else {
-		iounmap((void *) hydra_base);
-		printk
-		    ("Hydra i2c: Algo-bit error, couldn't register bus\n");
-		return -ENODEV;
-	}
+ 	return i2c_bit_add_bus(&bit_hydra_ops);
 }
 
-EXPORT_NO_SYMBOLS;
+static void __devexit hydra_remove(struct pci_dev *dev)
+{
+	pdregw(0);	/* clear SCLK_OE and SDAT_OE */
+	i2c_bit_del_bus(&bit_hydra_ops);
+	iounmap((void *) hydra_base);
+}
 
-#ifdef MODULE
+
+static struct pci_driver hydra_driver = {
+	.name		= "hydra smbus",
+	.id_table	= hydra_ids,
+	.probe		= hydra_probe,
+	.remove		= __devexit_p(hydra_remove),
+};
+
+static int __init i2c_hydra_init(void)
+{
+	return pci_module_init(&hydra_driver);
+}
+
+
+static void __exit i2c_hydra_exit(void)
+{
+	pci_unregister_driver(&hydra_driver);
+}
+
+
+
 MODULE_AUTHOR("Geert Uytterhoeven <geert@linux-m68k.org>");
 MODULE_DESCRIPTION("i2c for Apple Hydra Mac I/O");
 
-int init_module(void)
-{
-	return i2c_hydra_init();
-}
+module_init(i2c_hydra_init);
+module_exit(i2c_hydra_exit);
 
-void cleanup_module(void)
-{
-	i2c_bit_del_bus(&bit_hydra_ops);
-	if (hydra_base) {
-		pdregw(0);	/* clear SCLK_OE and SDAT_OE */
-		iounmap((void *) hydra_base);
-	}
-}
-#endif

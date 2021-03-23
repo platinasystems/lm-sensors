@@ -33,17 +33,26 @@ PROGSENSORSSOURCES := $(MODULE_DIR)/main.c $(MODULE_DIR)/chips.c
 # executables.
 INCLUDEFILES += $(PROGSENSORSSOURCES:.c=.rd)
 
+REMOVESENSORSBIN := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(BINDIR)/%,$(PROGSENSORSTARGETS))
+REMOVESENSORSMAN := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(PROGSENSORSMAN1DIR)/%,$(PROGSENSORSMAN1FILES))
+
+LIBICONV := $(shell if /sbin/ldconfig -p | grep -q libiconv\\.so ; then echo \-liconv; else echo; fi)
+
 $(PROGSENSORSTARGETS): $(PROGSENSORSSOURCES:.c=.ro) lib/$(LIBSHBASENAME)
-	$(CC) -o $@ $(PROGSENSORSSOURCES:.c=.ro) -Llib -lsensors
+	$(CC) $(EXLDFLAGS) -o $@ $(PROGSENSORSSOURCES:.c=.ro) $(LIBICONV) -Llib -lsensors
 
 all-prog-sensors: $(PROGSENSORSTARGETS)
-all :: all-prog-sensors
+user :: all-prog-sensors
 
 install-prog-sensors: all-prog-sensors
-	mkdir -p $(DESTDIR)$(BINDIR) $(DESTDIR)$(PROGSENSORSMAN1DIR)
-	$(INSTALL) -o root -g root -m 755 $(PROGSENSORSTARGETS) $(DESTDIR)$(BINDIR)
-	$(INSTALL) -o $(MANOWN) -g $(MANGRP) -m 644 $(PROGSENSORSMAN1FILES) $(DESTDIR)$(PROGSENSORSMAN1DIR)
-install :: install-prog-sensors
+	$(MKDIR) $(DESTDIR)$(BINDIR) $(DESTDIR)$(PROGSENSORSMAN1DIR)
+	$(INSTALL) -m 755 $(PROGSENSORSTARGETS) $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 644 $(PROGSENSORSMAN1FILES) $(DESTDIR)$(PROGSENSORSMAN1DIR)
+user_install :: install-prog-sensors
+
+user_uninstall::
+	$(RM) $(REMOVESENSORSBIN)
+	$(RM) $(REMOVESENSORSMAN)
 
 clean-prog-sensors:
 	$(RM) $(PROGSENSORSDIR)/*.rd $(PROGSENSORSDIR)/*.ro 

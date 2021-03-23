@@ -25,38 +25,14 @@
     and Philip Edelbrock <phil@netroedge.com>
 */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include "version.h"
 
-/* temp. because wasn't in kernel 2.4.13 patch */
-#ifndef I2C_DRIVERID_FSCSCY
-#define I2C_DRIVERID_FSCSCY 1029
-#endif
-
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
-
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { 0x73, SENSORS_I2C_END };
@@ -175,16 +151,12 @@ SENSORS_INSMOD_1(fscscy);
 
 /* Initial limits */
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
 /* For each registered FSCSCY, we need to keep some data in memory. That
    data is pointed to by fscscy_list[NR]->data. The structure itself is
    dynamically allocated, at the same time when a new fscscy client is
    allocated. */
 struct fscscy_data {
+	struct i2c_client client;
 	int sysctl_id;
 
 	struct semaphore update_lock;
@@ -215,22 +187,10 @@ struct fscscy_data {
 };
 
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_fscscy_init(void);
-static int __init fscscy_cleanup(void);
-
 static int fscscy_attach_adapter(struct i2c_adapter *adapter);
 static int fscscy_detect(struct i2c_adapter *adapter, int address,
 		       unsigned short flags, int kind);
 static int fscscy_detach_client(struct i2c_client *client);
-static int fscscy_command(struct i2c_client *client, unsigned int cmd,
-			void *arg);
-static void fscscy_inc_use(struct i2c_client *client);
-static void fscscy_dec_use(struct i2c_client *client);
 
 static int fscscy_read_value(struct i2c_client *client, u8 register);
 static int fscscy_write_value(struct i2c_client *client, u8 register,
@@ -260,20 +220,38 @@ static void fscscy_intrusion(struct i2c_client *client, int operation,
 static int fscscy_id = 0;
 
 static struct i2c_driver fscscy_driver = {
-	/* name */ "FSCSCY sensor driver",
-	/* id */ I2C_DRIVERID_FSCSCY,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &fscscy_attach_adapter,
-	/* detach_client */ &fscscy_detach_client,
-	/* command */ &fscscy_command,
-	/* inc_use */ &fscscy_inc_use,
-	/* dec_use */ &fscscy_dec_use
+	.name		= "FSCSCY sensor driver",
+	.id		= I2C_DRIVERID_FSCSCY,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= fscscy_attach_adapter,
+	.detach_client	= fscscy_detach_client,
 };
 
-/* Used by fscscy_init/cleanup */
-static int __initdata fscscy_initialized = 0;
-
 /* The /proc/sys entries */
+
+/* -- SENSORS SYSCTL START -- */
+#define FSCSCY_SYSCTL_VOLT0    1000       /* 12 volt supply */
+#define FSCSCY_SYSCTL_VOLT1    1001       /* 5 volt supply */
+#define FSCSCY_SYSCTL_VOLT2    1002       /* batterie voltage*/
+#define FSCSCY_SYSCTL_FAN0     1101       /* state, min, ripple, actual value fan 0 */
+#define FSCSCY_SYSCTL_FAN1     1102       /* state, min, ripple, actual value fan 1 */
+#define FSCSCY_SYSCTL_FAN2     1103       /* state, min, ripple, actual value fan 2 */
+#define FSCSCY_SYSCTL_FAN3     1104       /* state, min, ripple, actual value fan 3 */
+#define FSCSCY_SYSCTL_FAN4     1105       /* state, min, ripple, actual value fan 4 */
+#define FSCSCY_SYSCTL_FAN5     1106       /* state, min, ripple, actual value fan 5 */
+#define FSCSCY_SYSCTL_TEMP0    1201       /* state and value of sensor 0, cpu die */
+#define FSCSCY_SYSCTL_TEMP1    1202       /* state and value of sensor 1, motherboard */
+#define FSCSCY_SYSCTL_TEMP2    1203       /* state and value of sensor 2, chassis */
+#define FSCSCY_SYSCTL_TEMP3    1204       /* state and value of sensor 3, chassis */
+#define FSCSCY_SYSCTL_REV     2000        /* Revision */
+#define FSCSCY_SYSCTL_EVENT   2001        /* global event status */
+#define FSCSCY_SYSCTL_CONTROL 2002        /* global control byte */
+#define FSCSCY_SYSCTL_WDOG     2003       /* state, min, ripple, actual value fan 2 */
+#define FSCSCY_SYSCTL_PCILOAD  2004       /* PCILoad value */
+#define FSCSCY_SYSCTL_INTRUSION 2005      /* state, control for intrusion sensor */
+
+/* -- SENSORS SYSCTL END -- */
+
 /* These files are created for each detected FSCSCY. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -321,7 +299,7 @@ static ctl_table fscscy_dir_table_template[] = {
 	{0}
 };
 
-int fscscy_attach_adapter(struct i2c_adapter *adapter)
+static int fscscy_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, fscscy_detect);
 }
@@ -351,14 +329,12 @@ int fscscy_detect(struct i2c_adapter *adapter, int address,
 	/* OK. For now, we presume we have a valid client. We now create the
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access fscscy_{read,write}_value. */
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct fscscy_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct fscscy_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct fscscy_data *) (new_client + 1);
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -409,12 +385,12 @@ int fscscy_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int fscscy_detach_client(struct i2c_client *client)
+static int fscscy_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -427,33 +403,12 @@ int fscscy_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
 
-/* No commands defined yet */
-int fscscy_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
-
-void fscscy_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-void fscscy_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
-
-int fscscy_read_value(struct i2c_client *client, u8 reg)
+static int fscscy_read_value(struct i2c_client *client, u8 reg)
 {
 #ifdef DEBUG
 	printk("fscscy: read reg 0x%02x\n",reg);
@@ -461,7 +416,7 @@ int fscscy_read_value(struct i2c_client *client, u8 reg)
 	return i2c_smbus_read_byte_data(client, reg);
 }
 
-int fscscy_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int fscscy_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 #ifdef DEBUG
 	printk("fscscy: write reg 0x%02x, val 0x%02x\n",reg, value);
@@ -470,7 +425,7 @@ int fscscy_write_value(struct i2c_client *client, u8 reg, u8 value)
 }
 
 /* Called when we have found a new FSCSCY. It should set limits, etc. */
-void fscscy_init_client(struct i2c_client *client)
+static void fscscy_init_client(struct i2c_client *client)
 {
 	struct fscscy_data *data = client->data;
 
@@ -493,7 +448,7 @@ void fscscy_init_client(struct i2c_client *client)
 	data->volt_min[2] = data->volt_max[2] = fscscy_read_value(client, FSCSCY_REG_VOLT_BATT);
 }
 
-void fscscy_update_client(struct i2c_client *client)
+static void fscscy_update_client(struct i2c_client *client)
 {
 	struct fscscy_data *data = client->data;
 
@@ -938,54 +893,22 @@ void fscscy_intrusion(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_fscscy_init(void)
+static int __init sm_fscscy_init(void)
 {
-	int res;
-
 	printk("fscscy.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	fscscy_initialized = 0;
-
-	if ((res = i2c_add_driver(&fscscy_driver))) {
-		printk
-		    ("fscscy.o: Driver registration failed, module not inserted.\n");
-		fscscy_cleanup();
-		return res;
-	}
-	fscscy_initialized++;
-	return 0;
+	return i2c_add_driver(&fscscy_driver);
 }
 
-int __init fscscy_cleanup(void)
+static void __exit sm_fscscy_exit(void)
 {
-	int res;
-
-	if (fscscy_initialized >= 1) {
-		if ((res = i2c_del_driver(&fscscy_driver))) {
-			printk
-			    ("fscscy.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		fscscy_initialized--;
-	}
-	return 0;
+	i2c_del_driver(&fscscy_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR
     ("Martin Knoblauch <mkn@teraport.de> based on work (fscpos) from  Hermann Jung <hej@odn.de>");
 MODULE_DESCRIPTION("fujitsu siemens scylla chip driver");
 
-int init_module(void)
-{
-	return sensors_fscscy_init();
-}
-
-int cleanup_module(void)
-{
-	return fscscy_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_fscscy_init);
+module_exit(sm_fscscy_exit);

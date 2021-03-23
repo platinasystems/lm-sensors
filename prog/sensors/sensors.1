@@ -21,7 +21,7 @@
 .\" Formatted or processed versions of this manual, if unaccompanied by
 .\" the source, must acknowledge the copyright and authors of this work.
 .\"
-.TH sensors 1  "February 8, 1999" "" "Linux Programmer's Manual"
+.TH sensors 1  "June 2, 2002" "" "Linux User's Manual"
 .SH NAME
 sensors \- printing sensors information
 .SH SYNOPSIS
@@ -59,6 +59,8 @@ Prints a help text
 Evaluates all `set' statements in the configuration file. You must probably
 be `root' to do this. If this parameter is not specified, no `set' statement
 is evaluated.
+.IP -A
+Do not show adapter and algorithm for each chipset.
 .IP -u
 Treats all chips as unknown ones. Output will be of much lower quality;
 this option is only added for testing purposes.
@@ -77,5 +79,9 @@ for further details.
 lm_sensors-2.x
 .SH SEE ALSO
 sensors.conf(5)
+
+.SH AUTHOR
+Frodo Looijaard and the lm_sensors group
+http://www.lm-sensors.nu/
 
 

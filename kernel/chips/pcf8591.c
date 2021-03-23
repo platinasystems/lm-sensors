@@ -18,26 +18,12 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include "sensors.h"
-#include "version.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
-
-#ifndef I2C_DRIVERID_PCF8591
-#define I2C_DRIVERID_PCF8591 1030
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
+#include "version.h"
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -82,17 +68,10 @@ SENSORS_INSMOD_1(pcf8591);
 #define REG_TO_SIGNED(reg) (reg & 0x80)?(reg - 256):(reg)
                           /* Convert signed 8 bit value to signed value */
 
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif
-
-
 
 struct pcf8591_data {
-        struct semaphore lock;
+	struct i2c_client client;
         int sysctl_id;
-        enum chips type;
 
         struct semaphore update_lock;
         char valid;             /* !=0 if following fields are valid */
@@ -103,21 +82,10 @@ struct pcf8591_data {
         u8 aout;
 };
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_pcf8591_init(void);
-static int __init pcf8591_cleanup(void);
 static int pcf8591_attach_adapter(struct i2c_adapter *adapter);
 static int pcf8591_detect(struct i2c_adapter *adapter, int address,
                           unsigned short flags, int kind);
 static int pcf8591_detach_client(struct i2c_client *client);
-static int pcf8591_command(struct i2c_client *client, unsigned int cmd,
-                           void *arg);
-static void pcf8591_inc_use(struct i2c_client *client);
-static void pcf8591_dec_use(struct i2c_client *client);
 
 static void pcf8591_update_client(struct i2c_client *client);
 static void pcf8591_init_client(struct i2c_client *client);
@@ -134,23 +102,27 @@ static void pcf8591_aout(struct i2c_client *client, int operation,
 
 /* This is the driver that will be inserted */
 static struct i2c_driver pcf8591_driver = {
-        /* name */ "PCF8591 sensor chip driver",
-        /* id */ I2C_DRIVERID_PCF8591,
-        /* flags */ I2C_DF_NOTIFY,
-        /* attach_adapter */ &pcf8591_attach_adapter,
-        /* detach_client */ &pcf8591_detach_client,
-        /* command */ &pcf8591_command,
-        /* inc_use */ &pcf8591_inc_use,
-        /* dec_use */ &pcf8591_dec_use
+	.name		= "PCF8591 sensor chip driver",
+	.id		= I2C_DRIVERID_PCF8591,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= pcf8591_attach_adapter,
+	.detach_client	= pcf8591_detach_client,
 };
-
-/* Used by lm78_init/cleanup */
-static int __initdata pcf8591_initialized = 0;
 
 static int pcf8591_id = 0;
 
-
 /* The /proc/sys entries */
+
+/* -- SENSORS SYSCTL START -- */
+#define PCF8591_SYSCTL_AIN_CONF 1000      /* Analog input configuration */
+#define PCF8591_SYSCTL_CH0 1001           /* Input channel 1 */
+#define PCF8591_SYSCTL_CH1 1002           /* Input channel 2 */
+#define PCF8591_SYSCTL_CH2 1003           /* Input channel 3 */
+#define PCF8591_SYSCTL_CH3 1004           /* Input channel 4 */
+#define PCF8591_SYSCTL_AOUT_ENABLE 1005   /* Analog output enable flag */
+#define PCF8591_SYSCTL_AOUT 1006          /* Analog output */
+/* -- SENSORS SYSCTL END -- */
+
 /* These files are created for each detected PCF8591. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -179,7 +151,7 @@ static ctl_table pcf8591_dir_table_template[] = {
      * pcf8591_driver is inserted (when this module is loaded), for each
        available adapter
      * when a new adapter is inserted (and pcf8591_driver is still present) */
-int pcf8591_attach_adapter(struct i2c_adapter *adapter)
+static int pcf8591_attach_adapter(struct i2c_adapter *adapter)
 {
         return i2c_detect(adapter, &addr_data, pcf8591_detect);
 }
@@ -205,19 +177,18 @@ int pcf8591_detect(struct i2c_adapter *adapter, int address,
         }
 #endif
 
-        if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE))
+        if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE
+                                     | I2C_FUNC_SMBUS_WRITE_BYTE_DATA))
                 goto ERROR0;
 
         /* OK. For now, we presume we have a valid client. We now create the
            client structure, even though we cannot fill it completely yet. */
-        if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-                                   sizeof(struct pcf8591_data),
-                                   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct pcf8591_data), GFP_KERNEL))) {
                 err = -ENOMEM;
                 goto ERROR0;
         }
 
-        data = (struct pcf8591_data *) (new_client + 1);
+	new_client = &data->client;
         new_client->addr = address;
         new_client->data = data;
         new_client->adapter = adapter;
@@ -231,16 +202,8 @@ int pcf8591_detect(struct i2c_adapter *adapter, int address,
         if (kind <= 0)
                 kind = pcf8591;
 
-        if (kind == pcf8591) {
-                type_name = "pcf8591";
-                client_name = "PCF8591 chip";
-        } else {
-#ifdef DEBUG
-                printk(KERN_ERR "pcf8591.o: Internal error: unknown kind (%d)?!?",
-                       kind);
-#endif
-                goto ERROR1;
-        }
+	type_name = "pcf8591";
+	client_name = "PCF8591 chip";
 
         /* Fill in the remaining client fields and put it into the global list */
         strcpy(new_client->name, client_name);
@@ -257,7 +220,7 @@ int pcf8591_detect(struct i2c_adapter *adapter, int address,
         if ((i = i2c_register_entry(new_client,
                                         type_name,
                                         pcf8591_dir_table_template,
-                                        THIS_MODULE)) < 0) {
+					THIS_MODULE)) < 0) {
                 err = i;
                 goto ERROR4;
         }
@@ -273,20 +236,14 @@ int pcf8591_detect(struct i2c_adapter *adapter, int address,
       ERROR4:
         i2c_detach_client(new_client);
       ERROR3:
-      ERROR1:
-        kfree(new_client);
+	kfree(data);
       ERROR0:
         return err;
 }
 
-int pcf8591_detach_client(struct i2c_client *client)
+static int pcf8591_detach_client(struct i2c_client *client)
 {
         int err;
-
-#ifdef MODULE
-        if (MOD_IN_USE)
-                return -EBUSY;
-#endif
 
         i2c_deregister_entry(((struct pcf8591_data *) (client->data))->
                                  sysctl_id);
@@ -297,35 +254,13 @@ int pcf8591_detach_client(struct i2c_client *client)
                 return err;
         }
 
-        kfree(client);
+	kfree(client->data);
 
         return 0;
-}
-
-/* No commands defined yet */
-int pcf8591_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-        return 0;
-}
-
-/* Nothing here yet */
-void pcf8591_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-        MOD_INC_USE_COUNT;
-#endif
-}
-
-/* Nothing here yet */
-void pcf8591_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-        MOD_DEC_USE_COUNT;
-#endif
 }
 
 /* Called when we have found a new PCF8591. */
-void pcf8591_init_client(struct i2c_client *client)
+static void pcf8591_init_client(struct i2c_client *client)
 {
         struct pcf8591_data *data = client->data;
         data->control_byte = PCF8591_INIT_CONTROL_BYTE;
@@ -334,7 +269,7 @@ void pcf8591_init_client(struct i2c_client *client)
         i2c_smbus_write_byte_data(client, data->control_byte, data->aout);
 }
 
-void pcf8591_update_client(struct i2c_client *client)
+static void pcf8591_update_client(struct i2c_client *client)
 {
         struct pcf8591_data *data = client->data;
 
@@ -491,60 +426,22 @@ void pcf8591_aout(struct i2c_client *client, int operation, int ctl_name,
         }
 }
 
-int __init sensors_pcf8591_init(void)
+static int __init sm_pcf8591_init(void)
 {
-        int res;
-
         printk(KERN_INFO "pcf8591.o version %s (%s)\n", LM_VERSION, LM_DATE);
-        pcf8591_initialized = 0;
-
-        if ((res = i2c_add_driver(&pcf8591_driver))) {
-                printk
-                    (KERN_ERR "pcf8591.o: Driver registration failed, module not inserted.\n");
-                pcf8591_cleanup();
-                return res;
-        }
-        pcf8591_initialized++;
-        return 0;
+	return i2c_add_driver(&pcf8591_driver);
 }
 
-int __init pcf8591_cleanup(void)
+static void __exit sm_pcf8591_exit(void)
 {
-        int res;
-
-        if (pcf8591_initialized >= 1) {
-                if ((res = i2c_del_driver(&pcf8591_driver))) {
-                        printk
-                            (KERN_ERR "pcf8591.o: Driver deregistration failed, module not removed.\n");
-                        return res;
-                }
-                pcf8591_initialized--;
-        }
-        return 0;
+        i2c_del_driver(&pcf8591_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR("Aurelien Jarno <aurelien@aurel32.net>");
 MODULE_DESCRIPTION("PCF8591 driver");
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
 
-int init_module(void)
-{
-        return sensors_pcf8591_init();
-}
-
-int cleanup_module(void)
-{
-        return pcf8591_cleanup();
-}
-
-#endif                          /* MODULE */
-
-
-
-
+module_init(sm_pcf8591_init);
+module_exit(sm_pcf8591_exit);

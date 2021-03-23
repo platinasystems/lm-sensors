@@ -1,7 +1,7 @@
 /*
    mtp008.c - Part of lm_sensors, Linux kernel modules for hardware
    monitoring
-   Copyright (c) 2001  Kris Van Hees <aedil@alchar.org>
+   Copyright (C) 2001, 2004  Kris Van Hees <aedil@alchar.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,32 +18,14 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include "version.h"
 
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = {SENSORS_I2C_END};
@@ -114,7 +96,7 @@ SENSORS_INSMOD_1(mtp008);
 #define PIIDIODE	3
 
 /*
- * Conversion routines and macros.  Rounding and limit checking is only done on
+ * Conversion routines and macros.  Limit checking is only done on
  * the TO_REG variants.
  *
  * Note that IN values are expressed as 100 times the actual voltage to avoid
@@ -122,7 +104,7 @@ SENSORS_INSMOD_1(mtp008);
  * 409 (0V to 4.096V).
  */
 #define IN_TO_REG(val)		(SENSORS_LIMIT((((val) * 10 + 8) / 16), 0, 255))
-#define IN_FROM_REG(val)	(((val) * 16) / 10)
+#define IN_FROM_REG(val)	(((val) * 16 + 5) / 10)
 
 /*
  * The fan cotation count (as stored in the register) is calculated using the
@@ -131,7 +113,7 @@ SENSORS_INSMOD_1(mtp008);
  * and the rpm is therefore:
  *      rpm = 1350000 / (count * div)
  */
-extern inline u8 FAN_TO_REG(long rpm, int div)
+static inline u8 FAN_TO_REG(long rpm, int div)
 {
 	if (rpm == 0)
 		return 255;
@@ -205,62 +187,13 @@ extern inline u8 FAN_TO_REG(long rpm, int div)
 #define PWM_TO_REG(val)		(val)
 #define PWMENABLE_FROM_REG(nr, val)	(((val) >> ((nr) + 3)) & 1)
 
-/* Initial limits */
-#define MTP008_INIT_IN_0	(vid)				/* VCore 1 */
-#define MTP008_INIT_IN_1	330				/* +3.3V */
-#define MTP008_INIT_IN_2	(1200 * 10 / 38)		/* +12V */
-#define MTP008_INIT_IN_3	(vid)				/* VCore 2 */
-#define MTP008_INIT_IN_5	((11861 + 7 * (-1200)) / 36)	/* -12V */
-#define MTP008_INIT_IN_6	150				/* Vtt */
-
-#define MTP008_INIT_IN_PCT	10
-
-#define MTP008_INIT_IN_MIN_0	(MTP008_INIT_IN_0 -			      \
-				 MTP008_INIT_IN_0 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MAX_0	(MTP008_INIT_IN_0 +			      \
-				 MTP008_INIT_IN_0 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MIN_1	(MTP008_INIT_IN_1 -			      \
-				 MTP008_INIT_IN_1 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MAX_1	(MTP008_INIT_IN_1 +			      \
-				 MTP008_INIT_IN_1 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MIN_2	(MTP008_INIT_IN_2 -			      \
-				 MTP008_INIT_IN_2 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MAX_2	(MTP008_INIT_IN_2 +			      \
-				 MTP008_INIT_IN_2 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MIN_3	(MTP008_INIT_IN_3 -			      \
-				 MTP008_INIT_IN_3 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MAX_3	(MTP008_INIT_IN_3 +			      \
-				 MTP008_INIT_IN_3 * MTP008_INIT_IN_PCT / 100)
-
-#define MTP008_INIT_IN_MIN_5	(MTP008_INIT_IN_5 -			      \
-				 MTP008_INIT_IN_5 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MAX_5	(MTP008_INIT_IN_5 +			      \
-				 MTP008_INIT_IN_5 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MIN_6	(MTP008_INIT_IN_6 -			      \
-				 MTP008_INIT_IN_6 * MTP008_INIT_IN_PCT / 100)
-#define MTP008_INIT_IN_MAX_6	(MTP008_INIT_IN_6 +			      \
-				 MTP008_INIT_IN_6 * MTP008_INIT_IN_PCT / 100)
-
-#define MTP008_INIT_FAN_MIN_1	3000
-#define MTP008_INIT_FAN_MIN_2	3000
-#define MTP008_INIT_FAN_MIN_3	3000
-
-#define MTP008_INIT_TEMP_OVER	700			/* 70 Celsius */
-#define MTP008_INIT_TEMP_HYST	500			/* 50 Celsius */
-#define MTP008_INIT_TEMP2_OVER	700			/* 70 Celsius */
-#define MTP008_INIT_TEMP2_HYST	500			/* 50 Celsius */
-
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
 /*
  * For each registered MTP008, we need to keep some data in memory.  The
  * structure itself is dynamically allocated, at the same time when a new
  * mtp008 client is allocated.
  */
 struct mtp008_data {
+	struct i2c_client client;
 	int sysctl_id;
 	enum chips type;
 
@@ -287,21 +220,10 @@ struct mtp008_data {
 	u8 pwmenable;				/* Register 0x57 value */
 };
 
-#ifdef MODULE
-static int __init sensors_mtp008_init(void);
-#else
-extern int __init sensors_mtp008_init(void);
-#endif
-static int __init mtp008_cleanup(void);
-
 static int mtp008_attach_adapter(struct i2c_adapter *adapter);
 static int mtp008_detect(struct i2c_adapter *adapter, int address,
 			 unsigned short flags, int kind);
 static int mtp008_detach_client(struct i2c_client *client);
-static int mtp008_command(struct i2c_client *client, unsigned int cmd,
-			  void *arg);
-static void mtp008_inc_use(struct i2c_client *client);
-static void mtp008_dec_use(struct i2c_client *client);
 
 static int mtp008_read_value(struct i2c_client *client, u8 register);
 static int mtp008_write_value(struct i2c_client *client, u8 register, u8 value);
@@ -334,18 +256,53 @@ static int mtp008_id = 0;
 
 static struct i2c_driver mtp008_driver =
 {
-    /* name */			"MTP008 sensor driver",
-    /* id */			I2C_DRIVERID_MTP008,
-    /* flags */			I2C_DF_NOTIFY,
-    /* attach_adapter */	&mtp008_attach_adapter,
-    /* detach_client */		&mtp008_detach_client,
-    /* command */		&mtp008_command,
-    /* inc_use */		&mtp008_inc_use,
-    /* dec_use */		&mtp008_dec_use
+	.name		= "MTP008 sensor driver",
+	.id		= I2C_DRIVERID_MTP008,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= mtp008_attach_adapter,
+	.detach_client	= mtp008_detach_client,
 };
 
-/* Used by mtp008_init/cleanup */
-static int __initdata mtp008_initialized = 0;
+/* -- SENSORS SYSCTL START -- */
+#define MTP008_SYSCTL_IN0	1000	/* Volts * 100 */
+#define MTP008_SYSCTL_IN1	1001
+#define MTP008_SYSCTL_IN2	1002
+#define MTP008_SYSCTL_IN3	1003
+#define MTP008_SYSCTL_IN4	1004
+#define MTP008_SYSCTL_IN5	1005
+#define MTP008_SYSCTL_IN6	1006
+#define MTP008_SYSCTL_FAN1	1101	/* Rotations/min */
+#define MTP008_SYSCTL_FAN2	1102
+#define MTP008_SYSCTL_FAN3	1103
+#define MTP008_SYSCTL_TEMP1	1200	/* Degrees Celcius * 10 */
+#define MTP008_SYSCTL_TEMP2	1201	/* Degrees Celcius * 10 */
+#define MTP008_SYSCTL_TEMP3	1202	/* Degrees Celcius * 10 */
+#define MTP008_SYSCTL_VID	1300	/* Volts * 100 */
+#define MTP008_SYSCTL_PWM1	1401
+#define MTP008_SYSCTL_PWM2	1402
+#define MTP008_SYSCTL_PWM3	1403
+#define MTP008_SYSCTL_SENS1	1501	/* 1, 2, or Beta (3000-5000) */
+#define MTP008_SYSCTL_SENS2	1502
+#define MTP008_SYSCTL_SENS3	1503
+#define MTP008_SYSCTL_FAN_DIV	2000	/* 1, 2, 4 or 8 */
+#define MTP008_SYSCTL_ALARMS	2001	/* bitvector */
+#define MTP008_SYSCTL_BEEP	2002	/* bitvector */
+
+#define MTP008_ALARM_IN0	0x0001
+#define MTP008_ALARM_IN1	0x0002
+#define MTP008_ALARM_IN2	0x0004
+#define MTP008_ALARM_IN3	0x0008
+#define MTP008_ALARM_IN4	0x0100
+#define MTP008_ALARM_IN5	0x0200
+#define MTP008_ALARM_IN6	0x0400
+#define MTP008_ALARM_FAN1	0x0040
+#define MTP008_ALARM_FAN2	0x0080
+#define MTP008_ALARM_FAN3	0x0800
+#define MTP008_ALARM_TEMP1	0x0010
+#define MTP008_ALARM_TEMP2	0x0100
+#define MTP008_ALARM_TEMP3	0x0200
+
+/* -- SENSORS SYSCTL END -- */
 
 /* The /proc/sys entries */
 /* These files are created for each detected chip. This is just a template;
@@ -379,9 +336,9 @@ static ctl_table mtp008_dir_table_template[] =
 	{MTP008_SYSCTL_TEMP1, "temp1", NULL, 0, 0644, NULL,
 	 &i2c_proc_real, &i2c_sysctl_real, NULL, &mtp008_temp},
 	{MTP008_SYSCTL_TEMP2, "temp2", NULL, 0, 0644, NULL,
-       &i2c_proc_real, &i2c_sysctl_real, NULL, &mtp008_temp_add},
+	 &i2c_proc_real, &i2c_sysctl_real, NULL, &mtp008_temp_add},
 	{MTP008_SYSCTL_TEMP3, "temp3", NULL, 0, 0644, NULL,
-       &i2c_proc_real, &i2c_sysctl_real, NULL, &mtp008_temp_add},
+	 &i2c_proc_real, &i2c_sysctl_real, NULL, &mtp008_temp_add},
 	{MTP008_SYSCTL_VID, "vid", NULL, 0, 0444, NULL,
 	 &i2c_proc_real, &i2c_sysctl_real, NULL, &mtp008_vid},
 	{MTP008_SYSCTL_FAN_DIV, "fan_div", NULL, 0, 0644, NULL,
@@ -409,7 +366,7 @@ static ctl_table mtp008_dir_table_template[] =
  * mtp008_driver is inserted (when this module is loaded), for each available
  * adapter when a new adapter is inserted (and mtp008_driver is still present)
  */
-int mtp008_attach_adapter(struct i2c_adapter *adapter)
+static int mtp008_attach_adapter(struct i2c_adapter *adapter)
 {
 	struct i2c_client_address_data mtp008_addr_data;
 
@@ -445,13 +402,12 @@ int mtp008_detect(struct i2c_adapter *adapter, int address,
 	 * structure, even though we cannot fill it completely yet.  But it
 	 * allows us to use mtp008_(read|write)_value().
 	 */
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct mtp008_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct mtp008_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
-	data = (struct mtp008_data *) (new_client + 1);
+
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -507,13 +463,13 @@ int mtp008_detect(struct i2c_adapter *adapter, int address,
       ERROR2:
 	i2c_detach_client(new_client);
       ERROR1:
-	kfree(new_client);
+	kfree(data);
 
       ERROR0:
 	return err;
 }
 
-int mtp008_detach_client(struct i2c_client *client)
+static int mtp008_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -525,45 +481,25 @@ int mtp008_detach_client(struct i2c_client *client)
 		       "client not detached.\n");
 		return err;
 	}
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
 
-/* No commands defined yet */
-int mtp008_command(struct i2c_client *client, unsigned int cmd, void *arg)
-{
-	return 0;
-}
 
-void mtp008_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-void mtp008_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
-int mtp008_read_value(struct i2c_client *client, u8 reg)
+static int mtp008_read_value(struct i2c_client *client, u8 reg)
 {
 	return i2c_smbus_read_byte_data(client, reg) & 0xff;
 }
 
-int mtp008_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int mtp008_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	return i2c_smbus_write_byte_data(client, reg, value);
 }
 
 /* Called when we have found a new MTP008. It should set limits, etc. */
-void mtp008_init_client(struct i2c_client *client)
+static void mtp008_init_client(struct i2c_client *client)
 {
-	int vid;
 	u8 save1, save2;
 	struct mtp008_data *data;
 
@@ -582,65 +518,6 @@ void mtp008_init_client(struct i2c_client *client)
 
 	mtp008_getsensortype(data, save2);
 
-	/*
-	 * Retrieve the VID setting (needed for the default limits).
-	 */
-	vid = mtp008_read_value(client, MTP008_REG_VID_FANDIV) & 0x0f;
-	vid |= (mtp008_read_value(client, MTP008_REG_RESET_VID4) & 0x01) << 4;
-	vid = VID_FROM_REG(vid);
-
-	/*
-	 * Set the default limits.
-	 *
-	 * Setting temp sensors is done as follows:
-	 *
-	 *          Register 0x57: 0 0 0 0 x x x x
-	 *                                 | \ / +-- AIN5/VT3
-	 *                                 |  +----- AIN4/VT2/PII
-	 *                                 +-------- VT1/PII
-	 */
-
-	mtp008_write_value(client, MTP008_REG_IN_MAX(0),
-			   IN_TO_REG(MTP008_INIT_IN_MAX_0));
-	mtp008_write_value(client, MTP008_REG_IN_MIN(0),
-			   IN_TO_REG(MTP008_INIT_IN_MIN_0));
-	mtp008_write_value(client, MTP008_REG_IN_MAX(1),
-			   IN_TO_REG(MTP008_INIT_IN_MAX_1));
-	mtp008_write_value(client, MTP008_REG_IN_MIN(1),
-			   IN_TO_REG(MTP008_INIT_IN_MIN_1));
-	mtp008_write_value(client, MTP008_REG_IN_MAX(2),
-			   IN_TO_REG(MTP008_INIT_IN_MAX_2));
-	mtp008_write_value(client, MTP008_REG_IN_MIN(2),
-			   IN_TO_REG(MTP008_INIT_IN_MIN_2));
-	mtp008_write_value(client, MTP008_REG_IN_MAX(3),
-			   IN_TO_REG(MTP008_INIT_IN_MAX_3));
-	mtp008_write_value(client, MTP008_REG_IN_MIN(3),
-			   IN_TO_REG(MTP008_INIT_IN_MIN_3));
-
-	mtp008_write_value(client, MTP008_REG_IN_MAX(5),
-			   IN_TO_REG(MTP008_INIT_IN_MAX_5));
-	mtp008_write_value(client, MTP008_REG_IN_MIN(5),
-			   IN_TO_REG(MTP008_INIT_IN_MIN_5));
-	mtp008_write_value(client, MTP008_REG_IN_MAX(6),
-			   IN_TO_REG(MTP008_INIT_IN_MAX_6));
-	mtp008_write_value(client, MTP008_REG_IN_MIN(6),
-			   IN_TO_REG(MTP008_INIT_IN_MIN_6));
-
-	mtp008_write_value(client, MTP008_REG_TEMP_MAX,
-			   TEMP_TO_REG(MTP008_INIT_TEMP_OVER));
-	mtp008_write_value(client, MTP008_REG_TEMP_MIN,
-			   TEMP_TO_REG(MTP008_INIT_TEMP_HYST));
-	mtp008_write_value(client, MTP008_REG_IN_MAX(4),
-			   TEMP_TO_REG(MTP008_INIT_TEMP2_OVER));
-	mtp008_write_value(client, MTP008_REG_IN_MIN(4),
-			   TEMP_TO_REG(MTP008_INIT_TEMP2_HYST));
-
-	mtp008_write_value(client, MTP008_REG_FAN_MIN(1),
-			   FAN_TO_REG(MTP008_INIT_FAN_MIN_1, 2));
-	mtp008_write_value(client, MTP008_REG_FAN_MIN(2),
-			   FAN_TO_REG(MTP008_INIT_FAN_MIN_2, 2));
-	mtp008_write_value(client, MTP008_REG_FAN_MIN(3),
-			   FAN_TO_REG(MTP008_INIT_FAN_MIN_3, 2));
 
 	/*
 	 * Start monitoring.
@@ -651,7 +528,7 @@ void mtp008_init_client(struct i2c_client *client)
 	);
 }
 
-void mtp008_update_client(struct i2c_client *client)
+static void mtp008_update_client(struct i2c_client *client)
 {
 	int i;
 	u8 inp;
@@ -726,6 +603,7 @@ void mtp008_update_client(struct i2c_client *client)
 		 */
 		inp = mtp008_read_value(client, MTP008_REG_PIN_CTRL2);
 		mtp008_getsensortype(data, inp);
+		data->pwmenable = inp;
 
 		/*
 		 * Read the PWM registers if enabled.
@@ -740,10 +618,10 @@ void mtp008_update_client(struct i2c_client *client)
 		}
 
 		/*
-		 * Read the fan sensors. Skip 3 if PWM3 enabled.
+		 * Read the fan sensors. Skip 3 if PWM1 enabled.
 		 */
 		for (i = 1; i <= 3; i++) {
-			if(i == 3 && PWMENABLE_FROM_REG(3, inp)) {
+			if(i == 3 && PWMENABLE_FROM_REG(1, inp)) {
 				data->fan[2] = 0;
 				data->fan_min[2] = 0;
 			} else {
@@ -760,7 +638,7 @@ void mtp008_update_client(struct i2c_client *client)
 	up(&data->update_lock);
 }
 
-void mtp008_getsensortype(struct mtp008_data *data, u8 inp)
+static void mtp008_getsensortype(struct mtp008_data *data, u8 inp)
 {
 	inp &= 0x0f;
 	data->sens[0] = (inp >> 3) + 2;			/* 2 or 3 */
@@ -931,12 +809,14 @@ void mtp008_temp_add(struct i2c_client *client, int operation, int ctl_name,
 		if(data->sens[nr - 3] != VOLTAGE) {
 			if (*nrels_mag >= 1) {
 				data->in_max[nr] = TEMP_TO_REG(results[0]);
-				mtp008_write_value(client, MTP008_REG_TEMP_MAX,
+				mtp008_write_value(client,
+						   MTP008_REG_IN_MAX(nr),
 						   data->in_max[nr]);
 			}
 			if (*nrels_mag >= 2) {
 				data->in_min[nr] = TEMP_TO_REG(results[1]);
-				mtp008_write_value(client, MTP008_REG_TEMP_MIN,
+				mtp008_write_value(client,
+						   MTP008_REG_IN_MIN(nr),
 						   data->in_min[nr]);
 			}
 		}
@@ -1079,12 +959,20 @@ void mtp008_pwm(struct i2c_client *client, int operation, int ctl_name,
 		mtp008_update_client(client);
 
 		results[0] = PWM_FROM_REG(data->pwm[nr]);
-
-		*nrels_mag = 1;
+		results[1] = PWMENABLE_FROM_REG(nr + 1, data->pwmenable);
+		*nrels_mag = 2;
 
 		break;
 	case SENSORS_PROC_REAL_WRITE:
 		if (*nrels_mag >= 1) {
+			if (*nrels_mag >= 2) {
+				if(results[1])
+					data->pwmenable |= 0x10 << nr;
+				else
+					data->pwmenable &= ~(0x10 << nr);
+				mtp008_write_value(client, MTP008_REG_PIN_CTRL2,
+					           data->pwmenable);
+			}
 			data->pwm[nr] = PWM_TO_REG(results[0]);
 			mtp008_write_value(client, MTP008_REG_PWM_CTRL(nr),
 					   data->pwm[nr]);
@@ -1192,56 +1080,23 @@ void mtp008_sens(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_mtp008_init(void)
+static int __init sm_mtp008_init(void)
 {
-	int res;
-
 	printk("mtp008.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	mtp008_initialized = 0;
-
-	if ((res = i2c_add_driver(&mtp008_driver))) {
-		printk("mtp008.o: Driver registration failed, "
-		       "module not inserted.\n");
-		mtp008_cleanup();
-		return res;
-	}
-	mtp008_initialized++;
-
-	return 0;
+	return i2c_add_driver(&mtp008_driver);
 }
 
-int __init mtp008_cleanup(void)
+static void __exit sm_mtp008_exit(void)
 {
-	int res;
-
-	if (mtp008_initialized >= 1) {
-		if ((res = i2c_del_driver(&mtp008_driver))) {
-			printk("mtp008.o: Driver deregistration failed, "
-			       "module not removed.\n");
-			return res;
-		}
-		mtp008_initialized--;
-	}
-	return 0;
+	i2c_del_driver(&mtp008_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR("Frodo Looijaard <frodol@dds.nl>, "
 	      "Philip Edelbrock <phil@netroedge.com>, "
 	      "and Kris Van Hees <aedil@alchar.org>");
 MODULE_DESCRIPTION("MTP008 driver");
 
-int init_module(void)
-{
-	return sensors_mtp008_init();
-}
-
-int cleanup_module(void)
-{
-	return mtp008_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_mtp008_init);
+module_exit(sm_mtp008_exit);

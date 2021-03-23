@@ -1,8 +1,8 @@
 #!@BASH@
 #
-# @INITRDDIR@/sensors
+# @INITRDDIR@/sensord
 #
-# sensors       This shell script takes care of starting and stopping
+# sensord       This shell script takes care of starting and stopping
 #               sensord, the lm_sensors hardware health monitoring daemon.
 #
 # Here is the sensors service for SysV init, based on lm_sensors-2.5.5-sensors
@@ -12,7 +12,7 @@
 # xxx" and "alias i2c-sensors-chip-0 xxx" in /etc/modules.conf. The rest should be
 # self explaining.
 #
-# You put it into /etc/rc.d/init.d/, you make symlink (probably using
+# You put it into /etc/rc.d/init.d/, you make a symlink (probably using
 # chkconfig, ntsysv, tksysv or serviceconf program) named S95xxx and K05xxx
 # into /etc/rc#.d (where # is the number of runlevel), and sensors service
 # (which starts lm_sensors modules, runs sensors -s and starts sensord)
@@ -92,7 +92,7 @@ start()
         daemon sensord -i $interval -l $log_interval
         RETVAL=$?
 
-        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/sensors
+        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/sensord
 
         echo
         return $RETVAL
@@ -114,7 +114,7 @@ stop()
         echo_status $?
 
         echo
-        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/sensors
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/sensord
 
         return $RETVAL
 }
@@ -146,10 +146,10 @@ case "$1" in
         reload
         ;;
   condrestart)
-        [ -e /var/lock/subsys/sensors ] && restart || :
+        [ -e /var/lock/subsys/sensord ] && restart || :
         ;;
   *)
-        echo "Usage: sensors {start|stop|restart|reload|condrestart|status}"
+        echo "Usage: sensord {start|stop|restart|reload|condrestart|status}"
         exit 1
         ;;
 esac

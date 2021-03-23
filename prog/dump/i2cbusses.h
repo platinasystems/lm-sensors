@@ -1,7 +1,7 @@
 /*
-    i2c-isa.h - Part of lm_sensors, Linux kernel modules for hardware
-                monitoring
-    Copyright (c) 1998, 1999  Frodo Looijaard <frodol@dds.nl>
+    i2cbusses.h - Part of the lm_sensors project
+
+    Copyright (C) 2004       The lm_sensors group
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,21 +18,11 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#ifndef _I2CBUSSES_H
+#define _I2CBUSSES_H
 
-#ifndef SENSORS_SENSORS_ISA_H
-#define SENSORS_SENSORS_ISA_H
+void print_i2c_busses(int procfmt);
 
-#ifdef __KERNEL__
+int open_i2c_dev(const int i2cbus, char *filename);
 
-#include <linux/i2c.h>
-
-/* Detect whether we are on the isa bus. If this returns true, all i2c
-   access will fail! */
-#define i2c_is_isa_client(clientptr) \
-        ((clientptr)->adapter->algo->id == I2C_ALGO_ISA)
-#define i2c_is_isa_adapter(adapptr) \
-        ((adapptr)->algo->id == I2C_ALGO_ISA)
-
-#endif				/* def __KERNEL__ */
-
-#endif				/* ndef SENSORS_ISA_H */
+#endif

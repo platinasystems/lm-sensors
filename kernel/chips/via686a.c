@@ -2,7 +2,7 @@
     via686a.c - Part of lm_sensors, Linux kernel modules
                 for hardware monitoring
                 
-    Copyright (c) 1998 - 2001  Frodo Looijaard <frodol@dds.nl>,
+    Copyright (c) 1998 - 2002  Frodo Looijaard <frodol@dds.nl>,
                         Kyösti Mälkki <kmalkki@cc.hut.fi>,
 			Mark Studebaker <mdsxyz123@yahoo.com>,
 			and Bob Dougherty <bobd@stanford.edu>
@@ -25,43 +25,23 @@
 */
 
 /*
-    Supports the Via VT82C686A and VT82C686B south bridges.
-    Reports either as a 686A.
+    Supports the Via VT82C686A, VT82C686B south bridges.
+    Reports all as a 686A.
     See doc/chips/via686a for details.
     Warning - only supports a single device.
 */
-#include <linux/version.h>
+
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/ioport.h>
-#include <linux/sysctl.h>
 #include <linux/pci.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
+#include <asm/io.h>
+#include "version.h"
+#include "sensors_compat.h"
 
-#ifdef MODULE_LICENSE
-MODULE_LICENSE("GPL");
-#endif
-
-#ifndef PCI_DEVICE_ID_VIA_82C686_4
-#define PCI_DEVICE_ID_VIA_82C686_4 0x3057
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
 
 /* If force_addr is set to anything different from 0, we forcibly enable
    the device at the given address. */
@@ -126,11 +106,11 @@ static const u8 reghyst[] = { 0x3a, 0x3e, 0x1e };
 //    10 comparator mode- like 00, but ignores hysteresis
 //    11 same as 00
 #define VIA686A_REG_TEMP_MODE 0x4b
-// We'll just assume that you want to set all 3 simulataneously:
+// We'll just assume that you want to set all 3 simultaneously:
 #define VIA686A_TEMP_MODE_MASK 0x3F
 #define VIA686A_TEMP_MODE_CONTINUOUS (0x00)
 
-/* Conversions. Rounding and limit checking is only done on the TO_REG
+/* Conversions. Limit checking is only done on the TO_REG
    variants. */
 
 /********* VOLTAGE CONVERSIONS (Bob Dougherty) ********/
@@ -146,55 +126,47 @@ static const u8 reghyst[] = { 0x3a, 0x3e, 0x1e };
 // regVal = (volts/factor-133)/25
 // (These conversions were contributed by Jonathan Teh Soon Yew 
 // <j.teh@iname.com>)
-// 
-// These get us close, but they don't completely agree with what my BIOS 
-// says- they are all a bit low.  But, it all we have to go on...
-extern inline u8 IN_TO_REG(long val, int inNum)
+static inline u8 IN_TO_REG(long val, int inNum)
 {
-	// to avoid floating point, we multiply everything by 100.
-	// val is guaranteed to be positive, so we can achieve the effect of 
-	// rounding by (...*10+5)/10.  Note that the *10 is hidden in the 
-	// /250 (which should really be /2500).
-	// At the end, we need to /100 because we *100 everything and we need
-	// to /10 because of the rounding thing, so we /1000.  
+	/* To avoid floating point, we multiply constants by 10 (100 for +12V).
+	   Rounding is done (120500 is actually 133000 - 12500).
+	   Remember that val is expressed in 0.01V/bit, which is why we divide
+	   by an additional 1000 (10000 for +12V): 100 for val and 10 (100)
+	   for the constants. */
 	if (inNum <= 1)
 		return (u8)
-		    SENSORS_LIMIT(((val * 210240 - 13300) / 250 + 5) / 1000, 
-				  0, 255);
+		    SENSORS_LIMIT((val * 21024 - 120500) / 25000, 0, 255);
 	else if (inNum == 2)
 		return (u8)
-		    SENSORS_LIMIT(((val * 157370 - 13300) / 250 + 5) / 1000, 
-				  0, 255);
+		    SENSORS_LIMIT((val * 15737 - 120500) / 25000, 0, 255);
 	else if (inNum == 3)
 		return (u8)
-		    SENSORS_LIMIT(((val * 101080 - 13300) / 250 + 5) / 1000, 
-				  0, 255);
+		    SENSORS_LIMIT((val * 10108 - 120500) / 25000, 0, 255);
 	else
-		return (u8) SENSORS_LIMIT(((val * 41714 - 13300) / 250 + 5)
-					  / 1000, 0, 255);
+		return (u8)
+		    SENSORS_LIMIT((val * 41714 - 1205000) / 250000, 0, 255);
 }
 
-extern inline long IN_FROM_REG(u8 val, int inNum)
+static inline long IN_FROM_REG(u8 val, int inNum)
 {
-	// to avoid floating point, we multiply everything by 100.
-	// val is guaranteed to be positive, so we can achieve the effect of
-	// rounding by adding 0.5.  Or, to avoid fp math, we do (...*10+5)/10.
-	// We need to scale with *100 anyway, so no need to /100 at the end.
+	/* To avoid floating point, we multiply constants by 10 (100 for +12V).
+	   We also multiply them by 100 because we want 0.01V/bit for the
+	   output value. Rounding is done. */
 	if (inNum <= 1)
-		return (long) (((250000 * val + 13300) / 210240 * 10 + 5) /10);
+		return (long) ((25000 * val + 133000 + 21024 / 2) / 21024);
 	else if (inNum == 2)
-		return (long) (((250000 * val + 13300) / 157370 * 10 + 5) /10);
+		return (long) ((25000 * val + 133000 + 15737 / 2) / 15737);
 	else if (inNum == 3)
-		return (long) (((250000 * val + 13300) / 101080 * 10 + 5) /10);
+		return (long) ((25000 * val + 133000 + 10108 / 2) / 10108);
 	else
-		return (long) (((250000 * val + 13300) / 41714 * 10 + 5) /10);
+		return (long) ((250000 * val + 1330000 + 41714 / 2) / 41714);
 }
 
 /********* FAN RPM CONVERSIONS ********/
 // Higher register values = slower fans (the fan's strobe gates a counter).
 // But this chip saturates back at 0, not at 255 like all the other chips.
 // So, 0 means 0 RPM
-extern inline u8 FAN_TO_REG(long rpm, int div)
+static inline u8 FAN_TO_REG(long rpm, int div)
 {
 	if (rpm == 0)
 		return 0;
@@ -298,52 +270,37 @@ static const u8 viaLUT[] =
 	    239, 240
 };
 
-/* Converting temps to (8-bit) hyst and over registers */
-// No interpolation here.  Just check the limits and go.
-// The +5 effectively rounds off properly and the +50 is because 
-// the temps start at -50
-extern inline u8 TEMP_TO_REG(long val)
+/* Converting temps to (8-bit) hyst and over registers
+   No interpolation here.
+   The +50 is because the temps start at -50 */
+static inline u8 TEMP_TO_REG(long val)
 {
-	return (u8)
-	    SENSORS_LIMIT(viaLUT[((val <= -500) ? 0 : (val >= 1100) ? 160 : 
-				  ((val + 5) / 10 + 50))], 0, 255);
+	return viaLUT[val <= -500 ? 0 : val >= 1100 ? 160 : 
+		      (val < 0 ? val - 5 : val + 5) / 10 + 50];
 }
 
 /* for 8-bit temperature hyst and over registers */
-// The temp values are already *10, so we don't need to do that.
-// But we _will_ round these off to the nearest degree with (...*10+5)/10
-#define TEMP_FROM_REG(val) ((tempLUT[(val)]*10+5)/10)
+#define TEMP_FROM_REG(val) (tempLUT[(val)])
 
 /* for 10-bit temperature readings */
 // You might _think_ this is too long to inline, but's it's really only
 // called once...
-extern inline long TEMP_FROM_REG10(u16 val)
+static inline long TEMP_FROM_REG10(u16 val)
 {
 	// the temp values are already *10, so we don't need to do that.
 	long temp;
 	u16 eightBits = val >> 2;
 	u16 twoBits = val & 3;
 
-	// handle the extremes first (they won't interpolate well! ;-)
-	if (val == 0)
-		return (long) tempLUT[0];
-	if (val == 1023)
-		return (long) tempLUT[255];
-
-	if (twoBits == 0)
+	/* no interpolation for these */
+	if (twoBits == 0 || eightBits == 255)
 		return (long) tempLUT[eightBits];
-	else {
-		// do some interpolation by multipying the lower and upper
-		// bounds by 25, 50 or 75, then /100.
-		temp = ((25 * (4 - twoBits)) * tempLUT[eightBits]
-			+ (25 * twoBits) * tempLUT[eightBits + 1]);
-		// increase the magnitude by 50 to achieve rounding.
-		if (temp > 0)
-			temp += 50;
-		else
-			temp -= 50;
-		return (temp / 100);
-	}
+
+	/* do some linear interpolation */
+	temp = (4 - twoBits) * tempLUT[eightBits]
+	     + twoBits * tempLUT[eightBits + 1];
+	/* achieve rounding */
+	return (temp < 0 ? temp - 2 : temp + 2) / 4;
 }
 
 #define ALARMS_FROM_REG(val) (val)
@@ -351,51 +308,11 @@ extern inline long TEMP_FROM_REG10(u16 val)
 #define DIV_FROM_REG(val) (1 << (val))
 #define DIV_TO_REG(val) ((val)==8?3:(val)==4?2:(val)==1?0:1)
 
-/* Initial limits */
-#define VIA686A_INIT_IN_0 200
-#define VIA686A_INIT_IN_1 250
-#define VIA686A_INIT_IN_2 330
-#define VIA686A_INIT_IN_3 500
-#define VIA686A_INIT_IN_4 1200
-
-#define VIA686A_INIT_IN_PERCENTAGE 10
-
-#define VIA686A_INIT_IN_MIN_0 (VIA686A_INIT_IN_0 - VIA686A_INIT_IN_0 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MAX_0 (VIA686A_INIT_IN_0 + VIA686A_INIT_IN_0 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MIN_1 (VIA686A_INIT_IN_1 - VIA686A_INIT_IN_1 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MAX_1 (VIA686A_INIT_IN_1 + VIA686A_INIT_IN_1 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MIN_2 (VIA686A_INIT_IN_2 - VIA686A_INIT_IN_2 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MAX_2 (VIA686A_INIT_IN_2 + VIA686A_INIT_IN_2 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MIN_3 (VIA686A_INIT_IN_3 - VIA686A_INIT_IN_3 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MAX_3 (VIA686A_INIT_IN_3 + VIA686A_INIT_IN_3 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MIN_4 (VIA686A_INIT_IN_4 - VIA686A_INIT_IN_4 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-#define VIA686A_INIT_IN_MAX_4 (VIA686A_INIT_IN_4 + VIA686A_INIT_IN_4 \
-        * VIA686A_INIT_IN_PERCENTAGE / 100)
-
-#define VIA686A_INIT_FAN_MIN	3000
-
-#define VIA686A_INIT_TEMP_OVER 600
-#define VIA686A_INIT_TEMP_HYST 500
-
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-/* For the VIA686A, we need to keep some data in memory. That
-   data is pointed to by via686a_list[NR]->data. The structure itself is
-   dynamically allocated, at the same time when a new via686a client is
-   allocated. */
+/* For the VIA686A, we need to keep some data in memory.
+   The structure is dynamically allocated, at the same time when a new
+   via686a client is allocated. */
 struct via686a_data {
+	struct i2c_client client;
 	struct semaphore lock;
 	int sysctl_id;
 
@@ -417,29 +334,16 @@ struct via686a_data {
 
 static struct pci_dev *s_bridge;	/* pointer to the (only) via686a */
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_via686a_init(void);
-static int __init via686a_cleanup(void);
-
 static int via686a_attach_adapter(struct i2c_adapter *adapter);
 static int via686a_detect(struct i2c_adapter *adapter, int address,
 			  unsigned short flags, int kind);
 static int via686a_detach_client(struct i2c_client *client);
-static int via686a_command(struct i2c_client *client, unsigned int cmd,
-			   void *arg);
-static void via686a_inc_use(struct i2c_client *client);
-static void via686a_dec_use(struct i2c_client *client);
 
 static int via686a_read_value(struct i2c_client *client, u8 register);
 static void via686a_write_value(struct i2c_client *client, u8 register,
 				u8 value);
 static void via686a_update_client(struct i2c_client *client);
 static void via686a_init_client(struct i2c_client *client);
-static int via686a_find(int *address);
 
 
 static void via686a_in(struct i2c_client *client, int operation,
@@ -458,20 +362,45 @@ static int via686a_id = 0;
 /* The driver. I choose to use type i2c_driver, as at is identical to both
    smbus_driver and isa_driver, and clients could be of either kind */
 static struct i2c_driver via686a_driver = {
-	/* name */ "VIA 686A",
-	/* id */ I2C_DRIVERID_VIA686A,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &via686a_attach_adapter,
-	/* detach_client */ &via686a_detach_client,
-	/* command */ &via686a_command,
-	/* inc_use */ &via686a_inc_use,
-	/* dec_use */ &via686a_dec_use
+	.name		= "VIA 686A",
+	.id		= I2C_DRIVERID_VIA686A,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= via686a_attach_adapter,
+	.detach_client	= via686a_detach_client,
 };
 
-/* Used by via686a_init/cleanup */
-static int __initdata via686a_initialized = 0;
+
 
 /* The /proc/sys entries */
+
+/* -- SENSORS SYSCTL START -- */
+#define VIA686A_SYSCTL_IN0 1000
+#define VIA686A_SYSCTL_IN1 1001
+#define VIA686A_SYSCTL_IN2 1002
+#define VIA686A_SYSCTL_IN3 1003
+#define VIA686A_SYSCTL_IN4 1004
+#define VIA686A_SYSCTL_FAN1 1101
+#define VIA686A_SYSCTL_FAN2 1102
+#define VIA686A_SYSCTL_TEMP 1200
+#define VIA686A_SYSCTL_TEMP2 1201
+#define VIA686A_SYSCTL_TEMP3 1202
+#define VIA686A_SYSCTL_FAN_DIV 2000
+#define VIA686A_SYSCTL_ALARMS 2001
+
+#define VIA686A_ALARM_IN0 0x01
+#define VIA686A_ALARM_IN1 0x02
+#define VIA686A_ALARM_IN2 0x04
+#define VIA686A_ALARM_IN3 0x08
+#define VIA686A_ALARM_TEMP 0x10
+#define VIA686A_ALARM_FAN1 0x40
+#define VIA686A_ALARM_FAN2 0x80
+#define VIA686A_ALARM_IN4 0x100
+#define VIA686A_ALARM_TEMP2 0x800
+#define VIA686A_ALARM_CHAS 0x1000
+#define VIA686A_ALARM_TEMP3 0x8000
+
+/* -- SENSORS SYSCTL END -- */
+
 /* These files are created for each detected VIA686A. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -517,35 +446,9 @@ static inline void via686a_write_value(struct i2c_client *client, u8 reg,
 }
 
 /* This is called when the module is loaded */
-int via686a_attach_adapter(struct i2c_adapter *adapter)
+static int via686a_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, via686a_detect);
-}
-
-/* Locate chip and get correct base address */
-int via686a_find(int *address)
-{
-	u16 val;
-
-	if (!pci_present())
-		return -ENODEV;
-
-	if (!(s_bridge = pci_find_device(PCI_VENDOR_ID_VIA,
-					 PCI_DEVICE_ID_VIA_82C686_4,
-					 NULL))) return -ENODEV;
-
-	if (PCIBIOS_SUCCESSFUL !=
-	    pci_read_config_word(s_bridge, VIA686A_BASE_REG, &val))
-		return -ENODEV;
-	*address = val & ~(VIA686A_EXTENT - 1);
-	if (*address == 0 && force_addr == 0) {
-		printk("via686a.o: base address not set - upgrade BIOS or use force_addr=0xaddr\n");
-		return -ENODEV;
-	}
-	if (force_addr)
-		*address = force_addr;	/* so detect will get called */
-
-	return 0;
 }
 
 int via686a_detect(struct i2c_adapter *adapter, int address,
@@ -565,8 +468,9 @@ int via686a_detect(struct i2c_adapter *adapter, int address,
 		return 0;
 	}
 
+	/* 8231 requires multiple of 256, we enforce that on 686 as well */
 	if(force_addr)
-		address = force_addr & ~(VIA686A_EXTENT - 1);
+		address = force_addr & 0xFF00;
 	if (check_region(address, VIA686A_EXTENT)) {
 		printk("via686a.o: region 0x%x already in use!\n",
 		       address);
@@ -590,14 +494,12 @@ int via686a_detect(struct i2c_adapter *adapter, int address,
 			return -ENODEV;
 	}
 
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct via686a_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct via686a_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct via686a_data *) (new_client + 1);
+	new_client = &data->client;
 	new_client->addr = address;
 	init_MUTEX(&data->lock);
 	new_client->data = data;
@@ -637,12 +539,12 @@ int via686a_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
 	release_region(address, VIA686A_EXTENT);
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int via686a_detach_client(struct i2c_client *client)
+static int via686a_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -656,91 +558,35 @@ int via686a_detach_client(struct i2c_client *client)
 	}
 
 	release_region(client->addr, VIA686A_EXTENT);
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
 }
 
-/* No commands defined yet */
-int via686a_command(struct i2c_client *client, unsigned int cmd, void *arg)
+/* Called when we have found a new VIA686A. */
+static void via686a_init_client(struct i2c_client *client)
 {
-	return 0;
-}
-
-void via686a_inc_use(struct i2c_client *client)
-{
-	MOD_INC_USE_COUNT;
-}
-
-void via686a_dec_use(struct i2c_client *client)
-{
-	MOD_DEC_USE_COUNT;
-}
-
-/* Called when we have found a new VIA686A. Set limits, etc. */
-void via686a_init_client(struct i2c_client *client)
-{
-	int i;
-
-	/* Reset the device */
-	via686a_write_value(client, VIA686A_REG_CONFIG, 0x80);
-
-	/* Have to wait for reset to complete or else the following
-	   initializations won't work reliably. The delay was arrived at
-	   empirically, the datasheet doesn't tell you.
-	   Waiting for the reset bit to clear doesn't work, it
-	   clears in about 2-4 udelays and that isn't nearly enough. */
-	udelay(50);
-
-	via686a_write_value(client, VIA686A_REG_IN_MIN(0),
-			    IN_TO_REG(VIA686A_INIT_IN_MIN_0, 0));
-	via686a_write_value(client, VIA686A_REG_IN_MAX(0),
-			    IN_TO_REG(VIA686A_INIT_IN_MAX_0, 0));
-	via686a_write_value(client, VIA686A_REG_IN_MIN(1),
-			    IN_TO_REG(VIA686A_INIT_IN_MIN_1, 1));
-	via686a_write_value(client, VIA686A_REG_IN_MAX(1),
-			    IN_TO_REG(VIA686A_INIT_IN_MAX_1, 1));
-	via686a_write_value(client, VIA686A_REG_IN_MIN(2),
-			    IN_TO_REG(VIA686A_INIT_IN_MIN_2, 2));
-	via686a_write_value(client, VIA686A_REG_IN_MAX(2),
-			    IN_TO_REG(VIA686A_INIT_IN_MAX_2, 2));
-	via686a_write_value(client, VIA686A_REG_IN_MIN(3),
-			    IN_TO_REG(VIA686A_INIT_IN_MIN_3, 3));
-	via686a_write_value(client, VIA686A_REG_IN_MAX(3),
-			    IN_TO_REG(VIA686A_INIT_IN_MAX_3, 3));
-	via686a_write_value(client, VIA686A_REG_IN_MIN(4),
-			    IN_TO_REG(VIA686A_INIT_IN_MIN_4, 4));
-	via686a_write_value(client, VIA686A_REG_IN_MAX(4),
-			    IN_TO_REG(VIA686A_INIT_IN_MAX_4, 4));
-	via686a_write_value(client, VIA686A_REG_FAN_MIN(1),
-			    FAN_TO_REG(VIA686A_INIT_FAN_MIN, 2));
-	via686a_write_value(client, VIA686A_REG_FAN_MIN(2),
-			    FAN_TO_REG(VIA686A_INIT_FAN_MIN, 2));
-	for (i = 1; i <= 3; i++) {
-		via686a_write_value(client, VIA686A_REG_TEMP_OVER(i),
-				    TEMP_TO_REG(VIA686A_INIT_TEMP_OVER));
-		via686a_write_value(client, VIA686A_REG_TEMP_HYST(i),
-				    TEMP_TO_REG(VIA686A_INIT_TEMP_HYST));
-	}
+	u8 reg;
 
 	/* Start monitoring */
-	via686a_write_value(client, VIA686A_REG_CONFIG, 0x01);
+	reg = via686a_read_value(client, VIA686A_REG_CONFIG);
+	via686a_write_value(client, VIA686A_REG_CONFIG, (reg|0x01)&0x7F);
 
-	/* Cofigure temp interrupt mode for continuous-interrupt operation */
+	/* Configure temp interrupt mode for continuous-interrupt operation */
 	via686a_write_value(client, VIA686A_REG_TEMP_MODE, 
 			    via686a_read_value(client, VIA686A_REG_TEMP_MODE) &
 			    !(VIA686A_TEMP_MODE_MASK | VIA686A_TEMP_MODE_CONTINUOUS));
 }
 
-void via686a_update_client(struct i2c_client *client)
+static void via686a_update_client(struct i2c_client *client)
 {
 	struct via686a_data *data = client->data;
 	int i;
 
 	down(&data->update_lock);
 
-	if ((jiffies - data->last_updated > HZ + HZ / 2) ||
-	    (jiffies < data->last_updated) || !data->valid) {
+       if (time_after(jiffies - data->last_updated, HZ + HZ / 2) ||
+           time_before(jiffies, data->last_updated) || !data->valid) {
 
 		for (i = 0; i <= 4; i++) {
 			data->in[i] =
@@ -810,8 +656,8 @@ void via686a_update_client(struct i2c_client *client)
    large enough (by checking the incoming value of *nrels). This is not very
    good practice, but as long as you put less than about 5 values in results,
    you can assume it is large enough. */
-void via686a_in(struct i2c_client *client, int operation, int ctl_name,
-		int *nrels_mag, long *results)
+static void via686a_in(struct i2c_client *client, int operation, int ctl_name,
+               int *nrels_mag, long *results)
 {
 	struct via686a_data *data = client->data;
 	int nr = ctl_name - VIA686A_SYSCTL_IN0;
@@ -851,8 +697,7 @@ void via686a_fan(struct i2c_client *client, int operation, int ctl_name,
 		results[0] = FAN_FROM_REG(data->fan_min[nr - 1],
 					  DIV_FROM_REG(data->fan_div
 						       [nr - 1]));
-		results[1] =
-		    FAN_FROM_REG(data->fan[nr - 1],
+		results[1] = FAN_FROM_REG(data->fan[nr - 1],
 				 DIV_FROM_REG(data->fan_div[nr - 1]));
 		*nrels_mag = 2;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
@@ -938,59 +783,67 @@ void via686a_fan_div(struct i2c_client *client, int operation,
 	}
 }
 
-int __init sensors_via686a_init(void)
-{
-	int res, addr;
 
+static struct pci_device_id via686a_pci_ids[] __devinitdata = {
+       {PCI_VENDOR_ID_VIA, PCI_DEVICE_ID_VIA_82C686_4, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 },
+       { 0, }
+};
+
+static int __devinit via686a_pci_probe(struct pci_dev *dev,
+                                      const struct pci_device_id *id)
+{
+       u16 val;
+       int addr = 0;
+
+       if (PCIBIOS_SUCCESSFUL !=
+           pci_read_config_word(dev, VIA686A_BASE_REG, &val))
+               return -ENODEV;
+
+       addr = val & ~(VIA686A_EXTENT - 1);
+       if (addr == 0 && force_addr == 0) {
+               printk("via686a.o: base address not set - upgrade BIOS or use force_addr=0xaddr\n");
+               return -ENODEV;
+       }
+       if (force_addr)
+               addr = force_addr;      /* so detect will get called */
+
+       if (!addr) {
+               printk("via686a.o: No Via 686A sensors found.\n");
+               return -ENODEV;
+       }
+       normal_isa[0] = addr;
+       s_bridge = dev;
+       return i2c_add_driver(&via686a_driver);
+}
+
+static void __devexit via686a_pci_remove(struct pci_dev *dev)
+{
+       i2c_del_driver(&via686a_driver);
+}
+
+static struct pci_driver via686a_pci_driver = {
+       .name		= "via686a",
+       .id_table	= via686a_pci_ids,
+       .probe		= via686a_pci_probe,
+       .remove		= __devexit_p(via686a_pci_remove),
+};
+
+static int __init sm_via686a_init(void)
+{
 	printk("via686a.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	via686a_initialized = 0;
-
-	if (via686a_find(&addr)) {
-		printk("via686a.o: No Via 686A sensors found.\n");
-		return -ENODEV;
-	}
-	normal_isa[0] = addr;
-
-	if ((res = i2c_add_driver(&via686a_driver))) {
-		printk("via686a.o: Driver registration failed.\n");
-		via686a_cleanup();
-		return res;
-	}
-	via686a_initialized++;
-	return 0;
+	return pci_module_init(&via686a_pci_driver);
 }
 
-int __init via686a_cleanup(void)
+static void __exit sm_via686a_exit(void)
 {
-	int res;
-
-	if (via686a_initialized >= 1) {
-		if ((res = i2c_del_driver(&via686a_driver))) {
-			printk
-			    ("via686a.o: Driver deregistration failed.\n");
-			return res;
-		}
-		via686a_initialized--;
-	}
-	return 0;
+       pci_unregister_driver(&via686a_pci_driver);
 }
 
-EXPORT_NO_SYMBOLS;
-
-#ifdef MODULE
-
-MODULE_AUTHOR
-    ("Kyösti Mälkki <kmalkki@cc.hut.fi>, Mark Studebaker <mdsxyz123@yahoo.com>, Bob Dougherty <bobd@stanford.edu>");
+MODULE_AUTHOR("Kyösti Mälkki <kmalkki@cc.hut.fi>, "
+              "Mark Studebaker <mdsxyz123@yahoo.com> "
+             "and Bob Dougherty <bobd@stanford.edu>");
 MODULE_DESCRIPTION("VIA 686A Sensor device");
+MODULE_LICENSE("GPL");
 
-int init_module(void)
-{
-	return sensors_via686a_init();
-}
-
-int cleanup_module(void)
-{
-	return via686a_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_via686a_init);
+module_exit(sm_via686a_exit);

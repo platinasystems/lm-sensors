@@ -29,7 +29,7 @@
 /* Kinds of expression operators recognized */
 typedef enum sensors_operation { 
   sensors_add, sensors_sub, sensors_multiply, sensors_divide, 
-  sensors_negate } sensors_operation;
+  sensors_negate, sensors_exp, sensors_log } sensors_operation;
 
 /* An expression can have several forms */
 typedef enum sensors_expr_kind {
@@ -127,22 +127,29 @@ typedef struct sensors_proc_chips_entry {
 
 /* Internal data about a single chip feature.
    name is the string name used to refer to this feature (both in config
-    files and through user functions);
+     files and through user functions);
    number is the internal feature number, used in many functions to refer
      to this feature
-   logical_mapping is either SENSORS_NO_MAPPING is this is feature is the
+   logical_mapping is either SENSORS_NO_MAPPING if this is feature is the
      main element of category; or it is the number of a feature with which
      this feature is logically grouped (a group could be fan, fan_max and
      fan_div)
    compute_mapping is like logical_mapping, only it refers to another
      feature whose compute line will be inherited (a group could be fan and
      fan_max, but not fan_div)
-    mode is SENSORS_MODE_NO_RW, SENSORS_MODE_R, SENSORS_MODE_W or
-      SENSORS_MODE_RW, for unaccessible, readable, writable, and both readable
-      and writable.
-    sysctl is the SYSCTL id of the file the value can be found in;
-    offset is the (byte) offset of the place this feature can be found;
-    Divide the read value by 10**scaling to get the real value */
+   mode is SENSORS_MODE_NO_RW, SENSORS_MODE_R, SENSORS_MODE_W or
+     SENSORS_MODE_RW, for unaccessible, readable, writable, and both readable
+     and writable.
+   sysctl is the SYSCTL id of the file the value can be found in.
+   offset is the (byte) offset of the place this feature can be found.
+   scaling is the number of decimal points to scale by.
+     This scaling is performed on the raw sysctl value, NOT the value
+     seen in /proc. Therefore the scaling value must be the same as
+     the value returned in nrels_mag by the SENSORS_PROC_REAL_INFO
+     operation in the chip drivers.
+     Divide the read value by 10**scaling to get the real value.
+     Scaling can be positive or negative but negative values aren't
+     very useful because the driver can scale that direction itself. */
 typedef struct sensors_chip_feature {
   int number;
   const char *name;
@@ -152,6 +159,9 @@ typedef struct sensors_chip_feature {
   int sysctl;
   int offset;
   int scaling;
+  const char *sysname;
+  int sysscaling;
+  const char *altsysname;
 } sensors_chip_feature;
 
 /* Internal data about all features of a type of chip */

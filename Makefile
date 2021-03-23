@@ -24,17 +24,19 @@
 # If your /bin/sh is not bash, change the below definition so that make can
 # find bash. Or you can hope your sh-like shell understands all scripts.
 # I think so, but I have not tested it.
-# SHELL=/usr/bin/bash
+#SHELL := /usr/bin/bash
+
+# The currently running kernel version. This is used right below to
+# determine where the kernel sources can be found.
+KERNELVERSION := $(shell uname -r)
 
 # The location of linux itself. This is used to find the kernel headers
 # and other things.
-LINUX=/usr/src/linux
-LINUX_HEADERS=$(LINUX)/include
-
-# Determine whether we need to compile the kernel modules, or only the
-# user-space utilities. By default, the kernel modules are compiled.
-#COMPILE_KERNEL := 0
-COMPILE_KERNEL := 1
+#LINUX := /usr/src/linux
+LINUX := $(shell if [ -L /lib/modules/$(KERNELVERSION)/build ] ; \
+	then echo "/lib/modules/$(KERNELVERSION)/build" ; \
+	else echo "/usr/src/linux" ; fi)
+LINUX_HEADERS := $(LINUX)/include
 
 # If you have installed the i2c header at some other place (like 
 # /usr/local/include/linux), set that directory here. Please check this out
@@ -42,8 +44,8 @@ COMPILE_KERNEL := 1
 # may be used mistakenly. Note: This should point to the directory
 # *above* the linux/ subdirectory, so to /usr/local/include in the
 # above example.
-I2C_HEADERS=/usr/local/include
-#I2C_HEADERS=$(LINUX_HEADERS)
+I2C_HEADERS := /usr/local/include
+#I2C_HEADERS := $(LINUX_HEADERS)
 
 # Uncomment the third line on SMP systems if the magic invocation fails. It
 # is a bit complicated because SMP configuration changed around kernel 2.1.130
@@ -77,10 +79,16 @@ DESTDIR :=
 # This is the prefix that will be used for almost all directories below.
 PREFIX := /usr/local
 
-# This is the directory into which the modules will be installed.
+# Your C compiler
+CC := gcc
+
+# This is the main modules directory into which the modules will be installed.
 # The magic invocation will return something like this:
-#   /lib/modules/2.2.15-ac9/misc
-MODDIR := /lib/modules/`grep UTS_RELEASE $(LINUX_HEADERS)/linux/version.h|cut -f 2 -d'"'`/misc
+#   /lib/modules/2.2.15-ac9
+#MODDIR := /lib/modules/`grep UTS_RELEASE $(LINUX_HEADERS)/linux/version.h|cut -f 2 -d'"'`/misc
+#MODPREF := /lib/modules/$(KERNELVERSION)
+#MODPREF := /lib/modules/`grep UTS_RELEASE $(LINUX_HEADERS)/linux/version.h|cut -f 2 -d'"'`
+MODPREF := /lib/modules/$(shell $(CC) -I$(LINUX_HEADERS) -E etc/config.c | grep uts_release |cut -f 2 -d'"')
 
 # This is the directory where sensors.conf will be installed, if no other
 # configuration file is found
@@ -89,6 +97,8 @@ ETCDIR := /etc
 # You should not need to change this. It is the directory into which the
 # library files (both static and shared) will be installed.
 LIBDIR := $(PREFIX)/lib
+
+EXLDFLAGS := -Wl,-rpath,$(LIBDIR)
 
 # You should not need to change this. It is the directory into which the
 # executable program files will be installed. BINDIR for programs that are
@@ -114,12 +124,15 @@ LIBINCLUDEDIR := $(INCLUDEDIR)/sensors
 # manual pages will be installed.
 MANDIR := $(PREFIX)/man
 
-# You should not need to change this. It defines the manual owner and group
-# as which manual pages are installed.
-MANOWN := root
-MANGRP := root
-
 MACHINE := $(shell uname -m)
+
+# Extra non-default programs to build; e.g., sensord
+# PROG_EXTRA := sensord
+
+# Set these to add preprocessor or compiler flags, or use
+# environment variables
+# CFLAGS :=
+# CPPFLAGS :=
 
 ##################################################
 # Below this, nothing should need to be changed. #
@@ -137,56 +150,90 @@ MACHINE := $(shell uname -m)
 # to do this. 
 
 # The subdirectories we need to build things in 
-SRCDIRS := mkpatch
-ifeq ($(COMPILE_KERNEL),1)
-SRCDIRS += kernel kernel/busses kernel/chips kernel/include
+SRCDIRS :=
+ifneq ($(MAKECMDGOALS),user)
+ifneq ($(MAKECMDGOALS),user_install)
+ifneq ($(MAKECMDGOALS),user_uninstall)
+SRCDIRS += mkpatch
+SRCDIRS += kernel kernel/busses kernel/chips
 endif
-SRCDIRS += lib prog/sensors prog/sensord prog/dump prog/detect etc
+endif
+endif
+SRCDIRS += kernel/include
+SRCDIRS += lib prog/detect prog/dump prog/eeprom prog/pwm \
+           prog/sensors prog/xeon ${PROG_EXTRA:%=prog/%} etc
 
 # Some often-used commands with default options
 MKDIR := mkdir -p
+RMDIR := rmdir
 RM := rm -f
-CC := gcc
 BISON := bison
 FLEX := flex
 AR := ar
 INSTALL := install
-LN := ln -sfn
+LN := ln -sf
 GREP := grep
+AWK := awk
+SED := sed
 
 # Determine the default compiler flags
-# MODCFLAGS is to create in-kernel object files (modules); PROGFLAGS is to
-# create non-kernel object files (which are linked into executables).
-# ARCFLAGS are used to create archive object files (static libraries), and
-# LIBCFLAGS are for shared library objects.
-CFLAGS := -I. -Ikernel/include -I$(I2C_HEADERS) -I$(LINUX_HEADERS) -O2 
+# Set CFLAGS or CPPFLAGS above to add your own flags to all.
+# ALLCPPFLAGS/ALLCFLAGS are common flags, plus any user-specified overrides from the environment or make command line.
+# MODCPPFLAGS/MODCFLAGS is to create in-kernel object files (modules).
+# PROGCPPFLAGS/PROGCFLAGS is to create non-kernel object files (which are linked into executables).
+# ARCPPFLAGS/ARCFLAGS are used to create archive object files (static libraries).
+# LIBCPPFLAGS/LIBCFLAGS are for shared library objects.
+ALL_CPPFLAGS := -I. -Ikernel/include -I$(I2C_HEADERS)
+ALL_CFLAGS := -Wall
 
 ifeq ($(DEBUG),1)
-CFLAGS += -DDEBUG
+ALL_CPPFLAGS += -DDEBUG
+ALL_CFLAGS += -O -g
+else
+ALL_CFLAGS += -O2
 endif
 
 ifeq ($(WARN),1)
-CFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wpointer-arith -Wcast-qual \
-          -Wcast-align -Wwrite-strings -Wnested-externs -Winline
+ALL_CFLAGS += -W -Wstrict-prototypes -Wshadow -Wpointer-arith -Wcast-qual \
+            -Wcast-align -Wwrite-strings -Wnested-externs -Winline
 endif
 
-MODCFLAGS := $(CFLAGS) -D__KERNEL__ -DMODULE -fomit-frame-pointer 
-MODCFLAGS := $(MODCFLAGS) -DEXPORT_SYMTAB
-PROGCFLAGS := $(CFLAGS)
-ARCFLAGS := $(CFLAGS)
-LIBCFLAGS := $(CFLAGS) -fpic
+ALL_CPPFLAGS += $(CPPFLAGS)
+ALL_CFLAGS += $(CFLAGS)
+
+MODCPPFLAGS :=
+MODCFLAGS :=
 
 ifeq ($(MACHINE),alpha)
-MODCFLAGS += -ffixed-8
+MODCFLAGS += -ffixed-8 -mno-fp-regs -mcpu=ev56
+endif
+
+ifeq ($(MACHINE),x86_64)
+MODCFLAGS += -fno-strict-aliasing -fno-common -fomit-frame-pointer -mno-red-zone \
+	     -mcmodel=kernel -fno-reorder-blocks -finline-limit=2000 -fno-strength-reduce
 endif
 
 ifeq ($(SMP),1)
-MODCFLAGS += -D__SMP__
+MODCPPFLAGS += -D__SMP__
 endif
 
 ifeq ($(MODVER),1)
-MODCFLAGS += -DMODVERSIONS -include $(LINUX_HEADERS)/linux/modversions.h
+MODCPPFLAGS += -DMODVERSIONS -include $(LINUX_HEADERS)/linux/modversions.h
 endif
+
+# This magic is from the kernel Makefile.
+# Extra cflags for kbuild 2.4.  The default is to forbid includes by kernel code
+# from user space headers.
+kbuild_2_4_nostdinc := -nostdinc $(shell LC_ALL=C $(CC) -print-search-dirs | sed -ne 's/install: \(.*\)/-I \1include/gp')
+
+MODCPPFLAGS += -D__KERNEL__ -DMODULE -DEXPORT_SYMTAB -fomit-frame-pointer $(ALL_CPPFLAGS) -I$(LINUX_HEADERS) $(kbuild_2_4_nostdinc)
+MODCFLAGS += $(ALL_CFLAGS)
+PROGCPPFLAGS := -DETCDIR="\"$(ETCDIR)\"" $(ALL_CPPFLAGS)
+PROGCFLAGS := $(ALL_CFLAGS)
+ARCPPFLAGS := $(ALL_CPPFLAGS)
+ARCFLAGS := $(ALL_CFLAGS)
+LIBCPPFLAGS := $(ALL_CPPFLAGS)
+LIBCFLAGS := -fpic $(ALL_CFLAGS)
 
 .PHONY: all clean install version package dep
 
@@ -197,18 +244,56 @@ all::
 INCLUDEFILES := 
 include $(patsubst %,%/Module.mk,$(SRCDIRS))
 ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),uninstall)
+ifneq ($(MAKECMDGOALS),user_uninstall)
+ifneq ($(MAKECMDGOALS),help)
 include $(INCLUDEFILES)
 endif
+endif
+endif
+endif
+
+# Man pages
+MANPAGES := $(LIBMAN3FILES) $(LIBMAN5FILES) $(PROGDETECTMAN8FILES) $(PROGDUMPMAN8FILES) \
+            $(PROGSENSORSMAN1FILES) prog/sensord/sensord.8
 
 # Making the dependency files - done automatically!
 dep : 
 
-all ::
-
-install :: all
+user ::
+user_install::
+	@echo "*** Important note:"
+	@echo "***  * The libsensors configuration file ($(ETCDIR)/sensors.conf) is never"
+	@echo "***    overwritten by our installation process, so that you won't lose"
+	@echo "***    your personal settings in that file. You still can get our latest"
+	@echo "***    default config file in etc/sensors.conf.eg and manually copy it to"
+	@echo "***    $(ETCDIR)/sensors.conf if you want. You will then want to edit it"
+	@echo "***    to fit your needs again."
+all :: user
+install :: all user_install
+ifeq ($(DESTDIR),)
+	-/sbin/depmod -a
+else
+	@echo "*** This is a \`staged' install using \"$(DESTDIR)\" as prefix."
+	@echo "***"
+	@echo "*** Once the modules have been moved to their final destination"
+	@echo "*** you must run the command \"/sbin/depmod -a\"."
+	@echo "***"
+	@echo "*** Alternatively, if you build a package (e.g. rpm), include the"
+	@echo "*** command \"/sbin/depmod -a\" in the post-(un)install procedure."
+	@echo "***"
+	@echo "*** The depmod command mentioned above may generate errors. We are"
+	@echo "*** aware of the problem and are working on a solution."
+endif
 
 clean::
 	$(RM) lm_sensors-*
+
+user_uninstall::
+	
+uninstall :: user_uninstall
+	@echo "*** Note:"
+	@echo "***  * Kernel modules were not uninstalled."
 
 # This is tricky, but it works like a charm. It needs lots of utilities
 # though: cut, find, gzip, ln, tail and tar.
@@ -232,6 +317,44 @@ version:
 	echo -n 'Version: '; \
 	echo '#define LM_VERSION "'`read VER; echo $$VER`\" >> version.h
 
+help:
+	@echo 'Make targets are:'
+	@echo '  all (default): build modules and userspace programs'
+	@echo '  install: install modules and userspace programs'
+	@echo '  user: build userspace programs'
+	@echo '  user_install: install userspace programs'
+	@echo '  user_uninstall: remove userspace programs'
+	@echo '  clean: cleanup'
+	@echo '  package: create a distribution package'
+	@echo 'Note: make dep is automatic'
+
+$(LINUX)/.config:
+	@echo
+	@echo "Error - missing file $(LINUX)/.config !! "
+	@echo "  Verify kernel source is in $(LINUX) and then"
+	@echo "  cd to $(LINUX) and run 'make config' !!"
+	@echo
+	@echo "Exception: if you're using a stock RedHat kernel..."
+	@echo "  (1) Install the appropriate kernel-source RPM."
+	@echo "  (2) Copy the appropriate config..."
+	@echo "      from $(LINUX)/configs/<...>"
+	@echo "      to $(LINUX)/.config"
+	@echo "  (3) Do *NOT* 'make dep' or 'make config'."
+	@echo
+	@exit 1
+
+# Generate html man pages to be copied to the lm_sensors website.
+# This uses the man2html from here
+# http://ftp.math.utah.edu/pub/sgml/
+# which works directly from the nroff source
+manhtml:
+	$(MKDIR) html
+	cp $(MANPAGES) html
+	cd html ; \
+	export LOGNAME=sensors ; \
+	export HOSTNAME=stimpy.netroedge.com ; \
+	man2html *.[1-8] ; \
+	$(RM) *.[1-8]
 
 # Here, we define all implicit rules we want to use.
 
@@ -241,22 +364,23 @@ version:
 # dir/file.c in front of the dependency file rule.
 
 # .o files are used for modules
-%.o: %.c
-	$(CC) $(MODCFLAGS) -c $< -o $@
+# depend on the kernel config file!
+%.o: %.c $(LINUX)/.config
+	$(CC) $(MODCPPFLAGS) $(MODCFLAGS) -c $< -o $@
 
-%.d: %.c
-	$(CC) -M -MG $(MODCFLAGS) $< | \
-       	sed -e 's@^\(.*\)\.o:@$*.d $*.o: Makefile '`dirname $*.d`/Module.mk' @' > $@
+%.d: %.c $(LINUX)/.config
+	$(CC) -M -MG $(MODCPPFLAGS) $(MODCFLAGS) $< | \
+       	$(SED) -e 's@^\(.*\)\.o:@$*.d $*.o: Makefile '`dirname $*.d`/Module.mk' @' > $@
 
 
 
 # .ro files are used for programs (as opposed to modules)
 %.ro: %.c
-	$(CC) $(PROGCFLAGS) -c $< -o $@
+	$(CC) $(PROGCPPFLAGS) $(PROGCFLAGS) -c $< -o $@
 
 %.rd: %.c
-	$(CC) -M -MG $(PROGCFLAGS) $< | \
-       	sed -e 's@^\(.*\)\.o:@$*.rd $*.ro: Makefile '`dirname $*.rd`/Module.mk' @' > $@
+	$(CC) -M -MG $(PROGCPPFLAGS) $(PROGCFLAGS) $< | \
+       	$(SED) -e 's@^\(.*\)\.o:@$*.rd $*.ro: Makefile '`dirname $*.rd`/Module.mk' @' > $@
 
 
 %: %.ro
@@ -265,20 +389,20 @@ version:
 
 # .ao files are used for static archives
 %.ao: %.c
-	$(CC) $(ARCFLAGS) -c $< -o $@
+	$(CC) $(ARCPPFLAGS) $(ARCFLAGS) -c $< -o $@
 
 %.ad: %.c
-	$(CC) -M -MG $(ARCFLAGS) $< | \
-       	sed -e 's@^\(.*\)\.o:@$*.ad $*.ao: Makefile '`dirname $*.ad`/Module.mk' @' > $@
+	$(CC) -M -MG $(ARCPPFLAGS) $(ARCFLAGS) $< | \
+       	$(SED) -e 's@^\(.*\)\.o:@$*.ad $*.ao: Makefile '`dirname $*.ad`/Module.mk' @' > $@
 
 
 # .lo files are used for shared libraries
 %.lo: %.c
-	$(CC) $(LIBCFLAGS) -c $< -o $@
+	$(CC) $(LIBCPPFLAGS) $(LIBCFLAGS) -c $< -o $@
 
 %.ld: %.c
-	$(CC) -M -MG $(LIBCFLAGS) $< | \
-       	sed -e 's@^\(.*\)\.o:@$*.ld $*.lo: Makefile '`dirname $*.ld`/Module.mk' @' > $@
+	$(CC) -M -MG $(LIBCPPFLAGS) $(LIBCFLAGS) $< | \
+       	$(SED) -e 's@^\(.*\)\.o:@$*.ld $*.lo: Makefile '`dirname $*.ld`/Module.mk' @' > $@
 
 
 # Flex and Bison

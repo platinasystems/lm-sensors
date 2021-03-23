@@ -1,7 +1,7 @@
 /*
     adm9240.c - Part of lm_sensors, Linux kernel modules for hardware
              monitoring
-    Copyright (c) 1999  Frodo Looijaard <frodol@dds.nl>
+    Copyright (C) 1999  Frodo Looijaard <frodol@dds.nl>
     and Philip Edelbrock <phil@netroedge.com>
 
     This program is free software; you can redistribute it and/or modify
@@ -47,33 +47,12 @@
 
 */
 
-
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/ioport.h>
-#include <linux/sysctl.h>
-#include <asm/errno.h>
-#include <asm/io.h>
-#include <linux/types.h>
 #include <linux/i2c.h>
-#include "version.h"
-#include "sensors.h"
+#include <linux/i2c-proc.h>
 #include <linux/init.h>
-
-#ifdef MODULE_LICENSE
-MODULE_LICENSE("GPL");
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,2,18)) || \
-    (LINUX_VERSION_CODE == KERNEL_VERSION(2,3,0))
-#define init_MUTEX(s) do { *(s) = MUTEX; } while(0)
-#endif
-
-#ifndef THIS_MODULE
-#define THIS_MODULE NULL
-#endif
+#include "version.h"
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = { SENSORS_I2C_END };
@@ -145,10 +124,10 @@ SENSORS_INSMOD_3(adm9240, ds1780, lm81);
    variants. Note that you should be a bit careful with which arguments
    these macros are called: arguments may be evaluated more than once.
    Fixing this is just not worth it. */
-#define IN_TO_REG(val,nr) (SENSORS_LIMIT(((val) & 0xff),0,255))
+#define IN_TO_REG(val,nr) (SENSORS_LIMIT((val), 0, 255))
 #define IN_FROM_REG(val,nr) (val)
 
-extern inline u8 FAN_TO_REG(long rpm, int div)
+static inline u8 FAN_TO_REG(long rpm, int div)
 {
 	if (rpm == 0)
 		return 255;
@@ -160,13 +139,12 @@ extern inline u8 FAN_TO_REG(long rpm, int div)
 #define FAN_FROM_REG(val,div) ((val)==0?-1:\
                                (val)==255?0:1350000/((div)*(val)))
 
-#define TEMP_FROM_REG(temp) \
-   ((temp)<256?((((temp)&0x1fe) >> 1) * 10)      + ((temp) & 1) * 5:  \
-               ((((temp)&0x1fe) >> 1) -255) * 10 - ((temp) & 1) * 5)  \
+#define TEMP_FROM_REG(temp) ((temp)<256 ? (temp) * 5 : \
+                             ((temp) - 512) * 5)
 
-#define TEMP_LIMIT_FROM_REG(val) (((val)>0x80?(val)-0x100:(val))*10)
+#define TEMP_LIMIT_FROM_REG(val) (((val)>=0x80?(val)-0x100:(val))*10)
 
-#define TEMP_LIMIT_TO_REG(val) SENSORS_LIMIT(((val)<0?(((val)-5)/10):\
+#define TEMP_LIMIT_TO_REG(val) SENSORS_LIMIT(((val)<0?(((val)-5)/10)+256:\
                                                       ((val)+5)/10), \
                                              0,255)
 
@@ -178,59 +156,9 @@ extern inline u8 FAN_TO_REG(long rpm, int div)
 #define VID_FROM_REG(val) ((val)==0x1f?0:(val)>=0x10?510-(val)*10:\
                            205-(val)*5)
 
-/* Initial limits */
-#define ADM9240_INIT_IN_0 190
-#define ADM9240_INIT_IN_1 190
-#define ADM9240_INIT_IN_2 190
-#define ADM9240_INIT_IN_3 190
-#define ADM9240_INIT_IN_4 190
-#define ADM9240_INIT_IN_5 190
-
-#define ADM9240_INIT_IN_PERCENTAGE 10
-
-#define ADM9240_INIT_IN_MIN_0 \
-        (ADM9240_INIT_IN_0 - ADM9240_INIT_IN_0 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MAX_0 \
-        (ADM9240_INIT_IN_0 + ADM9240_INIT_IN_0 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MIN_1 \
-        (ADM9240_INIT_IN_1 - ADM9240_INIT_IN_1 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MAX_1 \
-        (ADM9240_INIT_IN_1 + ADM9240_INIT_IN_1 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MIN_2 \
-        (ADM9240_INIT_IN_2 - ADM9240_INIT_IN_2 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MAX_2 \
-        (ADM9240_INIT_IN_2 + ADM9240_INIT_IN_2 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MIN_3 \
-        (ADM9240_INIT_IN_3 - ADM9240_INIT_IN_3 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MAX_3 \
-        (ADM9240_INIT_IN_3 + ADM9240_INIT_IN_3 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MIN_4 \
-        (ADM9240_INIT_IN_4 - ADM9240_INIT_IN_4 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MAX_4 \
-        (ADM9240_INIT_IN_4 + ADM9240_INIT_IN_4 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MIN_5 \
-        (ADM9240_INIT_IN_5 - ADM9240_INIT_IN_5 * ADM9240_INIT_IN_PERCENTAGE / 100)
-#define ADM9240_INIT_IN_MAX_5 \
-        (ADM9240_INIT_IN_5 + ADM9240_INIT_IN_5 * ADM9240_INIT_IN_PERCENTAGE / 100)
-
-#define ADM9240_INIT_FAN_MIN_1 3000
-#define ADM9240_INIT_FAN_MIN_2 3000
-
-#define ADM9240_INIT_TEMP_OS_MAX 600
-#define ADM9240_INIT_TEMP_OS_HYST 500
-#define ADM9240_INIT_TEMP_HOT_MAX 700
-#define ADM9240_INIT_TEMP_HOT_HYST 600
-
-#ifdef MODULE
-extern int init_module(void);
-extern int cleanup_module(void);
-#endif				/* MODULE */
-
-/* For each registered ADM9240, we need to keep some data in memory. That
-   data is pointed to by adm9240_list[NR]->data. The structure itself is
-   dynamically allocated, at the same time when a new adm9240 client is
-   allocated. */
+/* For each registered ADM9240, we need to keep some data in memory. */
 struct adm9240_data {
+	struct i2c_client client;
 	int sysctl_id;
 	enum chips type;
 
@@ -253,26 +181,13 @@ struct adm9240_data {
 };
 
 
-#ifdef MODULE
-static
-#else
-extern
-#endif
-int __init sensors_adm9240_init(void);
-static int __init adm9240_cleanup(void);
-
 static int adm9240_attach_adapter(struct i2c_adapter *adapter);
 static int adm9240_detect(struct i2c_adapter *adapter, int address,
 			  unsigned short flags, int kind);
 static int adm9240_detach_client(struct i2c_client *client);
-static int adm9240_command(struct i2c_client *client, unsigned int cmd,
-			   void *arg);
-static void adm9240_inc_use(struct i2c_client *client);
-static void adm9240_dec_use(struct i2c_client *client);
 
-static int adm9240_read_value(struct i2c_client *client, u8 register);
-static int adm9240_write_value(struct i2c_client *client, u8 register,
-			       u8 value);
+static int adm9240_read_value(struct i2c_client *client, u8 reg);
+static int adm9240_write_value(struct i2c_client *client, u8 reg, u8 value);
 static void adm9240_update_client(struct i2c_client *client);
 static void adm9240_init_client(struct i2c_client *client);
 
@@ -293,26 +208,47 @@ static void adm9240_analog_out(struct i2c_client *client, int operation,
 static void adm9240_vid(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results);
 
-/* I choose here for semi-static ADM9240 allocation. Complete dynamic
-   allocation could also be used; the code needed for this would probably
-   take more memory than the datastructure takes now. */
 static int adm9240_id = 0;
 
 static struct i2c_driver adm9240_driver = {
-	/* name */ "ADM9240 sensor driver",
-	/* id */ I2C_DRIVERID_ADM9240,
-	/* flags */ I2C_DF_NOTIFY,
-	/* attach_adapter */ &adm9240_attach_adapter,
-	/* detach_client */ &adm9240_detach_client,
-	/* command */ &adm9240_command,
-	/* inc_use */ &adm9240_inc_use,
-	/* dec_use */ &adm9240_dec_use
+	.name		= "ADM9240 sensor driver",
+	.id		= I2C_DRIVERID_ADM9240,
+	.flags		= I2C_DF_NOTIFY,
+	.attach_adapter	= adm9240_attach_adapter,
+	.detach_client	= adm9240_detach_client,
 };
 
-/* Used by adm9240_init/cleanup */
-static int __initdata adm9240_initialized = 0;
-
 /* The /proc/sys entries */
+
+/* -- SENSORS SYSCTL START -- */
+
+#define ADM9240_SYSCTL_IN0 1000	/* Volts * 100 */
+#define ADM9240_SYSCTL_IN1 1001
+#define ADM9240_SYSCTL_IN2 1002
+#define ADM9240_SYSCTL_IN3 1003
+#define ADM9240_SYSCTL_IN4 1004
+#define ADM9240_SYSCTL_IN5 1005
+#define ADM9240_SYSCTL_FAN1 1101	/* Rotations/min */
+#define ADM9240_SYSCTL_FAN2 1102
+#define ADM9240_SYSCTL_TEMP 1250	/* Degrees Celcius * 100 */
+#define ADM9240_SYSCTL_FAN_DIV 2000	/* 1, 2, 4 or 8 */
+#define ADM9240_SYSCTL_ALARMS 2001	/* bitvector */
+#define ADM9240_SYSCTL_ANALOG_OUT 2002
+#define ADM9240_SYSCTL_VID 2003
+
+#define ADM9240_ALARM_IN0 0x0001
+#define ADM9240_ALARM_IN1 0x0002
+#define ADM9240_ALARM_IN2 0x0004
+#define ADM9240_ALARM_IN3 0x0008
+#define ADM9240_ALARM_IN4 0x0100
+#define ADM9240_ALARM_IN5 0x0200
+#define ADM9240_ALARM_FAN1 0x0040
+#define ADM9240_ALARM_FAN2 0x0080
+#define ADM9240_ALARM_TEMP 0x0010
+#define ADM9240_ALARM_CHAS 0x1000
+
+/* -- SENSORS SYSCTL END -- */
+
 /* These files are created for each detected ADM9240. This is just a template;
    though at first sight, you might think we could use a statically
    allocated list, we need some way to get back to the parent - which
@@ -348,7 +284,7 @@ static ctl_table adm9240_dir_table_template[] = {
 	{0}
 };
 
-int adm9240_attach_adapter(struct i2c_adapter *adapter)
+static int adm9240_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, adm9240_detect);
 }
@@ -363,16 +299,6 @@ static int adm9240_detect(struct i2c_adapter *adapter, int address,
 	const char *type_name = "";
 	const char *client_name = "";
 
-	/* Make sure we aren't probing the ISA bus!! This is just a safety check
-	   at this moment; i2c_detect really won't call us. */
-#ifdef DEBUG
-	if (i2c_is_isa_adapter(adapter)) {
-		printk
-		    ("adm9240.o: adm9240_detect called for an ISA bus adapter?!?\n");
-		return 0;
-	}
-#endif
-
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
 		goto ERROR0;
 
@@ -380,14 +306,13 @@ static int adm9240_detect(struct i2c_adapter *adapter, int address,
 	   client structure, even though we cannot fill it completely yet.
 	   But it allows us to access adm9240_{read,write}_value. */
 
-	if (!(new_client = kmalloc(sizeof(struct i2c_client) +
-				   sizeof(struct adm9240_data),
-				   GFP_KERNEL))) {
+	if (!(data = kmalloc(sizeof(struct adm9240_data), GFP_KERNEL))) {
 		err = -ENOMEM;
 		goto ERROR0;
 	}
 
-	data = (struct adm9240_data *) (new_client + 1);
+
+	new_client = &data->client;
 	new_client->addr = address;
 	new_client->data = data;
 	new_client->adapter = adapter;
@@ -475,12 +400,12 @@ static int adm9240_detect(struct i2c_adapter *adapter, int address,
 	i2c_detach_client(new_client);
       ERROR3:
       ERROR1:
-	kfree(new_client);
+	kfree(data);
       ERROR0:
 	return err;
 }
 
-int adm9240_detach_client(struct i2c_client *client)
+static int adm9240_detach_client(struct i2c_client *client)
 {
 	int err;
 
@@ -493,89 +418,30 @@ int adm9240_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(client);
+	kfree(client->data);
 
 	return 0;
-
 }
 
-/* No commands defined yet */
-int adm9240_command(struct i2c_client *client, unsigned int cmd, void *arg)
+
+static int adm9240_read_value(struct i2c_client *client, u8 reg)
 {
-	return 0;
+	return i2c_smbus_read_byte_data(client, reg);
 }
 
-void adm9240_inc_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_INC_USE_COUNT;
-#endif
-}
-
-void adm9240_dec_use(struct i2c_client *client)
-{
-#ifdef MODULE
-	MOD_DEC_USE_COUNT;
-#endif
-}
-
-int adm9240_read_value(struct i2c_client *client, u8 reg)
-{
-	return 0xFF & i2c_smbus_read_byte_data(client, reg);
-}
-
-int adm9240_write_value(struct i2c_client *client, u8 reg, u8 value)
+static int adm9240_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	return i2c_smbus_write_byte_data(client, reg, value);
 }
 
-/* Called when we have found a new ADM9240. It should set limits, etc. */
-void adm9240_init_client(struct i2c_client *client)
+/* Called when we have found a new ADM9240. */
+static void adm9240_init_client(struct i2c_client *client)
 {
-	/* Reset all except Watchdog values and last conversion values
-	   This sets fan-divs to 2, among others. This makes most other
-	   initializations unnecessary */
-	adm9240_write_value(client, ADM9240_REG_CONFIG, 0x80);
-
-	adm9240_write_value(client, ADM9240_REG_IN_MIN(0),
-			    IN_TO_REG(ADM9240_INIT_IN_MIN_0, 0));
-	adm9240_write_value(client, ADM9240_REG_IN_MAX(0),
-			    IN_TO_REG(ADM9240_INIT_IN_MAX_0, 0));
-	adm9240_write_value(client, ADM9240_REG_IN_MIN(1),
-			    IN_TO_REG(ADM9240_INIT_IN_MIN_1, 1));
-	adm9240_write_value(client, ADM9240_REG_IN_MAX(1),
-			    IN_TO_REG(ADM9240_INIT_IN_MAX_1, 1));
-	adm9240_write_value(client, ADM9240_REG_IN_MIN(2),
-			    IN_TO_REG(ADM9240_INIT_IN_MIN_2, 2));
-	adm9240_write_value(client, ADM9240_REG_IN_MAX(2),
-			    IN_TO_REG(ADM9240_INIT_IN_MAX_2, 2));
-	adm9240_write_value(client, ADM9240_REG_IN_MIN(3),
-			    IN_TO_REG(ADM9240_INIT_IN_MIN_3, 3));
-	adm9240_write_value(client, ADM9240_REG_IN_MAX(3),
-			    IN_TO_REG(ADM9240_INIT_IN_MAX_3, 3));
-	adm9240_write_value(client, ADM9240_REG_IN_MIN(4),
-			    IN_TO_REG(ADM9240_INIT_IN_MIN_4, 4));
-	adm9240_write_value(client, ADM9240_REG_IN_MAX(4),
-			    IN_TO_REG(ADM9240_INIT_IN_MAX_4, 4));
-	adm9240_write_value(client, ADM9240_REG_IN_MIN(5),
-			    IN_TO_REG(ADM9240_INIT_IN_MIN_5, 5));
-	adm9240_write_value(client, ADM9240_REG_IN_MAX(5),
-			    IN_TO_REG(ADM9240_INIT_IN_MAX_5, 5));
-	adm9240_write_value(client, ADM9240_REG_FAN1_MIN,
-			    FAN_TO_REG(ADM9240_INIT_FAN_MIN_1, 2));
-	adm9240_write_value(client, ADM9240_REG_FAN2_MIN,
-			    FAN_TO_REG(ADM9240_INIT_FAN_MIN_2, 2));
-	adm9240_write_value(client, ADM9240_REG_TOS,
-			    TEMP_LIMIT_TO_REG(ADM9240_INIT_TEMP_OS_MAX));
-	adm9240_write_value(client, ADM9240_REG_THYST,
-			    TEMP_LIMIT_TO_REG(ADM9240_INIT_TEMP_OS_HYST));
-	adm9240_write_value(client, ADM9240_REG_TEMP_CONFIG, 0x00);
-
 	/* Start monitoring */
 	adm9240_write_value(client, ADM9240_REG_CONFIG, 0x01);
 }
 
-void adm9240_update_client(struct i2c_client *client)
+static void adm9240_update_client(struct i2c_client *client)
 {
 	struct adm9240_data *data = client->data;
 	u8 i;
@@ -824,54 +690,23 @@ void adm9240_vid(struct i2c_client *client, int operation, int ctl_name,
 	}
 }
 
-int __init sensors_adm9240_init(void)
+static int __init sm_adm9240_init(void)
 {
-	int res;
-
 	printk("adm9240.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	adm9240_initialized = 0;
-
-	if ((res = i2c_add_driver(&adm9240_driver))) {
-		printk
-		    ("adm9240.o: Driver registration failed, module not inserted.\n");
-		adm9240_cleanup();
-		return res;
-	}
-	adm9240_initialized++;
-	return 0;
+	return i2c_add_driver(&adm9240_driver);
 }
 
-int __init adm9240_cleanup(void)
+static void __exit sm_adm9240_exit(void)
 {
-	int res;
-
-	if (adm9240_initialized >= 1) {
-		if ((res = i2c_del_driver(&adm9240_driver))) {
-			printk
-			    ("adm9240.o: Driver deregistration failed, module not removed.\n");
-			return res;
-		}
-		adm9240_initialized--;
-	}
-	return 0;
+	i2c_del_driver(&adm9240_driver);
 }
 
-EXPORT_NO_SYMBOLS;
 
-#ifdef MODULE
 
 MODULE_AUTHOR
     ("Frodo Looijaard <frodol@dds.nl> and Philip Edelbrock <phil@netroedge.com>");
+MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("ADM9240 driver");
 
-int init_module(void)
-{
-	return sensors_adm9240_init();
-}
-
-int cleanup_module(void)
-{
-	return adm9240_cleanup();
-}
-
-#endif				/* MODULE */
+module_init(sm_adm9240_init);
+module_exit(sm_adm9240_exit);

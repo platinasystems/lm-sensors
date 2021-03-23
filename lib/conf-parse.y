@@ -41,38 +41,38 @@ static sensors_expr *malloc_expr(void);
 static sensors_chip *current_chip = NULL;
 
 #define bus_add_el(el) sensors_add_array_el(el,\
-                                      (void **) &sensors_config_busses,\
+                                      &sensors_config_busses,\
                                       &sensors_config_busses_count,\
                                       &sensors_config_busses_max,\
                                       sizeof(sensors_bus))
 #define label_add_el(el) sensors_add_array_el(el,\
-                                        (void **) &current_chip->labels,\
+                                        &current_chip->labels,\
                                         &current_chip->labels_count,\
                                         &current_chip->labels_max,\
                                         sizeof(sensors_label));
 #define set_add_el(el) sensors_add_array_el(el,\
-                                      (void **) &current_chip->sets,\
+                                      &current_chip->sets,\
                                       &current_chip->sets_count,\
                                       &current_chip->sets_max,\
                                       sizeof(sensors_set));
 #define compute_add_el(el) sensors_add_array_el(el,\
-                                          (void **) &current_chip->computes,\
+                                          &current_chip->computes,\
                                           &current_chip->computes_count,\
                                           &current_chip->computes_max,\
                                           sizeof(sensors_compute));
 #define ignore_add_el(el) sensors_add_array_el(el,\
-                                          (void **) &current_chip->ignores,\
+                                          &current_chip->ignores,\
                                           &current_chip->ignores_count,\
                                           &current_chip->ignores_max,\
                                           sizeof(sensors_ignore));
 #define chip_add_el(el) sensors_add_array_el(el,\
-                                       (void **) &sensors_config_chips,\
+                                       &sensors_config_chips,\
                                        &sensors_config_chips_count,\
                                        &sensors_config_chips_max,\
                                        sizeof(sensors_chip));
 
 #define fits_add_el(el,list) sensors_add_array_el(el,\
-                                                  (void **) &(list).fits,\
+                                                  &(list).fits,\
                                                   &(list).fits_count,\
                                                   &(list).fits_max, \
 		                                  sizeof(sensors_chip_name));
@@ -102,6 +102,7 @@ static sensors_chip *current_chip = NULL;
 %left <nothing> '-' '+'
 %left <nothing> '*' '/'
 %left <nothing> NEG
+%right <nothing> '^' '`'
 
 %token <nothing> ','
 %token <nothing> EOL
@@ -189,6 +190,7 @@ ignore_statement:	IGNORE function_name
 			  new_el.name = $2;
 			  ignore_add_el(&new_el);
 			}
+;
 
 chip_statement:	  CHIP chip_name_list
 		  { sensors_chip new_el;
@@ -271,6 +273,20 @@ expression:	  FLOAT
 		  }
 		| '(' expression ')'
 		  { $$ = $2; }
+		| '^' expression
+		  { $$ = malloc_expr(); 
+		    $$->kind = sensors_kind_sub;
+		    $$->data.subexpr.op = sensors_exp;
+		    $$->data.subexpr.sub1 = $2;
+		    $$->data.subexpr.sub2 = NULL;
+		  }
+		| '`' expression
+		  { $$ = malloc_expr(); 
+		    $$->kind = sensors_kind_sub;
+		    $$->data.subexpr.op = sensors_log;
+		    $$->data.subexpr.sub1 = $2;
+		    $$->data.subexpr.sub2 = NULL;
+		  }
 ;
 
 i2cbus_name:	  NAME
