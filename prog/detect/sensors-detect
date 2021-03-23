@@ -48,7 +48,7 @@ foreach ('/usr/sbin', '/usr/local/sbin', '/sbin') {
 use vars qw(@pci_adapters @chip_ids $i2c_addresses_to_scan @superio_ids
             @cpu_ids $revision);
 
-$revision = '$Revision: 5291 $ ($Date: 2008-06-23 23:40:46 -0700 (Mon, 23 Jun 2008) $)';
+$revision = '$Revision: 5569 $ ($Date: 2008-12-15 09:36:09 +0100 (lun. 15 déc. 2008) $)';
 $revision =~ s/\$\w+: (.*?) \$/$1/g;
 $revision =~ s/ \([^()]*\)//;
 
@@ -268,6 +268,13 @@ $revision =~ s/ \([^()]*\)//;
        vendid => 0x1106,
        devid  => 0x8324,
        procid => "VIA Technologies CX700 South Bridge",
+       driver => "i2c-viapro",
+       match => qr/^SMBus V(IA|ia) Pro adapter at/,
+     },
+     {
+       vendid => 0x1106,
+       devid  => 0x8353,
+       procid => "VIA Technologies VX800/VX820 South Bridge",
        driver => "i2c-viapro",
        match => qr/^SMBus V(IA|ia) Pro adapter at/,
      },
@@ -681,10 +688,8 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
      },
      {
        name => "Analog Devices ADT7462",
-       driver => "to-be-written",
-       # The datasheet says addresses 0x5C and 0x58, but I guess these are
-       # left-aligned values
-       i2c_addrs => [0x2c, 0x2e],
+       driver => "adt7462",
+       i2c_addrs => [0x5c, 0x58],
        i2c_detect => sub { adt7467_detect(2, @_); },
      },
      {
@@ -707,7 +712,7 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
      },
      {
        name => "Analog Devices ADT7473",
-       driver => "to-be-written",
+       driver => "adt7473",
        i2c_addrs => [0x2e],
        i2c_detect => sub { adt7473_detect(0, @_); },
      },
@@ -1096,6 +1101,12 @@ use vars qw(@pci_adapters_sis5595 @pci_adapters_sis645 @pci_adapters_sis96x);
        i2c_detect => sub { lm90_detect(9, @_); },
      },
      {
+       name => "Texas Instruments TMP411",
+       driver => "to-be-written",
+       i2c_addrs => [0x4c..0x4e],
+       i2c_detect => sub { lm90_detect(10, @_); },
+     },
+     {
        name => "National Semiconductor LM63",
        driver => "lm63",
        i2c_addrs => [0x4c],
@@ -1388,7 +1399,7 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
      },
 );
 
-# sigh special case for old seperate FSC drivers to new merged one mapping
+# sigh special case for old separate FSC drivers to new merged one mapping
 @chip_oldfsc_ids = (
      {
        name => "FSC Poseidon I",
@@ -1598,6 +1609,11 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	devid => 0x77,
       },
       {
+	name => "SMSC EMC2700LPC Super IO",
+	# no datasheet
+	devid => 0x67,
+      },
+      {
 	name => "SMSC FDC37B72x Super IO",
 	driver => "not-a-sensor",
 	devid => 0x4c,
@@ -1686,9 +1702,17 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	logdev => 0x0a,
       },
       {
+	name => "SMSC LPC47M233 Super IO Sensors",
+	driver => "to-be-written",
+	devid => 0x6b80,
+	devid_mask => 0xff80,
+	logdev => 0x0a,
+      },
+      {
 	name => "SMSC LPC47M292 Super IO Fan Sensors",
 	driver => "smsc47m1",
-	devid => 0x6b,
+	devid => 0x6b00,
+	devid_mask => 0xff80,
 	logdev => 0x0a,
       },
       {
@@ -1840,6 +1864,16 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	alias_detect => sub { vt1211_alias_detect(0, @_); },
       },
       {
+	name => "VIA VT1212 Super IO Lite",   # in 100 pin TQFP package
+	driver => "not-a-sensor",
+	devid => 0x3e,
+      },
+      {
+	name => "VIA VT1212 Super IO Lite",   # in 48 pin LQFP package
+	driver => "not-a-sensor",
+	devid => 0x3f,
+      },
+      {
 	name => "Winbond W83627HF/F/HG/G Super IO Sensors",
 	driver => "w83627hf",
 	devid => 0x52,
@@ -1941,7 +1975,7 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
       },
       {
 	name => "Asus F8000 Super IO",
-	driver => "f8000",
+	driver => "to-be-written",
 	devid => 0x0581,
 	logdev => 0x04,
       },
@@ -1950,6 +1984,12 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	name => "ITE IT8708F Super IO",
 	driver => "not-a-sensor",
 	devid => 0x8708,
+      },
+      {
+	# Shouldn't be in this family, but seems to be still.
+	name => "ITE IT8710F Super IO",
+	driver => "not-a-sensor",
+	devid => 0x8710,
       },
     ],
   },
@@ -1992,6 +2032,12 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
 	name => "ITE IT8718F Super IO Sensors",
 	driver => "it87",
 	devid => 0x8718,
+	logdev => 0x04,
+      },
+      {
+	name => "ITE IT8720F Super IO Sensors",
+	driver => "it87",
+	devid => 0x8720,
 	logdev => 0x04,
       },
       {
@@ -2045,7 +2091,7 @@ use vars qw(@chip_kern24_ids @chip_kern26_ids
   },
   {
     name => "Intel AMB FB-DIMM thermal sensor",
-    driver => "to-be-written",
+    driver => "i5k_amb",
     detect => sub { intel_amb_detect(); },
   },
   {
@@ -3520,6 +3566,11 @@ sub lm78_detect
   return unless ($chip == 0 and ($reg == 0x00 or $reg == 0x20)) or
                     ($chip == 1 and $reg == 0x40) or
                     ($chip == 2 and ($reg & 0xfe) == 0xc0);
+
+  # Explicitly prevent misdetection of Winbond chips
+  $reg = i2c_smbus_read_byte_data($file, 0x4f);
+  return if $reg == 0xa3 || $reg == 0x5c;
+
   return (6);
 }
 
@@ -3934,7 +3985,7 @@ sub lm83_detect
 # $_[0]: Chip to detect
 #   (0 = LM90, 1=LM89/LM99, 2=LM86, 3=ADM1032, 4=MAX6657/MAX6658/MAX6659,
 #    5 = ADT7461, 6 = MAX6648/MAX6692, 7 = MAX6680/MAX6681,
-#    8 = W83L771W/G), 9 = TI TMP401
+#    8 = W83L771W/G), 9 = TMP401, 10 = TMP411
 # $_[1]: A reference to the file descriptor to access this chip.
 # $_[2]: Address
 # Returns: undef if not detected, 4, 6 or 8 if detected.
@@ -4022,6 +4073,15 @@ sub lm90_detect
     return if $mid != 0x55;     # Texas Instruments
     return if $cid != 0x11;     # TMP401
     return 6;
+  }
+  if ($chip == 10) {
+    return if ($conf & 0x1B) != 0;
+    return if $rate > 0x0F;
+    return if $mid != 0x55;     # Texas Instruments
+    return 6 if ($addr == 0x4c && $cid == 0x12); # TMP411A
+    return 6 if ($addr == 0x4d && $cid == 0x13); # TMP411B
+    return 6 if ($addr == 0x4e && $cid == 0x10); # TMP411C
+    return;
   }
   return;
 }
@@ -4379,7 +4439,7 @@ sub lm87_detect
 # $_[0]: Chip to detect (0 = W83781D, 1 = W83782D, 2 = W83783S,
 #                        3 = W83627HF, 4 = AS99127F (rev.1),
 #                        5 = AS99127F (rev.2), 6 = ASB100, 7 = W83791D,
-#                        8 = W83792D, 9 = W83627EHF 10 = W83627DHG)
+#                        8 = W83792D, 9 = W83627EHF, 10 = W83627DHG)
 # $_[1]: A reference to the file descriptor to access this chip.
 # $_[2]: Address
 # Returns: undef if not detected, (8, addr1, addr2) if detected, but only
@@ -4428,12 +4488,13 @@ sub w83781d_detect
   return if $chip == 6 and  $reg1 != 0x31;
   return if $chip == 7 and  $reg1 != 0x71;
   return if $chip == 8 and  $reg1 != 0x7a;
-  return if $chip == 9 and  $reg1 != 0xa1;
-  return if $chip == 10 and  $reg1 != 0xa2;
-  $reg1 = i2c_smbus_read_byte_data($file, 0x4a);
+  return if $chip == 9 and ($reg1 != 0x88 && $reg1 != 0xa1);
+  return if $chip == 10 and  $reg1 != 0xc1;
   # Default address is 0x2d
   @res = ($addr != 0x2d) ? (7) : (8);
-  return @res if $chip == 9; # No subclients
+  return @res if $chip >= 9; # No subclients
+
+  $reg1 = i2c_smbus_read_byte_data($file, 0x4a);
   push @res, ($reg1 & 0x07) + 0x48 unless $reg1 & 0x08;
   push @res, (($reg1 & 0x70) >> 4) + 0x48 unless ($reg1 & 0x80 or $chip == 2);
   return @res;
@@ -4536,7 +4597,7 @@ sub mozart_detect
 }
 
 # $_[0]: Chip to detect (0 = W83781D, 1 = W83782D, 3 = W83627HF,
-#                        9 = W83627EHF 10 = W83627DHG)
+#                        9 = W83627EHF, 10 = W83627DHG)
 # $_[1]: ISA address
 # $_[2]: I2C file handle
 # $_[3]: I2C address
@@ -5464,12 +5525,10 @@ sub k10temp_pci_detect
 }
 
 # Returns: undef if not detected, (9) if detected.
-# the device 0xa620 should not be visible on host PCI bus, gateway
-# must be used
 sub intel_amb_detect
 {
-	if ((exists $pci_list{'8086:a620'}) ||
-	   (exists $pci_list{'8086:25f0'})) {
+	if ((exists $pci_list{'8086:25f0'}) ||	# Intel 5000
+	    (exists $pci_list{'8086:4030'})) {	# Intel 5400
 		return 9;
 	}
 	return;
@@ -5485,7 +5544,8 @@ sub coretemp_detect
 				($probecpu->{'model'} == 14 ||
 				 $probecpu->{'model'} == 15 ||
 				 $probecpu->{'model'} == 0x16 ||
-				 $probecpu->{'model'} == 0x17)) {
+				 $probecpu->{'model'} == 0x17 ||
+				 $probecpu->{'model'} == 0x1a)) {
 			return 9;
 		}
 	}

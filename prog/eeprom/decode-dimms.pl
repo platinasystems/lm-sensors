@@ -97,7 +97,7 @@
 require 5.004;
 
 use strict;
-use POSIX;
+use POSIX qw(ceil);
 use Fcntl qw(:DEFAULT :seek);
 use vars qw($opt_html $opt_body $opt_bodyonly $opt_igncheck $use_sysfs
 	    @vendors %decode_callback);
@@ -412,7 +412,7 @@ sub printl2 ($$) # print a line w/ label and value (outside a table)
 	print "$label: $value\n";
 }
 
-sub prints ($) # print seperator w/ given text
+sub prints ($) # print separator w/ given text
 {
 	my ($label) = @_;
 	if ($opt_html) {
@@ -532,7 +532,7 @@ sub decode_sdr_sdram($)
 	else { printl $l, "Undefined!"; }
 
 	$l = "Refresh Type";
-	if ($bytes->[12] > 126) { printl $l, "Self Refreshing"; }
+	if ($bytes->[12] & 0x80) { printl $l, "Self Refreshing"; }
 	else { printl $l, "Not Self Refreshing"; }
 
 	$l = "Refresh Rate";
@@ -546,7 +546,7 @@ sub decode_sdr_sdram($)
 	else { printl $l, "Undefined!"; }
 
 	$l = "Primary SDRAM Component Bank Config";
-	if ($bytes->[13] > 126) { printl $l, "Bank2 = 2 x Bank1"; }
+	if ($bytes->[13] & 0x80) { printl $l, "Bank2 = 2 x Bank1"; }
 	else { printl $l, "No Bank2 OR Bank2 = Bank1 width"; }
 
 	$l = "Primary SDRAM Component Widths";
@@ -555,7 +555,7 @@ sub decode_sdr_sdram($)
 	else { printl $l, $temp; }
 
 	$l = "Error Checking SDRAM Component Bank Config";
-	if ($bytes->[14] > 126) { printl $l, "Bank2 = 2 x Bank1"; }
+	if ($bytes->[14] & 0x80) { printl $l, "Bank2 = 2 x Bank1"; }
 	else { printl $l, "No Bank2 OR Bank2 = Bank1 width"; }
 
 	$l = "Error Checking SDRAM Component Widths";
@@ -1092,7 +1092,7 @@ if ($opt_body)
 printh 'Memory Serial Presence Detect Decoder',
 'By Philip Edelbrock, Christian Zuckschwerdt, Burkart Lingner,
 Jean Delvare and others
-Version 2.10.6';
+Version 2.10.8';
 
 
 my $dimm_count=0;
