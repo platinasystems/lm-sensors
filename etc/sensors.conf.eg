@@ -53,7 +53,7 @@
 # These features are defined for each chip in lib/chips.c.
 #
 # Undefined features will be silently ignored in 'label' and 'compute' lines.
-# Undefined features in 'set' lines will result in 'Unknonw feature name'
+# Undefined features in 'set' lines will result in 'Unknown feature name'
 # when running 'sensors -s'.
 #
 # Unfortunately, feature names starting with a number must be in
@@ -374,8 +374,7 @@ chip "lm78-*" "lm78-j-*" "lm79-*" "w83781d-*"
 
 chip "lm75-*"
 
-# Most boards don't need scaling. Following is
-# for the Asus TX97-E. If it doesn't work for you, feel free to complain.
+# Most boards don't need scaling. Following is for the Asus TX97-E.
 #   compute temp @*2.0, @/2.0
 
 # Examples for temperature limits
@@ -1853,6 +1852,9 @@ chip "fscher-*"
     label in1         "+5V"
     label in2         "Battery"
 
+# Note: comment the compute lines below when using the newer unified fschmd
+# driver, as that driver does the scaling in the driver
+
 # Compute Voltages using mainboard dependant MRO-values
 # (see doc/chips/fscher)
 #                           M    R             O               O                  M    R
@@ -1862,6 +1864,10 @@ chip "fscher-*"
 
 # Read documentation before enabling pwm settings (see doc/chips/fscher)
 # WARNING: IMPROPER VALUES MAY DAMAGE YOUR SYSTEM DUE TO OVERHEATING!
+
+# Note these set statements will not work with the newer unified fschmd driver
+# The functionality is still available using standard sysfs attributes for
+# pwm control: pwm#_auto_point1_pwm (which are not accessible through sensors)
 
 # Allow fans to turn off
 #    set pwm1          0
@@ -2927,3 +2933,15 @@ chip "f71882fg-*"
     compute in6       (@ * 5.25), (@ / 5.25)
     compute in7       (@ * 2), (@ / 2)
     compute in8       (@ * 2), (@ / 2)
+
+
+chip "adm1022-*" "thmc50-*"
+
+   label temp "M/B Temp"
+   # Single CPU setup
+   label remote_temp "CPU Temp"
+
+   # Dual CPU setup (ADM1022 only)
+   #label remote_temp "CPU0 Temp"
+   #label remote_temp2 "CPU1 Temp"
+

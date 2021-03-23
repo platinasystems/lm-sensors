@@ -93,16 +93,16 @@ int sensors_read_proc_bus(void)
   while (fgets(line,255,f)) {
     if (strlen(line) > 0)
       line[strlen(line)-1] = '\0';
-    if (! (border = rindex(line,'\t')))
+    if (! (border = strrchr(line,'\t')))
       goto ERROR;
     /* Skip algorithm name */
     *border='\0';
-    if (! (border = rindex(line,'\t')))
+    if (! (border = strrchr(line,'\t')))
       goto ERROR;
     if (! (entry.adapter = strdup(border + 1)))
       goto FAT_ERROR;
     *border='\0';
-    if (! (border = rindex(line,'\t')))
+    if (! (border = strrchr(line,'\t')))
       goto ERROR;
     *border='\0';
     if (strncmp(line,"i2c-",4))
@@ -155,8 +155,8 @@ int sensors_read_proc(sensors_chip_name name, int feature, double *value)
 		strcpy(n, name.busname);
 		strcat(n, "/");
 		strcpy(altn, n);
-		/* use rindex to append sysname to n */
-		getsysname(the_feature, rindex(n, '\0'), &mag, rindex(altn, '\0'));
+		/* use strrchr to append sysname to n */
+		getsysname(the_feature, strrchr(n, '\0'), &mag, strrchr(altn, '\0'));
 		if ((f = fopen(n, "r")) != NULL
 		 || (f = fopen(altn, "r")) != NULL) {
 			int res = fscanf(f, "%lf", value);
@@ -198,8 +198,8 @@ int sensors_write_proc(sensors_chip_name name, int feature, double value)
 		strcpy(n, name.busname);
 		strcat(n, "/");
 		strcpy(altn, n);
-		/* use rindex to append sysname to n */
-		getsysname(the_feature, rindex(n, '\0'), &mag, rindex(altn, '\0'));
+		/* use strrchr to append sysname to n */
+		getsysname(the_feature, strrchr(n, '\0'), &mag, strrchr(altn, '\0'));
 		if ((f = fopen(n, "w")) != NULL
 		 || (f = fopen(altn, "w")) != NULL) {
 			for (; mag > 0; mag --)
@@ -272,23 +272,26 @@ static const struct match matches[] = {
 	Common magnitudes are #defined above.
 	Common conversions are as follows:
 		fan%d_min -> fan%d_min (for magnitude)
-		fan%d_state -> fan%d_status
-		fan%d -> fan_input%d
-		pwm%d -> fan%d_pwm
-		pwm%d_enable -> fan%d_pwm_enable
+		fan%d_state -> fan%d_status (for old fscxxx drv)
+		fan%d_ripple -> fan%d_div (for old fscxxx drv, alt. name)
+		fan%d -> fan%d_input
+		pwm%d -> fan%d_pwm (alt. name)
+		pwm%d_enable -> fan%d_pwm_enable (alt. name)
 		in%d_max -> in%d_max (for magnitude)
 		in%d_min -> in%d_min (for magnitude)
 		in%d -> in%d_input
 		vin%d_max -> in%d_max
 		vin%d_min -> in%d_min
-		vin%d -> in_input%d
+		vin%d -> in%d_input
 		temp%d_over -> temp%d_max
 		temp%d_hyst -> temp%d_max_hyst
 		temp%d_max -> temp%d_max (for magnitude)
 		temp%d_high -> temp%d_max
 		temp%d_min -> temp%d_min (for magnitude)
 		temp%d_low -> temp%d_min
-		temp%d_state -> temp%d_status
+		temp%d_crit -> temp%d_crit (for magnitude)
+		temp%d_state -> temp%d_status (for old fscxxx drv)
+		temp%d_offset -> temp%d_offset (for magnitude)
 		temp%d -> temp%d_input
 		sensor%d -> temp%d_type
 	AND all conversions listed in the matches[] structure above.
@@ -341,6 +344,12 @@ static int getsysname(const sensors_chip_feature *feature, char *sysname,
 	}
 	if(sscanf(name, "fan%d_stat%c%c", &num, &last, &check) == 2 && last == 'e') {
 		sprintf(sysname, "fan%d_status", num);
+		*sysmag = 0;
+		return 0;
+	}
+	if(sscanf(name, "fan%d_rippl%c%c", &num, &last, &check) == 2 && last == 'e') {
+		strcpy(sysname, name);
+		sprintf(altsysname, "fan%d_div", num);
 		*sysmag = 0;
 		return 0;
 	}
@@ -411,6 +420,11 @@ static int getsysname(const sensors_chip_feature *feature, char *sysname,
 	if(sscanf(name, "temp%d_stat%c%c", &num, &last, &check) == 2 && last == 'e') {
 		sprintf(sysname, "temp%d_status", num);
 		*sysmag = 0;
+		return 0;
+	}
+	if(sscanf(name, "temp%d_offse%c%c", &num, &last, &check) == 2 && last == 't') {
+		sprintf(sysname, "temp%d_offset", num);
+		*sysmag = TEMPMAG;
 		return 0;
 	}
 	if(sscanf(name, "temp%d%c", &num, &check) == 1) {

@@ -1,6 +1,53 @@
 lm_sensors CHANGES file
 -----------------------
 
+2.10.5 (20071024)
+  File i2c-dev.h: Rename I2C_FUNC_SMBUS_HWPEC_CALC to I2C_FUNC_SMBUS_PEC
+  File sensors.conf.eg: Add a thmc50 section
+  File useful_addresses.html: Moved to the wiki
+  Library: Fix a memory leak on error
+           Speed up sensors_get_ignored() a bit
+           Fix thmc50 support for Linux 2.6
+           Fix bmcsensors support for Linux 2.6
+           Fix lm93 VID support for Linux 2.6
+           Fix adm1024 support for Linux 2.6
+           Fix maxilife support for Linux 2.6
+           Fix magnitude of temperature offsets in Linux 2.6
+           Fix adm1026 critical temperature limits for Linux 2.6
+           Fix smsc47m192 temperature faults
+           Add sch311x support
+           Add support for adm1022 temp3
+  Makefile: Fix kernel version detection (#2187)
+  Man page sensord.8: Update
+  Module fscher: Add missing read of control register (2.6 backport)
+  Module i2c-i801: Add Tolapai support (2.6 backport)
+  Module i2c-nforce2: Declare PEC as supported (2.6 backport)
+  Module i2c-piix4: Add ATI SB700 and SB800 support (2.6 backport)
+  Module lm93: Fix an array overrun (2.6 backport)
+  Program sensord: Fix f71805f fans
+                   Synchronize the version with lm-sensors
+                   Fix a memory leak when daemonizing
+                   Fix memory leaks in command line parsing
+                   Add w83793 support
+                   Log the error code on failure
+                   Add lm87 support
+  Program sensors: Fix two memory leaks on error
+                   Add sch311x support
+                   Hide error on missing dme1737 fan and pwm
+                   Add thmc50/adm1022 support
+                   Hide error on missing adm1021 die code
+                   Handle gl518sm with no voltage input values
+  Program sensors-detect: Don't probe i2c-isa as a regular i2c bus
+                          Add Winbond W83L786NR/NG/R/G detection
+                          Add Winbond W83L771W/G detection
+                          Add Intel Tolapai SMBus detection
+                          Fix SMSC SCH311x detection
+                          Add AMD K10 CPU sensor detection 
+                          Fix SMSC LPC47B357/M967 detection
+                          Select the right driver for FSC chips
+  Program sensors-detect-stat.pl: Handle alternative chip lists
+
+
 2.10.4 (20070716)
   File doc/vid: Update the sysfs paths, update the chip lists
   File i2c-dev.h: Support I2C block reads with specified length
@@ -703,7 +750,7 @@ lm_sensors CHANGES file
                    module
                    Include i2c-nforce2
   Program sensord: New --rrd-no-average parameter
-                   Syncronize time slots with rrd
+                   Synchronize time slots with rrd
                    Fix W83781D temp3 alarm (Aurelien Jarno)
                    Add ASB100 support (Andrew May)
   Program sensors: Fully support the PC87360 family

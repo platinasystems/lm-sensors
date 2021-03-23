@@ -2,7 +2,7 @@
     chips.c - Part of sensors, a user-space program for hardware monitoring
     Copyright (c) 1998-2003 Frodo Looijaard <frodol@dds.nl>
                             and Mark D. Studebaker <mdsxyz123@yahoo.com>
-    Copyright (c) 2003-2006 The lm_sensors team
+    Copyright (C) 2007      Jean Delvare <khali@linux-fr.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@
 extern int fahrenheit;
 extern char degstr[5];
 
-static inline float deg_ctof(float cel)
+static inline double deg_ctof(double cel)
 {
    return ( cel * ( 9.0F / 5.0F ) + 32.0F );
 }
@@ -46,7 +46,7 @@ static inline float deg_ctof(float cel)
 /* minmax = 0 for limit/hysteresis, 1 for max/min, 2 for max only;
    curprec and limitprec are # of digits after decimal point
    for the current temp and the limits */
-static void print_temp_info(float n_cur, float n_over, float n_hyst,
+static void print_temp_info(double n_cur, double n_over, double n_hyst,
                             int minmax, int curprec, int limitprec)
 {
    if (fahrenheit) {
@@ -261,8 +261,7 @@ void print_adm1021(const sensors_chip_name *name)
         print_label(label,10);
         printf("%4.0f\n",cur);
       }
-    } else
-      printf("ERROR: Can't get die-code data!\n");
+    }
     free(label);
   }
 }
@@ -436,8 +435,7 @@ void print_adm1024(const sensors_chip_name *name)
       printf( "%+6.2f V  (min = %+6.2f V, max = %+6.2f V)   %s\n",
              cur,min,max,alarms&ADM1024_ALARM_IN0?"ALARM":"");
     }
-  } else
-    printf("ERROR: Can't get IN0 data!\n");
+  } /* No error, can be missing */
   free(label);
   if (!sensors_get_label_and_valid(*name,SENSORS_ADM1024_IN1,&label,&valid) &&
       !sensors_get_feature(*name,SENSORS_ADM1024_IN1,&cur) &&
@@ -496,8 +494,7 @@ void print_adm1024(const sensors_chip_name *name)
       printf("%+6.2f V  (min = %+6.2f V, max = %+6.2f V)   %s\n",
              cur,min,max,alarms&ADM1024_ALARM_IN5?"ALARM":"");
     }
-  } else
-    printf("ERROR: Can't get IN5 data!\n");
+  } /* No error, can be missing */
   free(label);
 
   if (!sensors_get_label_and_valid(*name,SENSORS_ADM1024_FAN1,&label,&valid) &&
@@ -509,8 +506,7 @@ void print_adm1024(const sensors_chip_name *name)
       printf("%4.0f RPM  (min = %4.0f RPM, div = %1.0f)          %s\n",
              cur,min,fdiv, alarms&ADM1024_ALARM_FAN1?"ALARM":"");
     }
-  } else
-    printf("ERROR: Can't get FAN1 data!\n");
+  } /* No error, can be missing */
   free(label);
   if (!sensors_get_label_and_valid(*name,SENSORS_ADM1024_FAN2,&label,&valid) &&
       !sensors_get_feature(*name,SENSORS_ADM1024_FAN2,&cur) &&
@@ -521,8 +517,7 @@ void print_adm1024(const sensors_chip_name *name)
       printf("%4.0f RPM  (min = %4.0f RPM, div = %1.0f)          %s\n",
              cur,min,fdiv, alarms&ADM1024_ALARM_FAN2?"ALARM":"");
     }
-  } else
-    printf("ERROR: Can't get FAN2 data!\n");
+  } /* No error, can be missing */
   free(label);
 
   if (!sensors_get_label_and_valid(*name,SENSORS_ADM1024_TEMP,&label,&valid) &&
@@ -531,7 +526,7 @@ void print_adm1024(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_ADM1024_TEMP_OVER,&max)) {
     if (valid) {
       print_label(label,10);
-      print_temp_info( cur, min, max, HYST, 1, 0);
+      print_temp_info(cur, max, min, MINMAX, 0, 0);
       printf( " %s\n", alarms & ADM1024_ALARM_TEMP ? "ALARM" : "" );
     }
   } else
@@ -544,7 +539,7 @@ void print_adm1024(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_ADM1024_TEMP1_OVER,&max)) {
     if (valid) {
       print_label(label,10);
-      print_temp_info( cur, min, max, HYST, 1, 0);
+      print_temp_info(cur, max, min, MINMAX, 0, 0);
       printf( " %s\n", alarms & ADM1024_ALARM_TEMP1 ? "ALARM" : "" );
     }
   } else
@@ -557,11 +552,10 @@ void print_adm1024(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_ADM1024_TEMP2_OVER,&max)) {
     if (valid) {
       print_label(label,10);
-      print_temp_info( cur, min, max, HYST, 1, 0);
+      print_temp_info(cur, max, min, MINMAX, 0, 0);
       printf( " %s\n", alarms & ADM1024_ALARM_TEMP2 ? "ALARM" : "" );
     }
-  } else
-    printf("ERROR: Can't get TEMP2 data!\n");
+  } /* No error, can be missing */
   free(label);
 
   if (!sensors_get_label_and_valid(*name,SENSORS_ADM1024_VID,&label,&valid) &&
@@ -1042,12 +1036,11 @@ void print_gl518(const sensors_chip_name *name)
  * of the GL518SM, we cannot read their values. This is detected when the
  * reading would be 0.0 V and displayed as "(n/a)" instead. */
   if (!sensors_get_label_and_valid(*name,SENSORS_GL518_VDD,&label,&valid) &&
-      !sensors_get_feature(*name,SENSORS_GL518_VDD,&cur) &&
       !sensors_get_feature(*name,SENSORS_GL518_VDD_MIN,&min) &&
       !sensors_get_feature(*name,SENSORS_GL518_VDD_MAX,&max)) {
     if (valid) {
       print_label(label,10);
-      if (cur == 0.0)
+      if (sensors_get_feature(*name, SENSORS_GL518_VDD, &cur) || cur == 0.0)
         printf("(n/a)     ");
       else
         printf("%+6.2f V  ",cur);
@@ -1060,12 +1053,11 @@ void print_gl518(const sensors_chip_name *name)
   free(label);
 
   if (!sensors_get_label_and_valid(*name,SENSORS_GL518_VIN1,&label,&valid) &&
-      !sensors_get_feature(*name,SENSORS_GL518_VIN1,&cur) &&
       !sensors_get_feature(*name,SENSORS_GL518_VIN1_MIN,&min) &&
       !sensors_get_feature(*name,SENSORS_GL518_VIN1_MAX,&max)) {
     if (valid) {
       print_label(label,10);
-      if (cur == 0.0)
+      if (sensors_get_feature(*name, SENSORS_GL518_VIN1, &cur) || cur == 0.0)
         printf("(n/a)     ");
       else
         printf("%+6.2f V  ",cur);
@@ -1078,12 +1070,11 @@ void print_gl518(const sensors_chip_name *name)
   free(label);
 
   if (!sensors_get_label_and_valid(*name,SENSORS_GL518_VIN2,&label,&valid) &&
-      !sensors_get_feature(*name,SENSORS_GL518_VIN2,&cur) &&
       !sensors_get_feature(*name,SENSORS_GL518_VIN2_MIN,&min) &&
       !sensors_get_feature(*name,SENSORS_GL518_VIN2_MAX,&max)) {
     if (valid) {
       print_label(label,10);
-      if (cur == 0.0)
+      if (sensors_get_feature(*name, SENSORS_GL518_VIN2, &cur) || cur == 0.0)
         printf("(n/a)     ");
       else
         printf("%+6.2f V  ",cur);
@@ -3523,9 +3514,16 @@ void print_fscpos(const sensors_chip_name *name)
   double voltage, temp, state, fan;
   int valid;
 
+  /* Check for the non standard temp1_state sysfs attr the old driver uses
+     if it isn't present we are talking to the new fschmd driver */
+  if (sensors_get_feature(*name,SENSORS_FSCPOS_TEMP1_STATE,&state) != 0) {
+    print_fscpos_fschmd(name);
+    return;
+  }
+
+  /* no need to read TEMP1_STATE, as we just successfully did that above */
   if (!sensors_get_label_and_valid(*name,SENSORS_FSCPOS_TEMP1,&label,&valid) &&
-      !sensors_get_feature(*name,SENSORS_FSCPOS_TEMP1,&temp) &&
-      !sensors_get_feature(*name,SENSORS_FSCPOS_TEMP1_STATE,&state)) { 
+      !sensors_get_feature(*name,SENSORS_FSCPOS_TEMP1,&temp)) {
     if (valid) {
       print_label(label,10);
 	if((int) state & 0x01)
@@ -3570,10 +3568,11 @@ void print_fscpos(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCPOS_FAN1_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x04)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN1 data!\n");
@@ -3584,10 +3583,11 @@ void print_fscpos(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCPOS_FAN2_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x04)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN2 data!\n");
@@ -3598,10 +3598,11 @@ void print_fscpos(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCPOS_FAN3_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x04)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN3 data!\n");
@@ -3641,20 +3642,24 @@ void print_fscpos(const sensors_chip_name *name)
 void print_fscscy(const sensors_chip_name *name)
 {
   char *label;
-  double voltage, temp, tempmin, tempmax, templim, state, fan;
+  double voltage, temp, templim, state, fan;
   int valid;
+  
+  /* Check for the non standard temp1_state sysfs attr the old driver uses
+     if it isn't present we are talking to the new fschmd driver */
+  if (sensors_get_feature(*name,SENSORS_FSCSCY_TEMP1_STATE,&state) != 0) {
+    print_fscscy_fschmd(name);
+    return;
+  }
 
+  /* no need to read TEMP1_STATE, as we just successfully did that above */
   if (!sensors_get_label_and_valid(*name,SENSORS_FSCSCY_TEMP1,&label,&valid) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP1,&temp) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP1_LIM,&templim) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP1_MIN,&tempmin) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP1_MAX,&tempmax) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP1_STATE,&state)) { 
+      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP1_LIM,&templim)) {
     if (valid) {
       print_label(label,10);
 	if((int) state & 0x01)
-	  printf("\t%+6.2f C (Min = %+6.2f C, Max = %+6.2f C, Lim = %+6.2f C)\n",
-		temp,tempmin,tempmax,templim);
+	  printf("\t%+6.2f C (Lim = %+6.2f C)\n", temp, templim);
 	else
 	  printf("\tfailed\n");
     }
@@ -3665,14 +3670,11 @@ void print_fscscy(const sensors_chip_name *name)
   if (!sensors_get_label_and_valid(*name,SENSORS_FSCSCY_TEMP2,&label,&valid) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP2,&temp) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP2_LIM,&templim) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP2_MIN,&tempmin) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP2_MAX,&tempmax) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP2_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
 	if((int) state & 0x01)
-	  printf("\t%+6.2f C (Min = %+6.2f C, Max = %+6.2f C, Lim = %+6.2f C)\n",
-		temp,tempmin,tempmax,templim);
+	  printf("\t%+6.2f C (Lim = %+6.2f C)\n", temp, templim);
 	else
 	  printf("\tfailed\n");
     }
@@ -3683,14 +3685,11 @@ void print_fscscy(const sensors_chip_name *name)
   if (!sensors_get_label_and_valid(*name,SENSORS_FSCSCY_TEMP3,&label,&valid) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP3,&temp) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP3_LIM,&templim) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP3_MIN,&tempmin) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP3_MAX,&tempmax) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP3_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
 	if((int) state & 0x01)
-	  printf("\t%+6.2f C (Min = %+6.2f C, Max = %+6.2f C, Lim = %+6.2f C)\n",
-		temp,tempmin,tempmax,templim);
+	  printf("\t%+6.2f C (Lim = %+6.2f C)\n", temp, templim);
 	else
 	  printf("\tfailed\n");
     }
@@ -3701,14 +3700,11 @@ void print_fscscy(const sensors_chip_name *name)
   if (!sensors_get_label_and_valid(*name,SENSORS_FSCSCY_TEMP4,&label,&valid) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP4,&temp) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP4_LIM,&templim) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP4_MIN,&tempmin) &&
-      !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP4_MAX,&tempmax) &&
       !sensors_get_feature(*name,SENSORS_FSCSCY_TEMP4_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
 	if((int) state & 0x01)
-	  printf("\t%+6.2f C (Min = %+6.2f C, Max = %+6.2f C, Lim = %+6.2f C)\n",
-		temp,tempmin,tempmax,templim);
+	  printf("\t%+6.2f C (Lim = %+6.2f C)\n", temp, templim);
 	else
 	  printf("\tfailed\n");
     }
@@ -3721,10 +3717,11 @@ void print_fscscy(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCSCY_FAN1_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x02)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN1 data!\n");
@@ -3735,10 +3732,11 @@ void print_fscscy(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCSCY_FAN2_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x02)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN2 data!\n");
@@ -3749,10 +3747,11 @@ void print_fscscy(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCSCY_FAN3_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x02)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN3 data!\n");
@@ -3763,10 +3762,11 @@ void print_fscscy(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCSCY_FAN4_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x02)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN4 data!\n");
@@ -3777,10 +3777,11 @@ void print_fscscy(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCSCY_FAN5_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x02)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN5 data!\n");
@@ -3791,10 +3792,11 @@ void print_fscscy(const sensors_chip_name *name)
       !sensors_get_feature(*name,SENSORS_FSCSCY_FAN6_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-	if((int) state & 0x02)
-	  printf("\tfaulty\n");
-	else
-	  printf("\t%6.0f RPM\n", fan);
+      if((int) state & 0x08)
+        printf("\tFAULT");
+      else
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN6 data!\n");
@@ -3837,9 +3839,16 @@ void print_fscher(const sensors_chip_name *name)
   double voltage, temp, state, fan;
   int valid;
   
+  /* Check for the non standard temp1_state sysfs attr the old driver uses
+     if it isn't present we are talking to the new fschmd driver */
+  if (sensors_get_feature(*name,SENSORS_FSCHER_TEMP1_STATE,&state) != 0) {
+    print_fscher_fschmd(name);
+    return;
+  }
+
+  /* no need to read TEMP1_STATE, as we just successfully did that above */
   if (!sensors_get_label_and_valid(*name,SENSORS_FSCHER_TEMP1,&label,&valid)
-      && !sensors_get_feature(*name,SENSORS_FSCHER_TEMP1,&temp)
-      && !sensors_get_feature(*name,SENSORS_FSCHER_TEMP1_STATE,&state)) { 
+      && !sensors_get_feature(*name,SENSORS_FSCHER_TEMP1,&temp)) {
     if (valid) {
       print_label(label,10);
       if((int) state & 0x01)
@@ -3884,10 +3893,11 @@ void print_fscher(const sensors_chip_name *name)
       && !sensors_get_feature(*name,SENSORS_FSCHER_FAN1_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-      if((int) state & 0x04)
-        printf("\tfaulty\n");
+      if((int) state & 0x08)
+        printf("\tFAULT");
       else
-        printf("\t%6.0f RPM\n", fan);
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN1 data!\n");
@@ -3898,10 +3908,11 @@ void print_fscher(const sensors_chip_name *name)
       && !sensors_get_feature(*name,SENSORS_FSCHER_FAN2_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-      if((int) state & 0x04)
-        printf("\tfaulty\n");
+      if((int) state & 0x08)
+        printf("\tFAULT");
       else
-        printf("\t%6.0f RPM\n", fan);
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN2 data!\n");
@@ -3912,10 +3923,11 @@ void print_fscher(const sensors_chip_name *name)
       && !sensors_get_feature(*name,SENSORS_FSCHER_FAN3_STATE,&state)) { 
     if (valid) {
       print_label(label,10);
-      if((int) state & 0x04)
-        printf("\tfaulty\n");
+      if((int) state & 0x08)
+        printf("\tFAULT");
       else
-        printf("\t%6.0f RPM\n", fan);
+        printf("\t%6.0f RPM", fan);
+      printf( "  %s\n", ((int) state & 0x04) ? "ALARM" : "" );
     }
   } else
     printf("ERROR: Can't get FAN3 data!\n");
@@ -4506,7 +4518,8 @@ void print_pc87427(const sensors_chip_name *name)
   free(label);
 }
 
-static void lm92_print_temp (float n_cur,float n_high,float n_low,float n_crit,float n_hyst)
+static void lm92_print_temp(double n_cur, double n_high, double n_low,
+			    double n_crit, double n_hyst)
 {
 	if (fahrenheit) {
 		n_cur = deg_ctof (n_cur);
@@ -6015,17 +6028,17 @@ static void print_dme1737_in(const sensors_chip_name *name, int i)
 
   if (!sensors_get_label_and_valid(*name, SENSORS_DME1737_IN(i), &label,
 				   &valid) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_IN(i), &cur) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_IN_MIN(i), &min) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_IN_MAX(i), &max) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_IN_ALARM(i), &alarm)) {
-    if (valid) {
+      valid) {
+    if (!sensors_get_feature(*name, SENSORS_DME1737_IN(i), &cur) &&
+        !sensors_get_feature(*name, SENSORS_DME1737_IN_MIN(i), &min) &&
+        !sensors_get_feature(*name, SENSORS_DME1737_IN_MAX(i), &max) &&
+        !sensors_get_feature(*name, SENSORS_DME1737_IN_ALARM(i), &alarm)) {
       print_label(label, 10);
       printf("%+6.2f V  (min = %+6.2f V, max = %+6.2f V)  %s\n",
 	     cur, min, max, alarm ? "ALARM" : "");
+    } else {
+      printf("ERROR: Can't get in%d data!\n", i);
     }
-  } else {
-    printf("ERROR: Can't get in%d data!\n", i);
   }
   free(label);
 }
@@ -6038,18 +6051,18 @@ static void print_dme1737_temp(const sensors_chip_name *name, int i)
 
   if (!sensors_get_label_and_valid(*name, SENSORS_DME1737_TEMP(i), &label,
 				   &valid) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_TEMP(i), &cur) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_TEMP_MIN(i), &min) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_TEMP_MAX(i), &max) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_TEMP_ALARM(i), &alarm) &&
-      !sensors_get_feature(*name, SENSORS_DME1737_TEMP_FAULT(i), &fault)) {
-    if (valid) {
+      valid) {
+    if (!sensors_get_feature(*name, SENSORS_DME1737_TEMP(i), &cur) &&
+        !sensors_get_feature(*name, SENSORS_DME1737_TEMP_MIN(i), &min) &&
+        !sensors_get_feature(*name, SENSORS_DME1737_TEMP_MAX(i), &max) &&
+        !sensors_get_feature(*name, SENSORS_DME1737_TEMP_ALARM(i), &alarm) &&
+        !sensors_get_feature(*name, SENSORS_DME1737_TEMP_FAULT(i), &fault)) {
       print_label(label, 10);
       print_temp_info(cur, max, min, MINMAX, 0, 0);
-      printf("%s  %s\n", fault ? "FAULT" : "", alarm ? "ALARM" : "");
+      printf("%s%s\n", fault ? "FAULT  " : "", alarm ? "ALARM" : "");
+    } else {
+      printf("ERROR: Can't get temp%d data!\n", i);
     }
-  } else {
-    printf("ERROR: Can't get temp%d data!\n", i);
   }
   free(label);
 }
@@ -6070,8 +6083,6 @@ static void print_dme1737_fan(const sensors_chip_name *name, int i)
       printf("%4.0f RPM  (min = %4.0f RPM)  %s\n", 
 	     cur, min, alarm ? "ALARM" : "");
     }
-  } else {
-    printf("ERROR: Can't get fan%d data!\n", i);
   }
   free(label);
 }
@@ -6091,8 +6102,6 @@ static void print_dme1737_pwm(const sensors_chip_name *name, int i)
       print_label(label, 10);
       printf("%4.0f      (enable = %1.0f, freq = %6.0f Hz)\n", cur, enable, freq);
     }
-  } else {
-    printf("ERROR: Can't get pwm%d data!\n", i);
   }
   free(label);
 }
@@ -6254,6 +6263,204 @@ void print_f71882fg(const sensors_chip_name *name)
     print_f71882fg_temp(name, i);
 }
 
+void print_thmc50(const sensors_chip_name *name)
+{
+  char *label;
+  double cur, hyst, over;
+  int valid;
+
+  if (!sensors_get_label_and_valid(*name, SENSORS_THMC50_TEMP,
+                                   &label, &valid) &&
+      !sensors_get_feature(*name, SENSORS_THMC50_TEMP, &cur) &&
+      !sensors_get_feature(*name, SENSORS_THMC50_TEMP_HYST, &hyst) &&
+      !sensors_get_feature(*name, SENSORS_THMC50_TEMP_OVER, &over)) {
+    if (valid) {
+      print_label(label, 10);
+      print_temp_info(cur, over, hyst, MINMAX, 0, 0);
+      printf("\n");
+    }
+  } else
+    printf("ERROR: Can't get temperature1 data!\n");
+  free(label);
+
+  if (!sensors_get_label_and_valid(*name, SENSORS_THMC50_REMOTE_TEMP,
+                                   &label, &valid) &&
+      !sensors_get_feature(*name, SENSORS_THMC50_REMOTE_TEMP, &cur) &&
+      !sensors_get_feature(*name, SENSORS_THMC50_REMOTE_TEMP_HYST, &hyst) &&
+      !sensors_get_feature(*name, SENSORS_THMC50_REMOTE_TEMP_OVER, &over)) {
+    if (valid) {
+      print_label(label, 10);
+      print_temp_info(cur, over, hyst, MINMAX, 0, 0);
+      printf("\n");
+    }
+  } else
+    printf("ERROR: Can't get temperature2 data!\n");
+  free(label);
+
+  if (!sensors_get_label_and_valid(*name, SENSORS_ADM1022_REMOTE_TEMP2,
+                                   &label, &valid) &&
+      !sensors_get_feature(*name, SENSORS_ADM1022_REMOTE_TEMP2, &cur) &&
+      !sensors_get_feature(*name, SENSORS_ADM1022_REMOTE_TEMP2_HYST, &hyst) &&
+      !sensors_get_feature(*name, SENSORS_ADM1022_REMOTE_TEMP2_OVER, &over)) {
+    if (valid) {
+      print_label(label, 10);
+      print_temp_info(cur, over, hyst, MINMAX, 0, 0);
+      printf("\n");
+    }
+  }
+  /* No error if files are missing as it will happen for original thmc50 */
+  free(label);
+}
+
+static void print_fschmd_in(const sensors_chip_name *name, int i,
+  int in_feature)
+{
+  char *label;
+  double cur;
+  int valid;
+
+  if (!sensors_get_label_and_valid(*name, in_feature, &label, &valid) &&
+      !sensors_get_feature(*name, in_feature, &cur)) {
+    if (valid) {
+      print_label(label, 10);
+      printf("%+6.2f V\n", cur);
+    }
+  } else {
+    printf("ERROR: Can't get in%d data!\n", i);
+  }
+  free(label);
+}
+
+static void print_fschmd_fan(const sensors_chip_name *name, int i,
+  int fan_feature, int fan_div_feature)
+{
+  char *label;
+  double cur, fdiv, alarm, fault;
+  int valid;
+
+  if (!sensors_get_label_and_valid(*name, fan_feature, &label, &valid) &&
+      !sensors_get_feature(*name, fan_feature, &cur) &&
+      !sensors_get_feature(*name, fan_div_feature, &fdiv) &&
+      !sensors_get_feature(*name, SENSORS_FSCHMD_FAN_ALARM(i), &alarm) &&
+      !sensors_get_feature(*name, SENSORS_FSCHMD_FAN_FAULT(i), &fault)) {
+    if (valid) {
+      print_label(label, 10);
+      if (fault)
+        printf("   FAULT\n");
+      else
+        printf("%4.0f RPM  (div = %1.0f)  %s\n", cur, fdiv,
+               alarm ? "ALARM" : "");
+    }
+  } else {
+    printf("ERROR: Can't get fan%d data!\n", i);
+  }
+  free(label);
+}
+
+static void print_fschmd_temp(const sensors_chip_name *name, int i,
+  int temp_feature, int temp_max_feature)
+{
+  char *label;
+  double cur, max, alarm, fault;
+  int valid;
+
+  if (!sensors_get_label_and_valid(*name, temp_feature, &label, &valid) &&
+      !sensors_get_feature(*name, temp_feature, &cur) &&
+      (!temp_max_feature ||
+       !sensors_get_feature(*name, temp_max_feature, &max)) &&
+      !sensors_get_feature(*name, SENSORS_FSCHMD_TEMP_ALARM(i), &alarm) &&
+      !sensors_get_feature(*name, SENSORS_FSCHMD_TEMP_FAULT(i), &fault)) {
+    if (valid) {
+      print_label(label, 10);
+      if (fault)
+        printf("   FAULT\n");
+      else {
+        /* The fscpos doesn't have max temp limits */
+        if (temp_max_feature)
+          print_temp_info(cur, max, 0, MAXONLY, 1, 1);
+        else
+          print_temp_info(cur, 0, 0, SINGLE, 1, 1);
+        printf("%s\n", alarm ? "ALARM" : "");
+      }
+    }
+  } else {
+    printf("ERROR: Can't get temp%d data!\n", i);
+  }
+  free(label);
+}
+
+void print_fschmd(const sensors_chip_name *name)
+{
+  int i;
+  int no_fan_sensors, no_temp_sensors;
+
+  if (!strcmp(name->prefix,"fschmd")) {
+    no_fan_sensors = 5;
+    no_temp_sensors = 5;
+  } else { /* fschrc */
+    no_fan_sensors = 4;
+    no_temp_sensors = 3;
+  }
+  
+  for (i = 0; i <= 2; i++)
+    print_fschmd_in(name, i, SENSORS_FSCHMD_IN(i));
+
+  for (i = 1; i <= no_fan_sensors; i++)
+    print_fschmd_fan(name, i, SENSORS_FSCHMD_FAN(i),
+                     SENSORS_FSCHMD_FAN_DIV(i));
+
+  for (i = 1; i <= no_temp_sensors; i++)
+    print_fschmd_temp(name, i, SENSORS_FSCHMD_TEMP(i),
+                      SENSORS_FSCHMD_TEMP_MAX(i));
+}
+
+void print_fscpos_fschmd(const sensors_chip_name *name)
+{
+  int i;
+  
+  for (i = 0; i < 3; i++)
+    print_fschmd_in(name, i, SENSORS_FSCPOS_VOLTAGE1 + i);
+
+  for (i = 0; i < 3; i++)
+    print_fschmd_fan(name, i + 1, SENSORS_FSCPOS_FAN1 + i,
+                     SENSORS_FSCPOS_FAN1_RIPPLE + i);
+
+  for (i = 0; i < 3; i++)
+    print_fschmd_temp(name, i + 1, SENSORS_FSCPOS_TEMP1 + i, 0);
+}
+
+void print_fscscy_fschmd(const sensors_chip_name *name)
+{
+  int i;
+  
+  for (i = 0; i < 3; i++)
+    print_fschmd_in(name, i, SENSORS_FSCSCY_VOLTAGE1 + i);
+
+  for (i = 0; i < 6; i++)
+    print_fschmd_fan(name, i + 1, SENSORS_FSCSCY_FAN1 + i,
+                     SENSORS_FSCSCY_FAN1_RIPPLE + i);
+
+  for (i = 0; i < 4; i++)
+    print_fschmd_temp(name, i + 1, SENSORS_FSCSCY_TEMP1 + i,
+                      SENSORS_FSCSCY_TEMP1_MAX + i);
+}
+
+void print_fscher_fschmd(const sensors_chip_name *name)
+{
+  int i;
+  
+  for (i = 0; i < 3; i++)
+    print_fschmd_in(name, i, SENSORS_FSCHER_VOLTAGE1 + i);
+
+  for (i = 0; i < 3; i++)
+    print_fschmd_fan(name, i + 1, SENSORS_FSCHER_FAN1 + i,
+                     SENSORS_FSCHER_FAN1_RIPPLE + i);
+
+  for (i = 0; i < 3; i++)
+    print_fschmd_temp(name, i + 1, SENSORS_FSCHER_TEMP1 + i,
+                      SENSORS_FSCHMD_TEMP_MAX(i + 1));
+}
+
 void print_unknown_chip(const sensors_chip_name *name)
 {
   int a,b,valid;
@@ -6264,17 +6471,17 @@ void print_unknown_chip(const sensors_chip_name *name)
   a=b=0;
   while((data=sensors_get_all_features(*name,&a,&b))) {
     if (sensors_get_label_and_valid(*name,data->number,&label,&valid)) {
-      printf("ERROR: Can't get feature `%s' data!\n",data->name);
+      printf("ERROR: Can't get feature `%s' label!\n", data->name);
       continue;
     }
-    if (! valid)
+    if (!valid) {
+      free(label);
       continue;
+    }
     if (data->mode & SENSORS_MODE_R) {
-      if(sensors_get_feature(*name,data->number,&val)) {
+      if(sensors_get_feature(*name,data->number,&val))
         printf("ERROR: Can't get feature `%s' data!\n",data->name);
-        continue;
-      }
-      if (data->mapping != SENSORS_NO_MAPPING)
+      else if (data->mapping != SENSORS_NO_MAPPING)
         printf("  %s: %.2f (%s)\n",label,val,data->name);
       else
         printf("%s: %.2f (%s)\n",label,val,data->name);

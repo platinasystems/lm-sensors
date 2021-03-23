@@ -68,7 +68,7 @@ void print_long_help(void)
   printf("Usage: %s [OPTION]... [CHIP]...\n",PROGRAM);
   printf("  -c, --config-file     Specify a config file (default: " ETCDIR "/" DEFAULT_CONFIG_FILE_NAME ")\n");
   printf("  -h, --help            Display this help text\n");
-  printf("  -s, --set             Execute `set' statements too (root only)\n");
+  printf("  -s, --set             Execute `set' statements (root only)\n");
   printf("  -f, --fahrenheit      Show temperatures in degrees fahrenheit\n");
   printf("  -A, --no-adapter      Do not show adapter for each chip\n");
   printf("  -U, --no-unknown      Do not show unknown chips\n");
@@ -229,16 +229,18 @@ int main (int argc, char *argv[])
       }
 
   open_config_file(config_file_name);
-  if ((res = sensors_init(config_file))) {
+  res = sensors_init(config_file);
+  close_config_file(config_file_name);
+  if (res) {
     fprintf(stderr,"%s\n",sensors_strerror(res));
     if (res == -SENSORS_ERR_PROC)
       fprintf(stderr,
               "Kernel interface access error\n"
               "For 2.6 kernels, make sure you have mounted sysfs and libsensors\n"
               "was compiled with sysfs support!\n");
+    sensors_cleanup();
     exit(1);
   }
-  close_config_file(config_file_name);
 
   /* build the degrees string */
   set_degstr();
@@ -247,7 +249,7 @@ int main (int argc, char *argv[])
     sensors_cleanup();
     exit(error);
   } else {
-    if(chips[0].prefix == SENSORS_CHIP_NAME_PREFIX_ANY)
+    if (optind == argc) /* No chip name on command line */
 	    fprintf(stderr,
 	            "No sensors found!\n"
 	            "Make sure you loaded all the kernel drivers you need.\n"
@@ -424,8 +426,13 @@ static struct match matches[] = {
  	{ "k8temp", print_k8temp },
  	{ "coretemp", print_coretemp },
  	{ "dme1737", print_dme1737 },
+ 	{ "sch311x", print_dme1737 },
 	{ "applesmc", print_applesmc },
 	{ "f71882fg", print_f71882fg },
+	{ "thmc50", print_thmc50 },
+	{ "adm1022", print_thmc50 },
+	{ "fschmd", print_fschmd },
+	{ "fschrc", print_fschmd },
 	{ NULL, NULL }
 };
 
