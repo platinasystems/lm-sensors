@@ -54,7 +54,7 @@ static const char *sprintf_chip_name(sensors_chip_name name);
 #define CHIPS_MAX 20
 sensors_chip_name chips[CHIPS_MAX];
 int chips_count=0;
-int do_sets, do_unknown, fahrenheit, show_algorithm, hide_adapter, hide_unknown;
+int do_sets, do_unknown, fahrenheit, hide_adapter, hide_unknown;
 
 char degstr[5]; /* store the correct string to print degrees */
 
@@ -70,7 +70,6 @@ void print_long_help(void)
   printf("  -h, --help            Display this help text\n");
   printf("  -s, --set             Execute `set' statements too (root only)\n");
   printf("  -f, --fahrenheit      Show temperatures in degrees fahrenheit\n");
-  printf("  -a, --algorithm       Show algorithm for each chip\n");
   printf("  -A, --no-adapter      Do not show adapter for each chip\n");
   printf("  -U, --no-unknown      Do not show unknown chips\n");
   printf("  -u, --unknown         Treat chips as unknown ones (testing only)\n");
@@ -149,18 +148,19 @@ static void set_degstr(void)
 int main (int argc, char *argv[])
 {
   int c,res,i,error;
-  char *config_file_name = NULL;
+  const char *config_file_name = ETCDIR "/" DEFAULT_CONFIG_FILE_NAME;
 
   struct option long_opts[] =  {
     { "help", no_argument, NULL, 'h' },
     { "set", no_argument, NULL, 's' },
     { "version", no_argument, NULL, 'v'},
     { "fahrenheit", no_argument, NULL, 'f' },
-    { "algorithm", no_argument, NULL, 'a' },
     { "no-adapter", no_argument, NULL, 'A' },
     { "no-unknown", no_argument, NULL, 'U' },
     { "config-file", required_argument, NULL, 'c' },
     { "unknown", no_argument, NULL, 'u' },
+    /* next option accepted for compatibility, but otherwise ignored */
+    { "algorithm", no_argument, NULL, 'a' },
     { 0,0,0,0 }
   };
 
@@ -168,7 +168,6 @@ int main (int argc, char *argv[])
 
   do_unknown = 0;
   do_sets = 0;
-  show_algorithm = 0;
   hide_adapter = 0;
   hide_unknown = 0;
   while (1) {
@@ -187,16 +186,13 @@ int main (int argc, char *argv[])
       print_version();
       exit(0);
     case 'c':
-      config_file_name = strdup(optarg);
+      config_file_name = optarg;
       break;
     case 's':
       do_sets = 1;
       break;
     case 'f':
       fahrenheit = 1;
-      break;
-    case 'a':
-      show_algorithm = 1;
       break;
     case 'A':
       hide_adapter = 1;
@@ -206,6 +202,9 @@ int main (int argc, char *argv[])
       break;
     case 'u':
       do_unknown = 1;
+      break;
+    case 'a':
+      /* Ignore for compatibility */
       break;
     default:
       fprintf(stderr,"Internal error while parsing options!\n");
@@ -229,11 +228,7 @@ int main (int argc, char *argv[])
         exit(1);
       }
 
-
-  if (config_file_name == NULL)
-    config_file_name = strdup(ETCDIR "/" DEFAULT_CONFIG_FILE_NAME);
   open_config_file(config_file_name);
-
   if ((res = sensors_init(config_file))) {
     fprintf(stderr,"%s\n",sensors_strerror(res));
     if (res == -SENSORS_ERR_PROC)
@@ -243,9 +238,7 @@ int main (int argc, char *argv[])
               "was compiled with sysfs support!\n");
     exit(1);
   }
-
   close_config_file(config_file_name);
-  free(config_file_name);
 
   /* build the degrees string */
   set_degstr();
@@ -374,6 +367,7 @@ struct match matches[] = {
 	{ "w83697hf", print_w83781d },
 	{ "w83687thf", print_w83781d },
 	{ "w83627ehf", print_w83627ehf },
+	{ "w83627dhg", print_w83627ehf },
 	{ "w83791d", print_w83781d },
 	{ "w83792d", print_w83792d },
 	{ "w83793", print_w83793 },
@@ -397,11 +391,13 @@ struct match matches[] = {
 	{ "vt1211", print_vt1211 },
 	{ "smsc47m192", print_smsc47m192 },
 	{ "smsc47m1", print_smsc47m1 },
+	{ "smsc47m2", print_smsc47m1 },
 	{ "pc87360", print_pc87360 },
 	{ "pc87363", print_pc87360 },
 	{ "pc87364", print_pc87364 },
 	{ "pc87365", print_pc87366 },
 	{ "pc87366", print_pc87366 },
+	{ "pc87427", print_pc87427 },
 	{ "lm92", print_lm92 },
 	{ "vt8231", print_vt8231 },
 	{ "bmc", print_bmc },
@@ -417,19 +413,21 @@ struct match matches[] = {
 	{ "xeontemp", print_xeontemp },
 	{ "max6650", print_max6650 },
 	{ "asb100", print_asb100 },
+	{ "adm1029", print_adm1029 },
 	{ "adm1030", print_adm1031 },
 	{ "adm1031", print_adm1031 },
 	{ "lm93", print_lm93 },
 	{ "smsc47b397", print_smsc47b397 },
 	{ "f71805f", print_f71805f },
+	{ "f71872f", print_f71805f },
  	{ "abituguru", print_abituguru },
  	{ "k8temp", print_k8temp },
+ 	{ "coretemp", print_coretemp },
 	{ NULL, NULL }
 };
 
 void do_a_print(sensors_chip_name name)
 {
-  const char *algo,*adap;
   struct match *m;
 
   /* do we know how to display it? */
@@ -441,14 +439,13 @@ void do_a_print(sensors_chip_name name)
     return;
 
   printf("%s\n",sprintf_chip_name(name));
-  adap = sensors_get_adapter_name(name.bus);
-  if (adap && !hide_adapter)
-    printf("Adapter: %s\n",adap);
-  algo = sensors_get_algorithm_name(name.bus);
-  if (algo && show_algorithm)
-    printf("Algorithm: %s\n",algo);
-  if (!algo || !adap)
-    printf(" ERROR: Can't get adapter or algorithm?!?\n");
+  if (!hide_adapter) {
+    const char *adap = sensors_get_adapter_name(name.bus);
+    if (adap)
+      printf("Adapter: %s\n", adap);
+    else
+      fprintf(stderr, "Can't get adapter name for bus %d\n", name.bus);
+  }
   if (do_unknown)
     print_unknown_chip(&name);
   else {

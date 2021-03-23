@@ -61,6 +61,8 @@ int scan_i2c_bus(int file, const int mode, const int first, const int last)
 	for (i = 0; i < 128; i += 16) {
 		printf("%02x: ", i);
 		for(j = 0; j < 16; j++) {
+			fflush(stdout);
+
 			/* Skip unwanted addresses */
 			if (i+j < first || i+j > last) {
 				printf("   ");
@@ -103,7 +105,7 @@ int scan_i2c_bus(int file, const int mode, const int first, const int last)
 			}
 
 			if (res < 0)
-				printf("XX ");
+				printf("-- ");
 			else
 				printf("%02x ", i+j);
 		}
@@ -153,7 +155,7 @@ static const struct func all_func[] = {
 	{ }
 };
 
-void print_functionality(long funcs)
+void print_functionality(unsigned long funcs)
 {
 	int i;
 	
@@ -168,7 +170,7 @@ int main(int argc, char *argv[])
 	char *end;
 	int i2cbus, file, res;
 	char filename[20];
-	long funcs;
+	unsigned long funcs;
 	int mode = MODE_AUTO;
 	int first = 0x03, last = 0x77;
 	int flags = 0;

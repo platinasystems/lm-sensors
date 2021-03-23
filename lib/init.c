@@ -43,10 +43,10 @@ int sensors_init(FILE *input)
   int res;
   sensors_cleanup();
   if (sensors_init_sysfs()) {
-    if ((res = sensors_read_sysfs_chips()) || (res = sensors_read_sysfs_bus()))
+    if ((res = sensors_read_sysfs_bus()) || (res = sensors_read_sysfs_chips()))
       return res;
   } else {
-    if ((res = sensors_read_proc_chips()) || (res = sensors_read_proc_bus()))
+    if ((res = sensors_read_proc_bus()) || (res = sensors_read_proc_chips()))
       return res;
   }
   if ((res = sensors_scanner_init(input)))
@@ -103,7 +103,6 @@ void free_chip_name(sensors_chip_name name)
 void free_bus(sensors_bus bus)
 {
   free(bus.adapter);
-  free(bus.algorithm);
 }
 
 void free_chip(sensors_chip chip)

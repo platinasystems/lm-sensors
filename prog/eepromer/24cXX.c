@@ -2,7 +2,7 @@
     copyright            : (C) by 2002-2003 Stefano Barbato
     email                : stefano@codesink.org
 
-    $Id: 24cXX.c 2099 2003-11-28 03:07:48Z mds $
+    $Id: 24cXX.c 4230 2006-11-10 09:22:12Z khali $
  ***************************************************************************/
 
 /***************************************************************************
@@ -69,7 +69,8 @@ static int i2c_write_3b(struct eeprom *e, __u8 buf[3])
 
 int eeprom_open(char *dev_fqn, int addr, int type, struct eeprom* e)
 {
-	int funcs, fd, r;
+	int fd, r;
+	unsigned long funcs;
 	e->fd = e->addr = 0;
 	e->dev = 0;
 	

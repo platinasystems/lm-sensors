@@ -75,18 +75,23 @@ static int sensors_read_one_sysfs_chip(struct sysfs_device *dev)
 
 	if (sscanf(dev->name, "%d-%x", &entry.name.bus, &entry.name.addr) == 2) {
 		/* find out if legacy ISA or not */
-		snprintf(bus_path, sizeof(bus_path),
+		if (entry.name.bus == 9191)
+			entry.name.bus = SENSORS_CHIP_NAME_BUS_ISA;
+		else {
+			snprintf(bus_path, sizeof(bus_path),
 				"%s/class/i2c-adapter/i2c-%d/device/name",
 				sensors_sysfs_mount, entry.name.bus);
 
-		if ((bus_attr = sysfs_open_attribute(bus_path))) {
-			if (sysfs_read_attribute(bus_attr))
-				return -SENSORS_ERR_PARSE;
+			if ((bus_attr = sysfs_open_attribute(bus_path))) {
+				if (sysfs_read_attribute(bus_attr))
+					return -SENSORS_ERR_PARSE;
 
-			if (bus_attr->value && !strncmp(bus_attr->value, "ISA ", 4))
-				entry.name.bus = SENSORS_CHIP_NAME_BUS_ISA;
+				if (bus_attr->value
+				 && !strncmp(bus_attr->value, "ISA ", 4))
+					entry.name.bus = SENSORS_CHIP_NAME_BUS_ISA;
 
-			sysfs_close_attribute(bus_attr);
+				sysfs_close_attribute(bus_attr);
+			}
 		}
 	} else if (sscanf(dev->name, "%*[a-z0-9_].%d", &entry.name.addr) == 1) {
 		/* must be new ISA (platform driver) */
@@ -195,9 +200,12 @@ int sensors_read_sysfs_bus(void)
 		struct sysfs_device *dev;
 		struct sysfs_attribute *attr;
 
-		if (!(dev = sysfs_get_classdev_device(clsdev)))
-			continue;
-		if (!(attr = sysfs_get_device_attr(dev, "name")))
+		/* Get the adapter name from the classdev "name" attribute
+		 * (Linux 2.6.20 and later). If it fails, fall back to
+		 * the device "name" attribute (for older kernels). */
+		if (!(attr = sysfs_get_classdev_attr(clsdev, "name"))
+		 && !((dev = sysfs_get_classdev_device(clsdev)) &&
+		      (attr = sysfs_get_device_attr(dev, "name"))))
 			continue;
 
 		/* NB: attr->value[attr->len-1] == '\n'; chop that off */
@@ -207,15 +215,9 @@ int sensors_read_sysfs_bus(void)
 
 		if (!strncmp(entry.adapter, "ISA ", 4)) {
 			entry.number = SENSORS_CHIP_NAME_BUS_ISA;
-			entry.algorithm = strdup("ISA bus algorithm");
 		} else if (sscanf(clsdev->name, "i2c-%d", &entry.number) != 1) {
 			entry.number = SENSORS_CHIP_NAME_BUS_DUMMY;
-			entry.algorithm = strdup("Dummy bus algorithm");
-		} else
-			entry.algorithm = strdup("Unavailable from sysfs");
-
-		if (!entry.algorithm)
-			sensors_fatal_error(__FUNCTION__, "out of memory");
+		}
 
 		sensors_add_proc_bus(&entry);
 	}
