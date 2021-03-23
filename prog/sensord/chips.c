@@ -45,13 +45,6 @@ fmtExtra
 }
 
 static const char *
-fmtValu_0
-(const double values[], int alarm, int beep) {
-  sprintf (buff, "%.0f", values[0]);
-  return fmtExtra (alarm, beep);
-}
-
-static const char *
 fmtTemps_0
 (const double values[], int alarm, int beep) {
   sprintf (buff, "%.0f C (limit = %.0f C, hysteresis = %.0f C)", values[0], values[1], values[2]);
@@ -252,8 +245,6 @@ static const FeatureDescriptor adm1021_features[] = {
     { SENSORS_ADM1021_TEMP, SENSORS_ADM1021_TEMP_HYST, SENSORS_ADM1021_TEMP_OVER, -1 } }, /* hyst=min, over=max */
   { fmtTemps_ADM1021_1, rrdF0, DataType_temperature, ADM1021_ALARM_RTEMP_HIGH | ADM1021_ALARM_RTEMP_LOW | ADM1021_ALARM_RTEMP_NA, 0,
     { SENSORS_ADM1021_REMOTE_TEMP, SENSORS_ADM1021_REMOTE_TEMP_HYST, SENSORS_ADM1021_REMOTE_TEMP_OVER, -1 } }, /* hyst=min, over=max */
-  { fmtValu_0, NULL, DataType_other, 0, 0,
-    { SENSORS_ADM1021_DIE_CODE, -1 } },
   { NULL }
 };
 
@@ -1435,6 +1426,29 @@ static const ChipDescriptor w83793_chip = {
   w83793_names, w83793_features, 0, 0
 };
 
+/** LM90 **/
+
+static const char *lm90_names[] = {
+  SENSORS_LM90_PREFIX, SENSORS_ADM1032_PREFIX, SENSORS_LM99_PREFIX, SENSORS_LM86_PREFIX,
+  SENSORS_MAX6657_PREFIX, SENSORS_ADT7461_PREFIX, NULL
+};
+
+static const FeatureDescriptor lm90_features[] = {
+  { fmtTemps_PC87360_1, rrdF1, DataType_temperature,
+    LM90_ALARM_LOCAL_HIGH | LM90_ALARM_LOCAL_LOW | LM90_ALARM_LOCAL_CRIT, 0,
+    { SENSORS_LM90_LOCAL_TEMP, SENSORS_LM90_LOCAL_LOW,
+      SENSORS_LM90_LOCAL_HIGH, SENSORS_LM90_LOCAL_TCRIT, -1 } },
+  { fmtTemps_PC87360_1, rrdF1, DataType_temperature,
+    LM90_ALARM_REMOTE_HIGH | LM90_ALARM_REMOTE_LOW | LM90_ALARM_REMOTE_CRIT, 0,
+    { SENSORS_LM90_REMOTE_TEMP, SENSORS_LM90_REMOTE_LOW,
+      SENSORS_LM90_REMOTE_HIGH, SENSORS_LM90_REMOTE_TCRIT, -1 } },
+  { NULL }
+};
+
+static const ChipDescriptor lm90_chip = {
+  lm90_names, lm90_features, SENSORS_LM90_ALARMS, 0
+};
+
 
 /** ALL **/
 
@@ -1467,5 +1481,6 @@ const ChipDescriptor * const knownChips[] = {
   &vt1211_chip,
   &k8temp_chip,
   &w83793_chip,
+  &lm90_chip,
   NULL
 };

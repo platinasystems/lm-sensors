@@ -294,9 +294,6 @@ static struct i2c_driver asb100_driver = {
 #define ASB100_ALARM_CHAS	0x1000
 #define ASB100_ALARM_TEMP3	0x2000
 
-#define ASB100_ALARM_IN7	0x10000 /* ? */
-#define ASB100_ALARM_IN8	0x20000	/* ? */
-
 /* -- SENSORS SYSCTL END -- */
 
 /* These files are created for each detected chip. This is just a template;
@@ -679,12 +676,8 @@ static void asb100_write_value(struct i2c_client *client, u16 reg, u16 value)
 static void asb100_init_client(struct i2c_client *client)
 {
 	struct asb100_data *data = client->data;
-	int vid = 0;
 
-	vid = asb100_read_value(client, ASB100_REG_VID_FANDIV) & 0x0f;
-	vid |= (asb100_read_value(client, ASB100_REG_CHIPID) & 0x01) << 4;
 	data->vrm = ASB100_DEFAULT_VRM;
-	vid = vid_from_reg(vid, data->vrm);
 
 	/* Start monitoring */
 	asb100_write_value(client, ASB100_REG_CONFIG, 
