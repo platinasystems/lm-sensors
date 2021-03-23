@@ -165,6 +165,11 @@ SENSORS_INSMOD_6(lm85b, lm85c, adm1027, adt7463, emc6d100, emc6d102);
 #define EMC6D100_REG_IN_MIN(nr) (0x73 + ((nr)-5) * 2)
 #define EMC6D100_REG_IN_MAX(nr) (0x74 + ((nr)-5) * 2)
 
+#define EMC6D102_REG_EXTEND_ADC1 0x85
+#define EMC6D102_REG_EXTEND_ADC2 0x86
+#define EMC6D102_REG_EXTEND_ADC3 0x87
+#define EMC6D102_REG_EXTEND_ADC4 0x88
+
 /* Conversions. Rounding and limit checking is only done on the TO_REG 
    variants. Note that you should be a bit careful with which arguments
    these macros are called: arguments may be evaluated more than once.
@@ -186,7 +191,7 @@ static int lm85_scaling[] = {  /* .001 Volts */
 #define INS_FROM_REG(n,val) (INSEXT_FROM_REG(n,val,0))
 
 /* FAN speed is measured using 90kHz clock */
-#define FAN_TO_REG(val)  (SENSORS_LIMIT( (val)<=0?0: 5400000/(val),0,65534))
+#define FAN_TO_REG(val)  ((val)<=0?0xffff:SENSORS_LIMIT(5400000/(val),1,65534))
 #define FAN_FROM_REG(val) ((val)==0?-1:(val)==0xffff?0:5400000/(val))
 
 /* Temperature is reported in .01 degC increments */
@@ -888,6 +893,7 @@ static int lm85_detect(struct i2c_adapter *adapter, int address,
 	data->therm_ovfl = 0;
 
 	init_MUTEX(&data->update_lock);
+	data->extend_adc = 0;
 
 	/* Initialize the LM85 chip */
 	lm85_init_client(new_client);
@@ -1114,7 +1120,6 @@ static void lm85_update_client(struct i2c_client *client)
 			    lm85_read_value(client, ADM1027_REG_EXTEND_ADC);
 			break ;
 		default :
-			data->extend_adc = 0 ;
 			break ;
 		}
 
@@ -1140,7 +1145,7 @@ static void lm85_update_client(struct i2c_client *client)
 
 		data->alarms = lm85_read_value(client, LM85_REG_ALARM);
 
-		switch( ((struct lm85_data *)(client->data))->type ) {
+		switch( data->type ) {
 		case adt7463 :
 			/* REG_THERM code duplicated in therm_signal() */
 			i = lm85_read_value(client, ADT7463_REG_THERM);
@@ -1162,6 +1167,26 @@ static void lm85_update_client(struct i2c_client *client)
 			    lm85_read_value(client, EMC6D100_REG_ALARM3) << 16;
 
 			break ;
+		case emc6d102 :
+			/* Have to read LSB bits after the MSB ones because
+			   the reading of the MSB bits has frozen the
+			   LSBs (backward from the ADM1027).
+			   We use only two extra bits per channel, and encode
+			   them in the same format the ADM1027 uses, to keep the
+			   rest of the code unchanged.
+			 */
+			i = lm85_read_value(client, EMC6D102_REG_EXTEND_ADC1);
+			data->extend_adc = (i & 0xcc) << 8; /* temp3, temp1 */
+			i = lm85_read_value(client, EMC6D102_REG_EXTEND_ADC2);
+			data->extend_adc |= (i & 0x0c) << 10; /* temp2 */
+			data->extend_adc |= (i & 0xc0) << 2; /* in4 */
+			i = lm85_read_value(client, EMC6D102_REG_EXTEND_ADC3);
+			data->extend_adc |= (i & 0x0c) >> 2; /* in0 */
+			data->extend_adc |= i & 0xc0; /* in3 */
+			i = lm85_read_value(client, EMC6D102_REG_EXTEND_ADC4);
+			data->extend_adc |= i & 0x0c; /* in1 */
+			data->extend_adc |= (i & 0xc0) >> 2; /* in2 */
+			break;
 		default : break ; /* no warnings */
 		}
 
@@ -1228,7 +1253,7 @@ static void lm85_update_client(struct i2c_client *client)
 		i = lm85_read_value(client, LM85_REG_AFAN_HYST2);
 		data->zone[2].hyst = (i>>4) & 0x0f ;
 
-		switch( ((struct lm85_data *)(client->data))->type ) {
+		switch( data->type ) {
 		case lm85b :
 		case lm85c :
 			data->tach_mode = lm85_read_value(client,
@@ -1300,7 +1325,7 @@ void lm85_in(struct i2c_client *client, int operation, int ctl_name,
 	if (operation == SENSORS_PROC_REAL_INFO)
 		*nrels_mag = 3;  /* 1.000 */
 	else if (operation == SENSORS_PROC_REAL_READ) {
-		int  ext = 0 ;
+		int ext;
 		lm85_update_client(client);
 		ext = EXT_FROM_REG(data->extend_adc, nr);
 		results[0] = INS_FROM_REG(nr,data->in_min[nr]);
@@ -1363,7 +1388,7 @@ void lm85_temp(struct i2c_client *client, int operation, int ctl_name,
 	if (operation == SENSORS_PROC_REAL_INFO)
 		*nrels_mag = 2;
 	else if (operation == SENSORS_PROC_REAL_READ) {
-		int  ext = 0 ;
+		int ext;
 		lm85_update_client(client);
 
 		/* +5 for offset of temp data in ext reg */

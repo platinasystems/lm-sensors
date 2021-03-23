@@ -1106,7 +1106,7 @@ static sensors_chip_feature as99127f_features[] =
                               W83781D_SYSCTL_FAN1, VALUE(2), 0 },
     { { SENSORS_W83782D_FAN2, "fan2", NOMAP, NOMAP, R }, 
                               W83781D_SYSCTL_FAN2, VALUE(2), 0 },
-    { { SENSORS_W83781D_FAN3, "fan3", NOMAP, NOMAP, R }, 
+    { { SENSORS_W83782D_FAN3, "fan3", NOMAP, NOMAP, R }, 
                               W83781D_SYSCTL_FAN3, VALUE(2), 0 },
     { { SENSORS_W83782D_FAN1_MIN, "fan1_min", SENSORS_W83782D_FAN1, 
                                   SENSORS_W83782D_FAN1, RW }, 
@@ -1114,7 +1114,7 @@ static sensors_chip_feature as99127f_features[] =
     { { SENSORS_W83782D_FAN2_MIN, "fan2_min", SENSORS_W83782D_FAN2, 
                                   SENSORS_W83782D_FAN2, RW }, 
                                   W83781D_SYSCTL_FAN2, VALUE(1), 0 },
-    { { SENSORS_W83781D_FAN3_MIN, "fan3_min", SENSORS_W83781D_FAN3, 
+    { { SENSORS_W83782D_FAN3_MIN, "fan3_min", SENSORS_W83782D_FAN3, 
                                   SENSORS_W83782D_FAN3, RW }, 
                                   W83781D_SYSCTL_FAN3, VALUE(1), 0 },
     { { SENSORS_W83782D_TEMP1, "temp1", NOMAP, NOMAP, R }, 
@@ -1149,7 +1149,7 @@ static sensors_chip_feature as99127f_features[] =
                                   W83781D_SYSCTL_FAN_DIV, VALUE(1), 0 },
     { { SENSORS_W83782D_FAN2_DIV, "fan2_div", SENSORS_W83782D_FAN2, NOMAP, RW }, 
                                   W83781D_SYSCTL_FAN_DIV, VALUE(2), 0 },
-    { { SENSORS_W83782D_FAN3_DIV, "fan3_div", SENSORS_W83781D_FAN3, NOMAP, RW }, 
+    { { SENSORS_W83782D_FAN3_DIV, "fan3_div", SENSORS_W83782D_FAN3, NOMAP, RW }, 
                                   W83781D_SYSCTL_FAN_DIV, VALUE(3), 0 },
     { { SENSORS_W83782D_ALARMS, "alarms", NOMAP, NOMAP, R }, 
                                 W83781D_SYSCTL_ALARMS, VALUE(1), 0 },
@@ -1367,7 +1367,7 @@ static sensors_chip_feature w83782d_features[] =
                               W83781D_SYSCTL_FAN1, VALUE(2), 0 },
     { { SENSORS_W83782D_FAN2, "fan2", NOMAP, NOMAP, R }, 
                               W83781D_SYSCTL_FAN2, VALUE(2), 0 },
-    { { SENSORS_W83781D_FAN3, "fan3", NOMAP, NOMAP, R }, 
+    { { SENSORS_W83782D_FAN3, "fan3", NOMAP, NOMAP, R }, 
                               W83781D_SYSCTL_FAN3, VALUE(2), 0 },
     { { SENSORS_W83782D_FAN1_MIN, "fan1_min", SENSORS_W83782D_FAN1, 
                                   SENSORS_W83782D_FAN1, RW }, 
@@ -1375,7 +1375,7 @@ static sensors_chip_feature w83782d_features[] =
     { { SENSORS_W83782D_FAN2_MIN, "fan2_min", SENSORS_W83782D_FAN2, 
                                   SENSORS_W83782D_FAN2, RW }, 
                                   W83781D_SYSCTL_FAN2, VALUE(1), 0 },
-    { { SENSORS_W83781D_FAN3_MIN, "fan3_min", SENSORS_W83781D_FAN3, 
+    { { SENSORS_W83782D_FAN3_MIN, "fan3_min", SENSORS_W83782D_FAN3, 
                                   SENSORS_W83782D_FAN3, RW }, 
                                   W83781D_SYSCTL_FAN3, VALUE(1), 0 },
     { { SENSORS_W83782D_TEMP1, "temp1", NOMAP, NOMAP, R }, 
@@ -1410,7 +1410,7 @@ static sensors_chip_feature w83782d_features[] =
                                   W83781D_SYSCTL_FAN_DIV, VALUE(1), 0 },
     { { SENSORS_W83782D_FAN2_DIV, "fan2_div", SENSORS_W83782D_FAN2, NOMAP, RW }, 
                                   W83781D_SYSCTL_FAN_DIV, VALUE(2), 0 },
-    { { SENSORS_W83782D_FAN3_DIV, "fan3_div", SENSORS_W83781D_FAN3, NOMAP, RW }, 
+    { { SENSORS_W83782D_FAN3_DIV, "fan3_div", SENSORS_W83782D_FAN3, NOMAP, RW }, 
                                   W83781D_SYSCTL_FAN_DIV, VALUE(3), 0 },
     { { SENSORS_W83782D_ALARMS, "alarms", NOMAP, NOMAP, R }, 
                                 W83781D_SYSCTL_ALARMS, VALUE(1), 0 },
@@ -1420,11 +1420,11 @@ static sensors_chip_feature w83782d_features[] =
     { { SENSORS_W83782D_BEEPS, "beeps", SENSORS_W83782D_ALARMS, 
                                SENSORS_W83782D_ALARMS, RW }, 
                                W83781D_SYSCTL_BEEP, VALUE(2), 0 },
-    { { SENSORS_W83782D_SENS1, "sensor1", NOMAP, NOMAP, RW }, 
+    { { SENSORS_W83782D_SENS1, "sensor1", SENSORS_W83782D_TEMP1, NOMAP, RW }, 
                                W83781D_SYSCTL_SENS1, VALUE(1), 0 },
-    { { SENSORS_W83782D_SENS2, "sensor2", NOMAP, NOMAP, RW }, 
+    { { SENSORS_W83782D_SENS2, "sensor2", SENSORS_W83782D_TEMP2, NOMAP, RW }, 
                                W83781D_SYSCTL_SENS2, VALUE(1), 0 },
-    { { SENSORS_W83782D_SENS3, "sensor3", NOMAP, NOMAP, RW }, 
+    { { SENSORS_W83782D_SENS3, "sensor3", SENSORS_W83782D_TEMP3, NOMAP, RW }, 
                                W83781D_SYSCTL_SENS3, VALUE(1), 0 },
     { { 0 }, 0 }
   };
@@ -1502,21 +1502,21 @@ static sensors_chip_feature w83783s_features[] =
     { { SENSORS_W83783S_FAN3_MIN, "fan3_min", SENSORS_W83783S_FAN3, 
                                   SENSORS_W83783S_FAN3, RW }, 
                                   W83781D_SYSCTL_FAN3, VALUE(1), 0 },
-    { { SENSORS_W83782D_TEMP1, "temp1", NOMAP, NOMAP, R }, 
+    { { SENSORS_W83783S_TEMP1, "temp1", NOMAP, NOMAP, R }, 
                                W83781D_SYSCTL_TEMP1, VALUE(3), 1 },
-    { { SENSORS_W83782D_TEMP1_HYST, "temp1_hyst", SENSORS_W83782D_TEMP1, 
-                                    SENSORS_W83782D_TEMP1, RW }, 
+    { { SENSORS_W83783S_TEMP1_HYST, "temp1_hyst", SENSORS_W83783S_TEMP1, 
+                                    SENSORS_W83783S_TEMP1, RW }, 
                                     W83781D_SYSCTL_TEMP1, VALUE(2), 1 },
-    { { SENSORS_W83782D_TEMP1_OVER, "temp1_over", SENSORS_W83782D_TEMP1, 
-                                    SENSORS_W83782D_TEMP1, RW }, 
+    { { SENSORS_W83783S_TEMP1_OVER, "temp1_over", SENSORS_W83783S_TEMP1, 
+                                    SENSORS_W83783S_TEMP1, RW }, 
                                     W83781D_SYSCTL_TEMP1, VALUE(1), 1 },
-    { { SENSORS_W83782D_TEMP2, "temp2", NOMAP, NOMAP, R }, 
+    { { SENSORS_W83783S_TEMP2, "temp2", NOMAP, NOMAP, R }, 
                                W83781D_SYSCTL_TEMP2, VALUE(3), 1 },
-    { { SENSORS_W83782D_TEMP2_HYST, "temp2_hyst", SENSORS_W83782D_TEMP2, 
-                                    SENSORS_W83782D_TEMP2, RW }, 
+    { { SENSORS_W83783S_TEMP2_HYST, "temp2_hyst", SENSORS_W83783S_TEMP2, 
+                                    SENSORS_W83783S_TEMP2, RW }, 
                                     W83781D_SYSCTL_TEMP2, VALUE(2), 1 },
-    { { SENSORS_W83782D_TEMP2_OVER, "temp2_over", SENSORS_W83782D_TEMP2, 
-                                    SENSORS_W83782D_TEMP2, RW }, 
+    { { SENSORS_W83783S_TEMP2_OVER, "temp2_over", SENSORS_W83783S_TEMP2, 
+                                    SENSORS_W83783S_TEMP2, RW }, 
                                     W83781D_SYSCTL_TEMP2, VALUE(1), 1 },
     { { SENSORS_W83783S_VID, "vid", NOMAP, NOMAP, R }, 
                              W83781D_SYSCTL_VID, VALUE(1), 3 },
@@ -1536,9 +1536,9 @@ static sensors_chip_feature w83783s_features[] =
     { { SENSORS_W83783S_BEEPS, "beeps", SENSORS_W83783S_ALARMS, 
                                SENSORS_W83783S_ALARMS, RW }, 
                                W83781D_SYSCTL_BEEP, VALUE(2), 0 },
-    { { SENSORS_W83783S_SENS1, "sensor1", NOMAP, NOMAP, RW }, 
+    { { SENSORS_W83783S_SENS1, "sensor1", SENSORS_W83783S_TEMP1, NOMAP, RW }, 
                                W83781D_SYSCTL_SENS1, VALUE(1), 0 },
-    { { SENSORS_W83783S_SENS2, "sensor2", NOMAP, NOMAP, RW }, 
+    { { SENSORS_W83783S_SENS2, "sensor2", SENSORS_W83783S_TEMP2, NOMAP, RW }, 
                                W83781D_SYSCTL_SENS2, VALUE(1), 0 },
     { { 0 }, 0 }
   };
@@ -1682,7 +1682,7 @@ static sensors_chip_feature w83791d_features[] =
                                   W83781D_SYSCTL_FAN_DIV, VALUE(1), 0 },
     { { SENSORS_W83791D_FAN2_DIV, "fan2_div", SENSORS_W83791D_FAN2, NOMAP, RW }, 
                                   W83781D_SYSCTL_FAN_DIV, VALUE(2), 0 },
-    { { SENSORS_W83791D_FAN3_DIV, "fan3_div", SENSORS_W83781D_FAN3, NOMAP, RW }, 
+    { { SENSORS_W83791D_FAN3_DIV, "fan3_div", SENSORS_W83791D_FAN3, NOMAP, RW }, 
                                   W83781D_SYSCTL_FAN_DIV, VALUE(3), 0 },
     { { SENSORS_W83791D_FAN4_DIV, "fan4_div", SENSORS_W83791D_FAN4, NOMAP, RW }, 
                                   W83781D_SYSCTL_FAN_DIV, VALUE(4), 0 },
@@ -1950,30 +1950,29 @@ static sensors_chip_feature w83l785ts_features[] =
     { { 0 }, 0 }
   };
 
-/* No support for Linux 2.4 yet (sysctl) */
 /* W83627DHG uses same structure excluding in9* */
 static sensors_chip_feature w83627ehf_features[] =
   {
     { { SENSORS_W83627EHF_IN0, "in0", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN0, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN1, "in1", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN1, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN2, "in2", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN2, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN3, "in3", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN3, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN4, "in4", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN4, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN5, "in5", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN5, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN6, "in6", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN6, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN7, "in7", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN7, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN8, "in8", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN8, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN9, "in9", NOMAP, NOMAP, R }, 
-                               NOSYSCTL, VALUE(3), 3 },
+                               W83627EHF_SYSCTL_IN9, VALUE(3), 3 },
     { { SENSORS_W83627EHF_IN0_ALARM, "in0_alarm", SENSORS_W83627EHF_IN0, NOMAP, 
                                      R }, 
                                      NOSYSCTL, VALUE(1), 0 },
@@ -2006,74 +2005,74 @@ static sensors_chip_feature w83627ehf_features[] =
                                      NOSYSCTL, VALUE(1), 0 },
     { { SENSORS_W83627EHF_IN0_MIN, "in0_min", SENSORS_W83627EHF_IN0, 
                                    SENSORS_W83627EHF_IN0, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN0, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN1_MIN, "in1_min", SENSORS_W83627EHF_IN1, 
                                    SENSORS_W83627EHF_IN1, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN1, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN2_MIN, "in2_min", SENSORS_W83627EHF_IN2, 
                                    SENSORS_W83627EHF_IN2, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN2, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN3_MIN, "in3_min", SENSORS_W83627EHF_IN3, 
                                    SENSORS_W83627EHF_IN3, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN3, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN4_MIN, "in4_min", SENSORS_W83627EHF_IN4, 
                                    SENSORS_W83627EHF_IN4, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN4, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN5_MIN, "in5_min", SENSORS_W83627EHF_IN5, 
                                    SENSORS_W83627EHF_IN5, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN5, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN6_MIN, "in6_min", SENSORS_W83627EHF_IN6, 
                                    SENSORS_W83627EHF_IN6, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN6, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN7_MIN, "in7_min", SENSORS_W83627EHF_IN7, 
                                    SENSORS_W83627EHF_IN7, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN7, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN8_MIN, "in8_min", SENSORS_W83627EHF_IN8, 
                                    SENSORS_W83627EHF_IN8, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN8, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN9_MIN, "in9_min", SENSORS_W83627EHF_IN9, 
                                    SENSORS_W83627EHF_IN9, RW }, 
-                                   NOSYSCTL, VALUE(1), 3 },
+                                   W83627EHF_SYSCTL_IN9, VALUE(1), 3 },
     { { SENSORS_W83627EHF_IN0_MAX, "in0_max", SENSORS_W83627EHF_IN0, 
                                    SENSORS_W83627EHF_IN0, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN0, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN1_MAX, "in1_max", SENSORS_W83627EHF_IN1, 
                                    SENSORS_W83627EHF_IN1, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN1, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN2_MAX, "in2_max", SENSORS_W83627EHF_IN2, 
                                    SENSORS_W83627EHF_IN2, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN2, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN3_MAX, "in3_max", SENSORS_W83627EHF_IN3, 
                                    SENSORS_W83627EHF_IN3, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN3, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN4_MAX, "in4_max", SENSORS_W83627EHF_IN4, 
                                    SENSORS_W83627EHF_IN4, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN4, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN5_MAX, "in5_max", SENSORS_W83627EHF_IN5, 
                                    SENSORS_W83627EHF_IN5, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN5, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN6_MAX, "in6_max", SENSORS_W83627EHF_IN6, 
                                    SENSORS_W83627EHF_IN6, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN6, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN7_MAX, "in7_max", SENSORS_W83627EHF_IN7, 
                                    SENSORS_W83627EHF_IN7, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN7, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN8_MAX, "in8_max", SENSORS_W83627EHF_IN8, 
                                    SENSORS_W83627EHF_IN8, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN8, VALUE(2), 3 },
     { { SENSORS_W83627EHF_IN9_MAX, "in9_max", SENSORS_W83627EHF_IN9, 
                                    SENSORS_W83627EHF_IN9, RW }, 
-                                   NOSYSCTL, VALUE(2), 3 },
+                                   W83627EHF_SYSCTL_IN9, VALUE(2), 3 },
     { { SENSORS_W83627EHF_FAN1, "fan1", NOMAP, NOMAP, R }, 
-                                NOSYSCTL, VALUE(2), 0 },
+                                W83627EHF_SYSCTL_FAN1, VALUE(2), 0 },
     { { SENSORS_W83627EHF_FAN2, "fan2", NOMAP, NOMAP, R }, 
-                                NOSYSCTL, VALUE(2), 0 },
+                                W83627EHF_SYSCTL_FAN2, VALUE(2), 0 },
     { { SENSORS_W83627EHF_FAN3, "fan3", NOMAP, NOMAP, R }, 
-                                NOSYSCTL, VALUE(2), 0 },
+                                W83627EHF_SYSCTL_FAN3, VALUE(2), 0 },
     { { SENSORS_W83627EHF_FAN4, "fan4", NOMAP, NOMAP, R }, 
-                                NOSYSCTL, VALUE(2), 0 },
+                                W83627EHF_SYSCTL_FAN4, VALUE(2), 0 },
     { { SENSORS_W83627EHF_FAN5, "fan5", NOMAP, NOMAP, R }, 
-                                NOSYSCTL, VALUE(2), 0 },
+                                W83627EHF_SYSCTL_FAN5, VALUE(2), 0 },
     { { SENSORS_W83627EHF_FAN1_ALARM, "fan1_alarm", SENSORS_W83627EHF_FAN1, 
                                       NOMAP, R }, 
                                       NOSYSCTL, VALUE(1), 0 },
@@ -2091,35 +2090,35 @@ static sensors_chip_feature w83627ehf_features[] =
                                       NOSYSCTL, VALUE(1), 0 },
     { { SENSORS_W83627EHF_FAN1_MIN, "fan1_min", SENSORS_W83627EHF_FAN1, 
                                     SENSORS_W83627EHF_FAN1, RW }, 
-                                    NOSYSCTL, VALUE(1), 0 },
+                                    W83627EHF_SYSCTL_FAN1, VALUE(1), 0 },
     { { SENSORS_W83627EHF_FAN2_MIN, "fan2_min", SENSORS_W83627EHF_FAN2, 
                                     SENSORS_W83627EHF_FAN2, RW }, 
-                                    NOSYSCTL, VALUE(1), 0 },
+                                    W83627EHF_SYSCTL_FAN2, VALUE(1), 0 },
     { { SENSORS_W83627EHF_FAN3_MIN, "fan3_min", SENSORS_W83627EHF_FAN3, 
                                     SENSORS_W83627EHF_FAN3, RW }, 
-                                    NOSYSCTL, VALUE(1), 0 },
+                                    W83627EHF_SYSCTL_FAN3, VALUE(1), 0 },
     { { SENSORS_W83627EHF_FAN4_MIN, "fan4_min", SENSORS_W83627EHF_FAN4, 
                                     SENSORS_W83627EHF_FAN4, RW }, 
-                                    NOSYSCTL, VALUE(1), 0 },
+                                    W83627EHF_SYSCTL_FAN4, VALUE(1), 0 },
     { { SENSORS_W83627EHF_FAN5_MIN, "fan5_min", SENSORS_W83627EHF_FAN5, 
                                     SENSORS_W83627EHF_FAN5, RW }, 
-                                    NOSYSCTL, VALUE(1), 0 },
+                                    W83627EHF_SYSCTL_FAN5, VALUE(1), 0 },
     { { SENSORS_W83627EHF_FAN1_DIV, "fan1_div", SENSORS_W83627EHF_FAN1, NOMAP, R }, 
-                                    NOSYSCTL, VALUE(1), 0 },
+                                    W83627EHF_SYSCTL_FAN_DIV, VALUE(1), 0 },
     { { SENSORS_W83627EHF_FAN2_DIV, "fan2_div", SENSORS_W83627EHF_FAN2, NOMAP, R }, 
-                                    NOSYSCTL, VALUE(2), 0 },
+                                    W83627EHF_SYSCTL_FAN_DIV, VALUE(2), 0 },
     { { SENSORS_W83627EHF_FAN3_DIV, "fan3_div", SENSORS_W83627EHF_FAN3, NOMAP, R }, 
-                                    NOSYSCTL, VALUE(3), 0 },
+                                    W83627EHF_SYSCTL_FAN_DIV, VALUE(3), 0 },
     { { SENSORS_W83627EHF_FAN4_DIV, "fan4_div", SENSORS_W83627EHF_FAN4, NOMAP, R }, 
-                                    NOSYSCTL, VALUE(4), 0 },
+                                    W83627EHF_SYSCTL_FAN_DIV, VALUE(4), 0 },
     { { SENSORS_W83627EHF_FAN5_DIV, "fan5_div", SENSORS_W83627EHF_FAN5, NOMAP, R }, 
-                                    NOSYSCTL, VALUE(5), 0 },
+                                    W83627EHF_SYSCTL_FAN_DIV, VALUE(5), 0 },
     { { SENSORS_W83627EHF_TEMP1, "temp1", NOMAP, NOMAP, R }, 
-                                 NOSYSCTL, VALUE(3), 0 },
+                                 W83627EHF_SYSCTL_TEMP1, VALUE(3), 1 },
     { { SENSORS_W83627EHF_TEMP2, "temp2", NOMAP, NOMAP, R }, 
-                                 NOSYSCTL, VALUE(3), 1 },
+                                 W83627EHF_SYSCTL_TEMP2, VALUE(3), 1 },
     { { SENSORS_W83627EHF_TEMP3, "temp3", NOMAP, NOMAP, R }, 
-                                 NOSYSCTL, VALUE(3), 1 },
+                                 W83627EHF_SYSCTL_TEMP3, VALUE(3), 1 },
     { { SENSORS_W83627EHF_TEMP1_ALARM, "temp1_alarm", SENSORS_W83627EHF_TEMP1, 
                                        NOMAP, R }, 
                                        NOSYSCTL, VALUE(1), 0 },
@@ -2131,22 +2130,37 @@ static sensors_chip_feature w83627ehf_features[] =
                                        NOSYSCTL, VALUE(1), 0 },
     { { SENSORS_W83627EHF_TEMP1_OVER, "temp1_over", SENSORS_W83627EHF_TEMP1, 
                                       SENSORS_W83627EHF_TEMP1, RW }, 
-                                      NOSYSCTL, VALUE(1), 0 },
+                                      W83627EHF_SYSCTL_TEMP1, VALUE(1), 1 },
     { { SENSORS_W83627EHF_TEMP2_OVER, "temp2_over", SENSORS_W83627EHF_TEMP2, 
                                       SENSORS_W83627EHF_TEMP2, RW }, 
-                                      NOSYSCTL, VALUE(1), 1 },
+                                      W83627EHF_SYSCTL_TEMP2, VALUE(1), 1 },
     { { SENSORS_W83627EHF_TEMP3_OVER, "temp3_over", SENSORS_W83627EHF_TEMP3, 
                                       SENSORS_W83627EHF_TEMP3, RW }, 
-                                      NOSYSCTL, VALUE(1), 1 },
+                                      W83627EHF_SYSCTL_TEMP3, VALUE(1), 1 },
     { { SENSORS_W83627EHF_TEMP1_HYST, "temp1_hyst", SENSORS_W83627EHF_TEMP1, 
                                       SENSORS_W83627EHF_TEMP1, RW }, 
-                                      NOSYSCTL, VALUE(2), 0 },
+                                      W83627EHF_SYSCTL_TEMP1, VALUE(2), 1 },
     { { SENSORS_W83627EHF_TEMP2_HYST, "temp2_hyst", SENSORS_W83627EHF_TEMP2, 
                                       SENSORS_W83627EHF_TEMP2, RW }, 
-                                      NOSYSCTL, VALUE(2), 1 },
+                                      W83627EHF_SYSCTL_TEMP2, VALUE(2), 1 },
     { { SENSORS_W83627EHF_TEMP3_HYST, "temp3_hyst", SENSORS_W83627EHF_TEMP3, 
                                       SENSORS_W83627EHF_TEMP3, RW }, 
-                                      NOSYSCTL, VALUE(2), 1 },
+                                      W83627EHF_SYSCTL_TEMP3, VALUE(2), 1 },
+    { { SENSORS_W83627EHF_TEMP1_TYPE, "sensor1", SENSORS_W83627EHF_TEMP1, 
+                                      NOMAP, R }, 
+                                      W83627EHF_SYSCTL_SENSOR1, VALUE(1), 0 },
+    { { SENSORS_W83627EHF_TEMP2_TYPE, "sensor2", SENSORS_W83627EHF_TEMP2, 
+                                      NOMAP, R }, 
+                                      W83627EHF_SYSCTL_SENSOR2, VALUE(1), 0 },
+    { { SENSORS_W83627EHF_TEMP3_TYPE, "sensor3", SENSORS_W83627EHF_TEMP3, 
+                                      NOMAP, R }, 
+                                      W83627EHF_SYSCTL_SENSOR3, VALUE(1), 0 },
+    { { SENSORS_W83627EHF_VID, "vid", NOMAP, NOMAP, R },
+                                      W83627EHF_SYSCTL_VID, VALUE(1), 3 },
+    { { SENSORS_W83627EHF_VRM, "vrm", NOMAP, NOMAP, RW },
+                                      W83627EHF_SYSCTL_VRM, VALUE(1), 1 },
+    { { SENSORS_W83627EHF_ALARMS, "alarms", NOMAP, NOMAP, R }, 
+                                      W83627EHF_SYSCTL_ALARMS, VALUE(1), 0 },
     { { 0 }, 0 }
   };
 
@@ -4148,6 +4162,10 @@ static sensors_chip_feature it87_features[] =
                            IT87_SYSCTL_FAN2, VALUE(2), 0 },
     { { SENSORS_IT87_FAN3, "fan3", NOMAP, NOMAP, R }, 
                            IT87_SYSCTL_FAN3, VALUE(2), 0 },
+    { { SENSORS_IT87_FAN4, "fan4", NOMAP, NOMAP, R },
+                           NOSYSCTL, VALUE(2), 0 },
+    { { SENSORS_IT87_FAN5, "fan5", NOMAP, NOMAP, R },
+                           NOSYSCTL, VALUE(2), 0 },
     { { SENSORS_IT87_FAN1_MIN, "fan1_min", SENSORS_IT87_FAN1, SENSORS_IT87_FAN1, 
                                RW }, 
                                IT87_SYSCTL_FAN1, VALUE(1), 0 },
@@ -4157,6 +4175,12 @@ static sensors_chip_feature it87_features[] =
     { { SENSORS_IT87_FAN3_MIN, "fan3_min", SENSORS_IT87_FAN3, SENSORS_IT87_FAN3, 
                                RW }, 
                                IT87_SYSCTL_FAN3, VALUE(1), 0 },
+    { { SENSORS_IT87_FAN4_MIN, "fan4_min", SENSORS_IT87_FAN4, SENSORS_IT87_FAN4,
+                               RW },
+                               NOSYSCTL, VALUE(1), 0 },
+    { { SENSORS_IT87_FAN5_MIN, "fan5_min", SENSORS_IT87_FAN5, SENSORS_IT87_FAN5,
+                               RW },
+                               NOSYSCTL, VALUE(1), 0 },
     { { SENSORS_IT87_TEMP1, "temp1", NOMAP, NOMAP, R }, 
                             IT87_SYSCTL_TEMP1, VALUE(3), 1 },
     { { SENSORS_IT87_TEMP2, "temp2", NOMAP, NOMAP, R }, 
@@ -4191,11 +4215,11 @@ static sensors_chip_feature it87_features[] =
                                IT87_SYSCTL_FAN_DIV, VALUE(3), 0 },
     { { SENSORS_IT87_ALARMS, "alarms", NOMAP, NOMAP, R }, 
                              IT87_SYSCTL_ALARMS, VALUE(1) },
-    { { SENSORS_IT87_SENS1, "sensor1", NOMAP, NOMAP, RW }, 
+    { { SENSORS_IT87_SENS1, "sensor1", SENSORS_IT87_TEMP1, NOMAP, RW }, 
                             IT87_SYSCTL_SENS1, VALUE(1), 0 },
-    { { SENSORS_IT87_SENS2, "sensor2", NOMAP, NOMAP, RW }, 
+    { { SENSORS_IT87_SENS2, "sensor2", SENSORS_IT87_TEMP2, NOMAP, RW }, 
                             IT87_SYSCTL_SENS2, VALUE(1), 0 },
-    { { SENSORS_IT87_SENS3, "sensor3", NOMAP, NOMAP, RW }, 
+    { { SENSORS_IT87_SENS3, "sensor3", SENSORS_IT87_TEMP3, NOMAP, RW }, 
                             IT87_SYSCTL_SENS3, VALUE(1), 0 },
     { { 0 }, 0 }
   };
@@ -5703,11 +5727,11 @@ static sensors_chip_feature max6650_features[] =
 
 #define SENSORS_SMSC47B397_TEMP(nr) \
 	{ { SENSORS_SMSC47B397_TEMP##nr, "temp" #nr, NOMAP, NOMAP, R }, \
-	 	0, VALUE(1), 1 }
+	 	NOSYSCTL, VALUE(1), 0 }
 
 #define SENSORS_SMSC47B397_FAN(nr) \
 	{ { SENSORS_SMSC47B397_FAN##nr, "fan" #nr, NOMAP, NOMAP, R }, \
-		0, VALUE(1), 1 }
+		NOSYSCTL, VALUE(1), 0 }
 
 static sensors_chip_feature smsc47b397_features[] =
 {
@@ -5854,11 +5878,11 @@ static sensors_chip_feature f71805f_features[] =
     { { SENSORS_F71805F_TEMP_HYST(3), "temp3_hyst", SENSORS_F71805F_TEMP(3), 
                                    SENSORS_F71805F_TEMP(3), RW }, 
                                    F71805F_SYSCTL_TEMP3, VALUE(2), 0 },
-    { { SENSORS_F71805F_TEMP_TYPE(1), "sensor1", NOMAP, NOMAP, R }, 
+    { { SENSORS_F71805F_TEMP_TYPE(1), "sensor1", SENSORS_F71805F_TEMP(1), NOMAP, R }, 
                                    F71805F_SYSCTL_SENSOR1, VALUE(1), 0 },
-    { { SENSORS_F71805F_TEMP_TYPE(2), "sensor2", NOMAP, NOMAP, R }, 
+    { { SENSORS_F71805F_TEMP_TYPE(2), "sensor2", SENSORS_F71805F_TEMP(2), NOMAP, R }, 
                                    F71805F_SYSCTL_SENSOR2, VALUE(1), 0 },
-    { { SENSORS_F71805F_TEMP_TYPE(3), "sensor3", NOMAP, NOMAP, R }, 
+    { { SENSORS_F71805F_TEMP_TYPE(3), "sensor3", SENSORS_F71805F_TEMP(3), NOMAP, R }, 
                                    F71805F_SYSCTL_SENSOR3, VALUE(1), 0 },
 /* 3 alarm bitvectors */
     { { SENSORS_F71805F_ALARMS_IN, "alarms_in", NOMAP, NOMAP, R }, 
@@ -5938,6 +5962,40 @@ static sensors_chip_feature abituguru_features[] =
 	{ { 0 }, 0 }
 };
 
+static sensors_chip_feature abituguru3_features[] =
+{
+	SENSORS_ABITUGURU_IN_FEATURES(0),
+	SENSORS_ABITUGURU_IN_FEATURES(1),
+	SENSORS_ABITUGURU_IN_FEATURES(2),
+	SENSORS_ABITUGURU_IN_FEATURES(3),
+	SENSORS_ABITUGURU_IN_FEATURES(4),
+	SENSORS_ABITUGURU_IN_FEATURES(5),
+	SENSORS_ABITUGURU_IN_FEATURES(6),
+	SENSORS_ABITUGURU_IN_FEATURES(7),
+	SENSORS_ABITUGURU_IN_FEATURES(8),
+	SENSORS_ABITUGURU_IN_FEATURES(9),
+	SENSORS_ABITUGURU_IN_FEATURES(10),
+	SENSORS_ABITUGURU_IN_FEATURES(11),
+	SENSORS_ABITUGURU_IN_FEATURES(12),
+	SENSORS_ABITUGURU_IN_FEATURES(13),
+	SENSORS_ABITUGURU_TEMP_FEATURES(1),
+	SENSORS_ABITUGURU_TEMP_FEATURES(2),
+	SENSORS_ABITUGURU_TEMP_FEATURES(3),
+	SENSORS_ABITUGURU_TEMP_FEATURES(4),
+	SENSORS_ABITUGURU_TEMP_FEATURES(5),
+	SENSORS_ABITUGURU_TEMP_FEATURES(6),
+	SENSORS_ABITUGURU_TEMP_FEATURES(7),
+	SENSORS_ABITUGURU_FAN_FEATURES(1),
+	SENSORS_ABITUGURU_FAN_FEATURES(2),
+	SENSORS_ABITUGURU_FAN_FEATURES(3),
+	SENSORS_ABITUGURU_FAN_FEATURES(4),
+	SENSORS_ABITUGURU_FAN_FEATURES(5),
+	SENSORS_ABITUGURU_FAN_FEATURES(6),
+	SENSORS_ABITUGURU_FAN_FEATURES(7),
+	SENSORS_ABITUGURU_FAN_FEATURES(8),
+	{ { 0 }, 0 }
+};
+
 
 static sensors_chip_feature k8temp_features[] =
   {
@@ -5964,6 +6022,200 @@ static sensors_chip_feature coretemp_features[] =
                                            NOSYSCTL, VALUE(1), 0 },
     { { 0 }, 0 }
   };
+
+#define SENSORS_DME1737_IN_FEATURES(nr) \
+	{ { SENSORS_DME1737_IN(nr), "in" #nr, \
+		NOMAP, NOMAP, R }, \
+		NOSYSCTL, VALUE(3), 3 }, \
+	{ { SENSORS_DME1737_IN_MIN(nr), "in" #nr "_min", \
+		SENSORS_DME1737_IN(nr), SENSORS_DME1737_IN(nr), RW }, \
+		NOSYSCTL, VALUE(1), 3 }, \
+	{ { SENSORS_DME1737_IN_MAX(nr), "in" #nr "_max", \
+		SENSORS_DME1737_IN(nr), SENSORS_DME1737_IN(nr), RW }, \
+		NOSYSCTL, VALUE(2), 3 }, \
+	{ { SENSORS_DME1737_IN_ALARM(nr), "in" #nr "_alarm", \
+		SENSORS_DME1737_IN(nr), NOMAP, R }, \
+		NOSYSCTL, VALUE(1), 0 }
+
+#define SENSORS_DME1737_TEMP_FEATURES(nr) \
+	{ { SENSORS_DME1737_TEMP(nr), "temp" #nr, \
+		NOMAP, NOMAP, R }, \
+		NOSYSCTL, VALUE(3), 3 }, \
+	{ { SENSORS_DME1737_TEMP_MIN(nr), "temp" #nr "_min", \
+		SENSORS_DME1737_TEMP(nr), SENSORS_DME1737_TEMP(nr), RW }, \
+		NOSYSCTL, VALUE(2), 3 }, \
+	{ { SENSORS_DME1737_TEMP_MAX(nr), "temp" #nr "_max", \
+		SENSORS_DME1737_TEMP(nr), SENSORS_DME1737_TEMP(nr), RW }, \
+		NOSYSCTL, VALUE(1), 3 }, \
+	{ { SENSORS_DME1737_TEMP_ALARM(nr), "temp" #nr "_alarm", \
+		SENSORS_DME1737_TEMP(nr), NOMAP, R }, \
+		NOSYSCTL, VALUE(1), 0 }, \
+	{ { SENSORS_DME1737_TEMP_FAULT(nr), "temp" #nr "_fault", \
+		SENSORS_DME1737_TEMP(nr), NOMAP, R }, \
+		NOSYSCTL, VALUE(2), 0 }
+
+#define SENSORS_DME1737_FAN_FEATURES(nr) \
+	{ { SENSORS_DME1737_FAN(nr), "fan" #nr, \
+		NOMAP, NOMAP, R }, \
+		NOSYSCTL, VALUE(2), 0 }, \
+	{ { SENSORS_DME1737_FAN_MIN(nr), "fan" #nr "_min", \
+		SENSORS_DME1737_FAN(nr), SENSORS_DME1737_FAN(nr), RW }, \
+		NOSYSCTL, VALUE(1), 0 }, \
+	{ { SENSORS_DME1737_FAN_ALARM(nr), "fan" #nr "_alarm", \
+		SENSORS_DME1737_FAN(nr), NOMAP, R }, \
+		NOSYSCTL, VALUE(1), 0 }
+
+#define SENSORS_DME1737_PWM_FEATURES(nr) \
+	{ { SENSORS_DME1737_PWM(nr), "pwm" #nr, \
+		NOMAP, NOMAP, RW }, \
+		NOSYSCTL, VALUE(1), 0 }, \
+	{ { SENSORS_DME1737_PWM_ENABLE(nr), "pwm" #nr "_enable", \
+		SENSORS_DME1737_PWM(nr), SENSORS_DME1737_PWM(nr), RW }, \
+		NOSYSCTL, VALUE(2), 0 }, \
+	{ { SENSORS_DME1737_PWM_FREQ(nr), "pwm" #nr "_freq", \
+		SENSORS_DME1737_PWM(nr), SENSORS_DME1737_PWM(nr), RW }, \
+		NOSYSCTL, VALUE(3), 0 }
+
+static sensors_chip_feature dme1737_features[] =
+{
+	SENSORS_DME1737_IN_FEATURES(0),
+	SENSORS_DME1737_IN_FEATURES(1),
+	SENSORS_DME1737_IN_FEATURES(2),
+	SENSORS_DME1737_IN_FEATURES(3),
+	SENSORS_DME1737_IN_FEATURES(4),
+	SENSORS_DME1737_IN_FEATURES(5),
+	SENSORS_DME1737_IN_FEATURES(6),
+	SENSORS_DME1737_TEMP_FEATURES(1),
+	SENSORS_DME1737_TEMP_FEATURES(2),
+	SENSORS_DME1737_TEMP_FEATURES(3),
+	SENSORS_DME1737_FAN_FEATURES(1),
+	SENSORS_DME1737_FAN_FEATURES(2),
+	SENSORS_DME1737_FAN_FEATURES(3),
+	SENSORS_DME1737_FAN_FEATURES(4),
+	SENSORS_DME1737_FAN_FEATURES(5),
+	SENSORS_DME1737_FAN_FEATURES(6),
+	SENSORS_DME1737_PWM_FEATURES(1),
+	SENSORS_DME1737_PWM_FEATURES(2),
+	SENSORS_DME1737_PWM_FEATURES(3),
+	SENSORS_DME1737_PWM_FEATURES(5),
+	SENSORS_DME1737_PWM_FEATURES(6),
+	{ { SENSORS_DME1737_VID, "cpu0_vid", NOMAP, NOMAP, R },
+		NOSYSCTL, VALUE(1), 3 },
+	{ { SENSORS_DME1737_VRM, "vrm", NOMAP, NOMAP, RW },
+		NOSYSCTL, VALUE(1), 1 },
+	{ { 0 }, 0 }
+};
+
+static sensors_chip_feature applesmc_features[] =
+  {
+    { { SENSORS_APPLESMC_TEMP(0), "temp1", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(1), "temp2", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(2), "temp3", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(3), "temp4", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(4), "temp5", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(5), "temp6", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(6), "temp7", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(7), "temp8", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(8), "temp9", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(9), "temp10", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(10), "temp11", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_TEMP(11), "temp12", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(1), 3 },
+    { { SENSORS_APPLESMC_FAN(0), "fan1", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(2), 0 },
+    { { SENSORS_APPLESMC_FAN(1), "fan2", NOMAP, NOMAP, R }, 
+                                NOSYSCTL, VALUE(2), 0 },
+    { { SENSORS_APPLESMC_FAN_MIN(0), "fan1_min", SENSORS_APPLESMC_FAN(0), 
+		  SENSORS_APPLESMC_FAN(0), R }, NOSYSCTL, VALUE(1), 0 },
+    { { SENSORS_APPLESMC_FAN_MIN(1), "fan2_min", SENSORS_APPLESMC_FAN(1),
+		  SENSORS_APPLESMC_FAN(1), R }, NOSYSCTL, VALUE(1), 0 },
+    { { SENSORS_APPLESMC_FAN_MAX(0), "fan1_max", SENSORS_APPLESMC_FAN(0), 
+		  SENSORS_APPLESMC_FAN(0), R }, NOSYSCTL, VALUE(1), 0 },
+    { { SENSORS_APPLESMC_FAN_MAX(1), "fan2_max", SENSORS_APPLESMC_FAN(1),
+		  SENSORS_APPLESMC_FAN(1), R }, NOSYSCTL, VALUE(1), 0 },
+    { { SENSORS_APPLESMC_FAN_SAFE(0), "fan1_safe", SENSORS_APPLESMC_FAN(0),
+		  SENSORS_APPLESMC_FAN(0), R }, NOSYSCTL, VALUE(1), 0 },
+    { { SENSORS_APPLESMC_FAN_SAFE(1), "fan2_safe", SENSORS_APPLESMC_FAN(1),
+		  SENSORS_APPLESMC_FAN(1), R }, NOSYSCTL, VALUE(1), 0 },
+    { { 0 }, 0 }
+  };
+
+#define SENSORS_F71882FG_IN_FEATURES(nr) \
+	{ { SENSORS_F71882FG_IN(nr), "in" #nr, \
+		NOMAP, NOMAP, R }, \
+		NOSYSCTL, VALUE(3), 3 }
+
+#define SENSORS_F71882FG_TEMP_FEATURES(nr) \
+	{ { SENSORS_F71882FG_TEMP(nr), "temp" #nr, \
+		NOMAP, NOMAP, R }, \
+		NOSYSCTL, VALUE(3), 3 }, \
+	{ { SENSORS_F71882FG_TEMP_MAX(nr), "temp" #nr "_max", \
+		SENSORS_F71882FG_TEMP(nr), SENSORS_F71882FG_TEMP(nr), RW }, \
+		NOSYSCTL, VALUE(1), 3 }, \
+	{ { SENSORS_F71882FG_TEMP_MAX_HYST(nr), "temp" #nr "_max_hyst", \
+		SENSORS_F71882FG_TEMP(nr), SENSORS_F71882FG_TEMP(nr), RW }, \
+		NOSYSCTL, VALUE(2), 3 }, \
+	{ { SENSORS_F71882FG_TEMP_CRIT(nr), "temp" #nr "_crit", \
+		SENSORS_F71882FG_TEMP(nr), SENSORS_F71882FG_TEMP(nr), RW }, \
+		NOSYSCTL, VALUE(4), 3 }, \
+	{ { SENSORS_F71882FG_TEMP_CRIT_HYST(nr), "temp" #nr "_crit_hyst", \
+		SENSORS_F71882FG_TEMP(nr), SENSORS_F71882FG_TEMP(nr), R }, \
+		NOSYSCTL, VALUE(5), 3 }, \
+	{ { SENSORS_F71882FG_TEMP_ALARM(nr), "temp" #nr "_alarm", \
+		SENSORS_F71882FG_TEMP(nr), NOMAP, R }, \
+		NOSYSCTL, VALUE(1), 0 }, \
+	{ { SENSORS_F71882FG_TEMP_FAULT(nr), "temp" #nr "_fault", \
+		SENSORS_F71882FG_TEMP(nr), NOMAP, R }, \
+		NOSYSCTL, VALUE(2), 0 }, \
+	{ { SENSORS_F71882FG_TEMP_TYPE(nr), "temp" #nr "_type", \
+		SENSORS_F71882FG_TEMP(nr), NOMAP, R }, \
+		NOSYSCTL, VALUE(3), 0 }
+
+#define SENSORS_F71882FG_FAN_FEATURES(nr) \
+	{ { SENSORS_F71882FG_FAN(nr), "fan" #nr, \
+		NOMAP, NOMAP, R }, \
+		NOSYSCTL, VALUE(2), 0 }, \
+	{ { SENSORS_F71882FG_FAN_ALARM(nr), "fan" #nr "_alarm", \
+		SENSORS_F71882FG_FAN(nr), NOMAP, R }, \
+		NOSYSCTL, VALUE(1), 0 }
+
+static sensors_chip_feature f71882fg_features[] =
+{
+	SENSORS_F71882FG_IN_FEATURES(0),
+	SENSORS_F71882FG_IN_FEATURES(1),
+	{ { SENSORS_F71882FG_IN_MAX(1), "in1_max",
+		SENSORS_F71882FG_IN(1), SENSORS_F71882FG_IN(1), RW },
+		NOSYSCTL, VALUE(1), 3 },
+	{ { SENSORS_F71882FG_IN_ALARM(1), "in1_alarm",
+		SENSORS_F71882FG_IN(1), NOMAP, R },
+		NOSYSCTL, VALUE(1), 0 },
+	SENSORS_F71882FG_IN_FEATURES(2),
+	SENSORS_F71882FG_IN_FEATURES(3),
+	SENSORS_F71882FG_IN_FEATURES(4),
+	SENSORS_F71882FG_IN_FEATURES(5),
+	SENSORS_F71882FG_IN_FEATURES(6),
+	SENSORS_F71882FG_IN_FEATURES(7),
+	SENSORS_F71882FG_IN_FEATURES(8),
+	SENSORS_F71882FG_TEMP_FEATURES(1),
+	SENSORS_F71882FG_TEMP_FEATURES(2),
+	SENSORS_F71882FG_TEMP_FEATURES(3),
+	SENSORS_F71882FG_FAN_FEATURES(1),
+	SENSORS_F71882FG_FAN_FEATURES(2),
+	SENSORS_F71882FG_FAN_FEATURES(3),
+	SENSORS_F71882FG_FAN_FEATURES(4),
+	{ { 0 }, 0 }
+};
 
 sensors_chip_features sensors_chip_features_list[] =
 {
@@ -6063,6 +6315,7 @@ sensors_chip_features sensors_chip_features_list[] =
  { SENSORS_LM86_PREFIX, lm90_features },
  { SENSORS_MAX6657_PREFIX, lm90_features },
  { SENSORS_ADT7461_PREFIX, lm90_features },
+ { SENSORS_MAX6680_PREFIX, lm90_features },
  { SENSORS_LM63_PREFIX, lm63_features },
  { SENSORS_MAX1619_PREFIX, max1619_features },
  { SENSORS_XEONTEMP_PREFIX, xeontemp_features },
@@ -6075,7 +6328,11 @@ sensors_chip_features sensors_chip_features_list[] =
  { SENSORS_F71805F_PREFIX, f71805f_features },
  { SENSORS_F71872F_PREFIX, f71805f_features },
  { SENSORS_ABITUGURU_PREFIX, abituguru_features },
+ { SENSORS_ABITUGURU3_PREFIX, abituguru3_features },
  { SENSORS_K8TEMP_PREFIX, k8temp_features },
  { SENSORS_CORETEMP_PREFIX, coretemp_features },
+ { SENSORS_DME1737_PREFIX, dme1737_features },
+ { SENSORS_APPLESMC_PREFIX, applesmc_features },
+ { SENSORS_F71882FG_PREFIX, f71882fg_features },
  { 0 }
 };

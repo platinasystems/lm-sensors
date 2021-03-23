@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-# $Id: fancontrol.pl 4341 2007-03-11 10:21:46Z khali $
+# $Id: fancontrol.pl 4588 2007-07-08 10:01:50Z khali $
 #
 # Perl script for temperature dependent fan speed control.
 #
@@ -390,7 +390,7 @@ sub UpdateFanSpeeds()
          { $pwmval = MAX; }
        else
          {
-           $pwmval = eval ( ($tval - $mint) / ($maxt - $mint) )**2 ;
+           $pwmval = eval ( ($tval - $mint) / ($maxt - $mint) );
            $pwmval *= (255 - $minso);
            $pwmval += $minso;
            $pwmval = int($pwmval);
