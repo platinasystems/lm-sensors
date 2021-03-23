@@ -223,7 +223,8 @@ chip "smsc47m192-*"
     label temp1 "SIO Temp"
 
 
-chip "lm85-*" "lm85b-*" "lm85c-*" "adm1027-*" "adt7463-*" "adt7468-*" "emc6d100-*" "emc6d102-*"
+chip "lm85-*" "lm85b-*" "lm85c-*" "adm1027-*" "adt7463-*" "adt7468-*" \
+     "emc6d100-*" "emc6d102-*" "emc6d103-*" "emc6d103s-*" 
 
     label in1 "Vcore"
     label in2 "+3.3V"
@@ -240,6 +241,14 @@ chip "lm85-*" "lm85b-*" "lm85c-*" "adm1027-*" "adt7463-*" "adt7468-*" "emc6d100-
 #    set in4_max 12.0 * 1.10
 
     label temp2 "M/B Temp"
+
+
+chip "emc6w201-*"
+
+    label in2 "+3.3V"
+    label in3 "+5V"
+
+    label temp6 "M/B Temp"
 
 
 chip "pc87365-*" "pc87366-*"
@@ -447,7 +456,7 @@ chip "sch5127-*"
     set in6_max  3.0 * 1.10
 
 
-chip "f71808e-*" "f71862fg-*" "f71869-*" "f71882fg-*" \
+chip "f71808e-*" "f71808a-*" "f71862fg-*" "f71869-*" "f71869a-*" "f71882fg-*" \
      "f71889fg-*" "f71889ed-*" "f71889a-*"
 
     label in0 "+3.3V"
