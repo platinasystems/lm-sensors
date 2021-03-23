@@ -12,17 +12,19 @@
 @center Copyright (C) 1998 - 2005
 @sp 1
 @center Frodo Looijaard,
-@center @email{phil..at..netroedge.com, Philip Edelbrock},
+@center Philip Edelbrock,
+@center Mark D. Studebaker,
 @center and
-@center @email{mdsxyz123..at..yahoo.com, Mark Studebaker}
+@center Jean Delvare
 @end titlepage
 
 @ifhtml
 Copyright (C) 1998 - 2005@*
 Frodo Looijaard,@*
-@email{phil..at..netroedge.com, Philip Edelbrock},@*
+Philip Edelbrock,@*
+Mark D. Studebaker@*
 and@*
-@email{mdsxyz123..at..yahoo.com, Mark Studebaker}@*
+Jean Delvare@*
 @end ifhtml
 
 @dircategory Utilities
@@ -698,6 +700,11 @@ motherboard manufacturers don't think they're worth monitoring
 (they are mostly unused these days). You can just add
 @command{ignore inN} lines to @file{/etc/sensors.conf} to hide them.
 
+Another possibility is that these lines are used to monitor different
+voltages. Only the motherboard manufacturer can tell for sure. Taking
+a look at what voltage values the BIOS displays may provide valuable
+hints though.
+
 
 @node Section 4.7, Section 4.8, Section 4.6, Problems
 @section What are VID lines? Why is the VID reading wrong?
@@ -937,15 +944,6 @@ do not recogize or support. Figure out what you really have @xref{Section 3.2.1,
 
 The LM80 detection is poor and other hardware is often misdetected
 as an LM80. Figure out what you really have @xref{Section 3.2.1, What chips are on motherboard XYZ}.
-
-
-@anchor{Bad readings from it87}
-@subsection Bad readings from it87!
-
-The it87 temperature sesnsors are configured, unfortunately,
-in a way different from w83781d. They cannot be configured from
-@file{/etc/sensors.conf}; they must be set at modprobe insertion with
-@command{modprobe it87 temp_type=0xXX}. See @file{doc/chips/it87} for details.
 
 
 @node Section 4.18, Section 4.19, Section 4.17, Problems
@@ -1260,8 +1258,8 @@ For IBM systems, see @file{README.thinkpad}.
 @section Problems on 2.6 kernels
 
 Not all drivers have been ported to 2.6. If your favorite driver is not
-in 2.6, the reason is that nobody has ported it.
-Please don't bother asking us why it is not in 2.6.
+in 2.6, the reason is that nobody has ported it, or the ported code did
+not get a proper review yet.
 If you would like to port the driver, see the file
 Documentation/i2c/porting-clients in the 2.6 kernel tree for help,
 then send us the ported driver when you are done.
@@ -1272,6 +1270,25 @@ i2c-viapro (the SMBus driver for VIA bridges) and via686a (the integrated
 sensors driver for VIA bridges). This caused the second loaded driver to 
 silently fail working. So do not load both i2c-viapro and via686a together 
 unless you have a recent kernel.
+
+@subsection Where are my EEPROMs?
+The 2.6.14-rc1 kernel introduced the hwmon class, which groups all
+hardware monitoring drivers in a logical way. The goal was to help
+libsensors grab the relevant sensors information in /sys. In particular:
+@itemize
+@item libsensors will no more need to know about the underlying bus types
+(I2C/SMBus, ISA or other);
+@item libsensors will no more list non-hardware monitoring chips.
+@end itemize
+This explains why EEPROMs are no more displayed by @command{sensors}:
+they are no hardware monitoring chips. The medium term plan is to drop
+eeprom support for all Linux 2.6 kernels, as it didn't fit well in
+the library code in the first place.
+
+Note that you can still obtain information about your EEPROMs by using
+the dedicated perl scripts in @file{prog/eeprom}: @command{ddcmon},
+@command{decode-dimms.pl}, @command{decode-edid.pl} and
+@command{decode-vaio.pl}.
 
 
 @node Help, Contribute, Problems, Top
@@ -1293,7 +1310,8 @@ unless you have a recent kernel.
 @section What to send us when asking for help
 
 We are always willing to answer questions if things don't work out.
-Please email @email{sensors@@stimpy.netroedge.com}, and not the individual authors,
+Post your question to our @uref{http://lists.lm-sensors.org/mailman/listinfo/lm-sensors, discussion list},
+and not the individual authors,
 unless you have something private to say.
 
 Instead of using email, you can also use the web-based support
@@ -1385,7 +1403,7 @@ detected chip type. That way, we have some positive feedback, too!
 @section How do I update a ticket?
 
 You can't. Only developers can. Follow up by emailing us
-at @email{sensors@@stimpy.netroedge.com} and reference your ticket number
+and reference your ticket number
 in the subject. Please don't enter a new ticket with
 follow-up information, email us instead. Thanks.
 
@@ -1393,7 +1411,7 @@ follow-up information, email us instead. Thanks.
 @node Section 5.8, , Section 5.7, Help
 @section How do I follow up on a ticket?
 
-Follow up by emailing us at @email{sensors@@stimpy.netroedge.com}
+Follow up by emailing us
 and reference your ticket number in the subject.
 
 
@@ -1422,37 +1440,42 @@ See @file{doc/developers/new_drivers} in our package for instructions.
 @node Section 6.2, Section 6.3, Section 6.1, Contribute
 @section How to get CVS access
 
-For anonymous CVS read access, see the instructions on our download page.
-Sorry, we don't have automatically generated CVS tarballs.
+For anonymous CVS read access, see the instructions on our
+@uref{http://www2.lm-sensors.nu/~lm78/download.html#cvs, download page}.
+Alternatively, @uref{http://www2.lm-sensors.nu/~lm78/download.html#snapshots, nightly snapshots}
+of the CVS repositories are available.
 
 For write access, run the script @command{doc/developers/genpasswd.pl} in
 our package and follow the instructions. Let us know what part
 of the package you would like to work on.
 
+
 @node Section 6.3, Section 6.4, Section 6.2, Contribute
 @section How to donate hardware to the project
 
-Send us email @email{sensors@@stimpy.netroedge.com}.
+@uref{http://www2.lm-sensors.nu/~lm78/author.html#contact, Contact us}.
 
 
 @node Section 6.4, Section 6.5, Section 6.3, Contribute
-@section How to join the project mailing list
+@section How to join the project mailing lists
 
-Send us email @email{sensors@@stimpy.netroedge.com}. Sorry,
-there is no automated subscribe/unsubscribe service yet
-(but we're seriously thinking of switching to majordomo).
-Therefore there may be some delay before your request is processed.
-Please note that you do NOT need to be subscribed to the list
-in order to post. If you simply need help as a user, post your
-detailed problem and questions directly. Don't worry, you'll be
-CC'd on all replies.
+There are two lists you can subscribe to:
+
+@itemize
+@item A @uref{http://lists.lm-sensors.org/mailman/listinfo/lm-sensors, general discussion list},
+meant for both development and user support. You do not need to be subscribed to post.
+@item A @uref{http://lists.lm-sensors.org/mailman/listinfo/lm-sensors-commit, CVS commits list},
+for watching the changes made to the CVS repositories. This list is read-only.
+@end itemize
 
 
 @node Section 6.5, Section 6.6, Section 6.4, Contribute
 @section How to access mailing list archives
 
-The mailing list archive is at: @uref{http://archives.andrew.net.au/lm-sensors}.
+The primary mailing list archive is at:
+@uref{http://lists.lm-sensors.org/pipermail/lm-sensors/}.
 It contains messages since October 28, 2001.
+
 There is another mailing list archive at:
 @uref{http://news.gmane.org/gmane.linux.drivers.sensors}.
 It contains messages since December 31, 2004.
@@ -1460,6 +1483,10 @@ This archive may also be accessed via a news reader:
 @uref{nntp://news.gmane.org/gmane.linux.drivers.sensors}
 and RSS:
 @uref{http://rss.gmane.org/gmane.linux.drivers.sensors}.
+
+And last there is a legacy archive at:
+@uref{http://archives.andrew.net.au/lm-sensors}.
+It contains messages from October 28, 2001 through May 16, 2005.
 
 
 @node Section 6.6, Section 6.7, Section 6.5, Contribute
@@ -1477,13 +1504,14 @@ Believe it or not, what we really need help with are:
 @itemize
 @item Answering email
 @item Answering support tickets
-@item Submitting patches to Linus, etc.
+@item Porting drivers to Linux 2.6
 @item Creating a sensors.conf database
-@item Creating RPM's
+@item Reviewing patches
 @end itemize
 
-Send us email @email{sensors@@stimpy.netroedge.com} if you can help.
-No experience necessary :)
+If you are willing to help, simply join our
+@uref{http://lists.lm-sensors.org/mailman/listinfo/lm-sensors, discussion list},
+and we'll help you help us.
 
 
 @node Section 6.8, Section 6.9, Section 6.7, Contribute
@@ -1582,28 +1610,34 @@ can not be sure.
 @appendix Revision History of This Document
 
 @itemize
-@item Rev 2.10 (MDS) Various updates, 20040103
-@item Rev 2.9 (CP) Converted to Gnu texinfo format, 20020910
-@item Rev 2.8 (MDS) Minor updates 20020710, released with lm_sensors 2.6.4
-@item Rev 2.7 (MDS) Minor updates 20020425
-@item Rev 2.6 (MDS) Minor updates 20020115, released with lm_sensors 2.6.3
-@item Rev 2.5 (MDS) Minor updates 20011111, released with lm_sensors 2.6.2
-@item Rev 2.4 (MDS) Minor updates 20010722
-@item Rev 2.3 (MDS) General update, 20010224, released with lm_sensors 2.6.0.
-@item Rev 2.2 (Frodo) Corrections for lm_sensors 2.4, 19990920
-@item Rev 2.1 (Frodo) Corrections for lm_sensors 2.2, 19990112
-@item Rev 2.0 (Frodo) Major revision for lm_sensors 2.1, 19981229
-@item Rev 1.10 (Frodo) Modified 3.8, updated some other things, 19980924
-@item Rev 1.9 (Frodo) Added 3.15, 19980906
-@item Rev 1.8 (Frodo) Added 3.14, 19980905
-@item Rev 1.7 (Phil) Added 3.13 and some other minor changes, 19980901
-@item Rev 1.6 (Frodo) Added 4, 4.1, 4.2, 4.3, 4.4, 4.5, 19980901
-@item Rev 1.5 (Frodo) Added 2.3, 2.4, 3.9, 3.10, 3.11, 19980826
-@item Rev 1.4 (Frodo) Added some more Winbond information, and 3.5-3.8, 19980817
-@item Rev 1.3 Added info on the Winbond chip, 19980816
-@item Rev 1.2 Adapation by Frodo Looijaard, 19980810
-@item Rev 1.1 Modifications by Philip Edelbrock, 19980809
-@item Rev 1.0 Written by Philip Edelbrock, 19980803
+@item Rev 2.16 (JD) Added 4.33.2, 2005-09-06
+@item Rev 2.15 (JD) Updates, including mailing-list change, 2005-05-21
+@item Rev 2.14 (MDS) Updated 4.12, 2004-11-26
+@item Rev 2.13 (JD) Added 4.6.1, updated 4.7, 2004-06-23
+@item Rev 2.12 (JD) Updated 4.27, 2004-04-11
+@item Rev 2.11 (JD) Various updates, 2004-01-18
+@item Rev 2.10 (MDS) Various updates, 2004-01-03
+@item Rev 2.9 (CP) Converted to Gnu texinfo format, 2002-09-10
+@item Rev 2.8 (MDS) Minor updates 2002-07-10, released with lm_sensors 2.6.4
+@item Rev 2.7 (MDS) Minor updates 2002-04-25
+@item Rev 2.6 (MDS) Minor updates 2002-01-15, released with lm_sensors 2.6.3
+@item Rev 2.5 (MDS) Minor updates 2001-11-11, released with lm_sensors 2.6.2
+@item Rev 2.4 (MDS) Minor updates 2001-07-22
+@item Rev 2.3 (MDS) General update, 2001-02-24, released with lm_sensors 2.6.0.
+@item Rev 2.2 (Frodo) Corrections for lm_sensors 2.4, 1999-09-20
+@item Rev 2.1 (Frodo) Corrections for lm_sensors 2.2, 1999-01-12
+@item Rev 2.0 (Frodo) Major revision for lm_sensors 2.1, 1998-12-29
+@item Rev 1.10 (Frodo) Modified 3.8, updated some other things, 1998-09-24
+@item Rev 1.9 (Frodo) Added 3.15, 1998-09-06
+@item Rev 1.8 (Frodo) Added 3.14, 1998-09-05
+@item Rev 1.7 (Phil) Added 3.13 and some other minor changes, 1998-09-01
+@item Rev 1.6 (Frodo) Added 4, 4.1, 4.2, 4.3, 4.4, 4.5, 1998-09-01
+@item Rev 1.5 (Frodo) Added 2.3, 2.4, 3.9, 3.10, 3.11, 1998-08-26
+@item Rev 1.4 (Frodo) Added some more Winbond information, and 3.5-3.8, 1998-08-17
+@item Rev 1.3 (Phil) Added info on the Winbond chip, 1998-08-16
+@item Rev 1.2 (Frodo) Adapation, 1998-08-10
+@item Rev 1.1 (Phil) Modifications, 1998-08-09
+@item Rev 1.0 (Phil) First version, 1998-08-03
 @end itemize
 
 @bye

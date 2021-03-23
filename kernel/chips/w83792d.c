@@ -2,7 +2,7 @@
     w83792d.c - Part of lm_sensors, Linux kernel modules for hardware
                 monitoring
     Copyright (c) 2004, 2005 Winbond Electronics Corp.
-                  Chunhao Huang <huang0@winbond.com.tw>
+                  Chunhao Huang
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,12 +26,10 @@
        calculation method to in6-in7(measured value, limits) is a little
        different between C and B version. C or B version can be identified
        by CR[0x49h].
-    3. Maybe there is some bug in temp3, because temp3 measured value
-       usually seems wrong.
-    4. The function of chassis open detection need further test.
-    5. The function of vid and vrm has not been finished, because I'm NOT
+    3. The function of chassis open detection need further test.
+    4. The function of vid and vrm has not been finished, because I'm NOT
        very familiar with them. If someone can finish it, that's good,
-       then please delete this note 5.
+       then please delete this note 4.
 */
 
 /*
@@ -58,7 +56,7 @@ static unsigned int normal_isa_range[] = { SENSORS_ISA_END };
 /* Insmod parameters */
 SENSORS_INSMOD_1(w83792d);
 SENSORS_MODULE_PARM(force_subclients, "List of subclient addresses: " \
-                      "{bus, clientaddr, subclientaddr1, subclientaddr2}");
+		    "{bus, clientaddr, subclientaddr1, subclientaddr2}");
 
 static int init;
 MODULE_PARM(init, "i");
@@ -170,6 +168,9 @@ static const u8 W83792D_REG_FAN_DIV[4] = {
 	0x9E	/* contains FAN7 Divisor. */
 };
 
+#define W83792D_REG_ALARM1 0xA9		/* realtime status register1 */
+#define W83792D_REG_ALARM2 0xAA		/* realtime status register2 */
+#define W83792D_REG_ALARM3 0xAB		/* realtime status register3 */
 #define W83792D_REG_CASE_OPEN 0x42	/* Bit 5: Case Open status bit */
 #define W83792D_REG_CASE_OPEN_CLR 0x44	/* Bit 7: Case Open CLR_CHS/Reset bit */
 
@@ -224,9 +225,9 @@ static inline u8 FAN_TO_REG(long rpm, int div)
 }
 
 #define IN_FROM_REG(nr,val) (((nr)<=1)?(val*2): \
-                             ((((nr)==6)||((nr)==7))?(val*6):(val*4)))
+				((((nr)==6)||((nr)==7))?(val*6):(val*4)))
 #define IN_TO_REG(nr,val) (((nr)<=1)?(val/2): \
-                           ((((nr)==6)||((nr)==7))?(val/6):(val/4)))
+				((((nr)==6)||((nr)==7))?(val/6):(val/4)))
 #define TEMP_FROM_REG(val) (((val)>0x80?(val)-0x100:(val))*10)
 #define TEMP_TO_REG(val) (SENSORS_LIMIT((val>=0)?((val)/10):((val)/10+256), 0, 255))
 #define FAN_FROM_REG(val,div) ((val)==0?-1:(val)==255?0:1350000/((val)*(div)))
@@ -268,6 +269,7 @@ struct w83792d_data {
 				   although 792 chip has 7 set of pwm. */
 	u8 pwm_flag[7];		/* indicates PWM or DC mode: 1->PWM; 0->DC */
 	/* u8 vrm;		 VRM version */
+	u32 alarms;		/* realtime status register encoding,combined */
 	u8 chassis[2];		/* [0]->Chassis status, [1]->CLR_CHS */
 	u8 thermal_cruise[3];	/* Smart FanI: Fan1,2,3 target value */
 	u8 fan_tolerance[3];	/* Fan1,2,3 tolerance(Smart Fan I/II) */
@@ -302,6 +304,8 @@ static void w83792d_temp_add(struct i2c_client *client, int operation,
 static void w83792d_vrm(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results); */
 static void w83792d_fan_div(struct i2c_client *client, int operation,
+			    int ctl_name, int *nrels_mag, long *results);
+static void w83792d_alarms(struct i2c_client *client, int operation,
 			    int ctl_name, int *nrels_mag, long *results);
 static void w83792d_chassis(struct i2c_client *client, int operation,
 			    int ctl_name, int *nrels_mag, long *results);
@@ -359,6 +363,7 @@ static struct i2c_driver w83792d_driver = {
 #define W83792D_SYSCTL_FAN_CFG 1500	/* control Fan Mode */
 #define W83792D_SYSCTL_FAN_DIV 1501
 #define W83792D_SYSCTL_CHASSIS 1502	/* control Case Open */
+#define W83792D_SYSCTL_ALARMS 1503
 
 #define W83792D_SYSCTL_THERMAL_CRUISE 1600	/* Smart Fan I: target value */
 #define W83792D_SYSCTL_FAN_TOLERANCE 1601	/* Smart Fan I/II: tolerance */
@@ -368,6 +373,26 @@ static struct i2c_driver w83792d_driver = {
 #define W83792D_SYSCTL_SF2_LEVELS_FAN1 1605	/* Smart Fan II: Fan1 levels */
 #define W83792D_SYSCTL_SF2_LEVELS_FAN2 1606	/* Smart Fan II: Fan2 levels */
 #define W83792D_SYSCTL_SF2_LEVELS_FAN3 1607	/* Smart Fan II: Fan3 levels */
+
+#define W83792D_ALARM_IN0 0x0001
+#define W83792D_ALARM_IN1 0x0002
+#define W83792D_ALARM_IN2 0x0100
+#define W83792D_ALARM_IN3 0x0200
+#define W83792D_ALARM_IN4 0x0400
+#define W83792D_ALARM_IN5 0x0800
+#define W83792D_ALARM_IN6 0x1000
+#define W83792D_ALARM_IN7 0x80000
+#define W83792D_ALARM_IN8 0x100000
+#define W83792D_ALARM_TEMP1 0x0004
+#define W83792D_ALARM_TEMP2 0x0008
+#define W83792D_ALARM_TEMP3 0x0010
+#define W83792D_ALARM_FAN1 0x0020
+#define W83792D_ALARM_FAN2 0x0040
+#define W83792D_ALARM_FAN3 0x0080
+#define W83792D_ALARM_FAN4 0x200000
+#define W83792D_ALARM_FAN5 0x400000
+#define W83792D_ALARM_FAN6 0x800000
+#define W83792D_ALARM_FAN7 0x8000
 
 /* -- SENSORS SYSCTL END -- */
 
@@ -417,6 +442,8 @@ static ctl_table w83792d_dir_table_template[] =
 	 &i2c_sysctl_real, NULL, &w83792d_vid}, */
 	{W83792D_SYSCTL_FAN_DIV, "fan_div", NULL, 0, 0644, NULL, &i2c_proc_real,
 	 &i2c_sysctl_real, NULL, &w83792d_fan_div},
+	{W83792D_SYSCTL_ALARMS, "alarms", NULL, 0, 0644, NULL,
+	 &i2c_proc_real, &i2c_sysctl_real, NULL, &w83792d_alarms},
 	{W83792D_SYSCTL_CHASSIS, "chassis", NULL, 0, 0644, NULL,
 	 &i2c_proc_real, &i2c_sysctl_real, NULL, &w83792d_chassis},
 	{W83792D_SYSCTL_PWM1, "pwm1", NULL, 0, 0644, NULL, &i2c_proc_real,
@@ -547,9 +574,10 @@ static int w83792d_detect(struct i2c_adapter *adapter, int address,
 			kind = w83792d;
 		} else {
 			if (kind == 0)
-				printk(KERN_WARNING "w83792d: Ignoring 'force' parameter for unknown chip at"
-				     "adapter %d, address 0x%02x\n",
-				     i2c_adapter_id(adapter), address);
+				printk(KERN_WARNING "w83792d: Ignoring "
+				       "'force' parameter for unknown chip "
+				       "at adapter %d, address 0x%02x\n",
+				       i2c_adapter_id(adapter), address);
 			LEAVE()
 			goto ERROR1;
 		}
@@ -587,23 +615,23 @@ static int w83792d_detect(struct i2c_adapter *adapter, int address,
 	if(force_subclients[0] == id && force_subclients[1] == address) {
 		if(force_subclients[2] < 0x48 || force_subclients[2] > 0x4b) {
 			printk(KERN_ERR "w83792d.o: Invalid subclient address %d; must be 0x48-0x4b\n",
-			        force_subclients[2]);
+			       force_subclients[2]);
 			goto ERROR5;
 		}
 		if(force_subclients[3] < 0x4c || force_subclients[3] > 0x4f) {
 			printk(KERN_ERR "w83792d.o: Invalid subclient address %d; must be 0x4c-0x4f\n",
-			        force_subclients[3]);
+			       force_subclients[3]);
 			goto ERROR5;
 		}
 		w83792d_write_value(new_client,
-		                    W83792D_REG_I2C_SUBADDR,
-		                    0x40 | (force_subclients[2] & 0x03) |
-		                    ((force_subclients[3] & 0x03) <<4));
+				    W83792D_REG_I2C_SUBADDR,
+				    0x40 | (force_subclients[2] & 0x03) |
+				    ((force_subclients[3] & 0x03) <<4));
 		data->lm75[0].addr = force_subclients[2];
 		data->lm75[1].addr = force_subclients[3];
 	} else {
 		val1 = w83792d_read_value(new_client,
-				          W83792D_REG_I2C_SUBADDR);
+					  W83792D_REG_I2C_SUBADDR);
 		data->lm75[0].addr = 0x48 + (val1 & 0x07);
 		data->lm75[1].addr = 0x48 + ((val1 >> 4) & 0x07);
 		if (data->lm75[0].addr == data->lm75[1].addr)
@@ -704,7 +732,7 @@ static int w83792d_write_value(struct i2c_client *client, u8 reg, u8 value)
 /* Called when we have found a new W83792D. It should set limits, etc. */
 static void w83792d_init_client(struct i2c_client *client)
 {
-	int temp2_cfg, temp3_cfg, i;
+	int temp2_cfg, temp3_cfg;
 	u8 vid_in_b;
 
 	ENTER()
@@ -729,12 +757,6 @@ static void w83792d_init_client(struct i2c_client *client)
 			    temp2_cfg & 0xe6);
 	w83792d_write_value(client, W83792D_REG_TEMP_ADD[1][6],
 			    temp3_cfg & 0xe6);
-
-	/* enable comparator mode for temp2 and temp3 so
-	   alarm indication will work correctly */
-	i = w83792d_read_value(client, W83792D_REG_IRQ);
-	if (!(i & 0x40))
-		w83792d_write_value(client, W83792D_REG_IRQ, i|0x40);
 
 	/* Start monitoring */
 	w83792d_write_value(client, W83792D_REG_CONFIG, (w83792d_read_value(
@@ -813,6 +835,11 @@ static void w83792d_update_client(struct i2c_client *client)
 		data->vid |=
 		    (w83792d_read_value(client, W83792D_REG_CHIPID) & 0x01)
 		    << 4;   */
+
+		/* Update the realtime status */
+		data->alarms = w83792d_read_value(client, W83792D_REG_ALARM1) +
+			(w83792d_read_value(client, W83792D_REG_ALARM2) << 8) +
+			(w83792d_read_value(client, W83792D_REG_ALARM3) << 16);
 
 		/* Update CaseOpen status and it's CLR_CHS. */
 		data->chassis[0] = (w83792d_read_value(client, 
@@ -1026,12 +1053,12 @@ void w83792d_fan(struct i2c_client *client, int operation, int ctl_name,
 					 (data->fan[nr])==0xff) {
 					(data->fan_div[nr])++;
 					results[1] = FAN_FROM_REG(data->fan[nr],
-					             DIV_FROM_REG(data->fan_div[nr]));
+						     DIV_FROM_REG(data->fan_div[nr]));
 				} else if ((data->fan_div[nr])>0 &&
 					  (data->fan[nr])<0x78) {
 					(data->fan_div[nr])--;
 					results[1] = FAN_FROM_REG(data->fan[nr],
-					             DIV_FROM_REG(data->fan_div[nr]));
+						     DIV_FROM_REG(data->fan_div[nr]));
 				}
 
 				tmp_reg = w83792d_read_value(client,
@@ -1102,43 +1129,39 @@ void w83792d_temp_add(struct i2c_client *client, int operation,
 		w83792d_update_client(client);
 		for (i=0; i<3; i++) {
 			j = (i==0) ? 2 : ((i==1)?0:1);
-			if (((data->temp_add[nr][i*2+1]) && 0x80) == 0) {
-				results[j] = TEMP_FROM_REG(data->temp_add[nr][i*2]);
-			} else {
+			if ((data->temp_add[nr][i*2+1]) & 0x80) {
 				results[j] = TEMP_FROM_REG(data->temp_add[nr][i*2]) + 5;
+			} else {
+				results[j] = TEMP_FROM_REG(data->temp_add[nr][i*2]);
 			}
 		}
 		*nrels_mag = 3;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
-		data->temp_add[nr][2] = TEMP_TO_REG(results[0]);
-		data->temp_add[nr][4] = TEMP_TO_REG(results[1]);
-		w83792d_write_value(client,
-				     W83792D_REG_TEMP_ADD[nr][2],
-				     data->temp_add[nr][2]);
-		w83792d_write_value(client,
-				     W83792D_REG_TEMP_ADD[nr][4],
-				     data->temp_add[nr][4]);
-		if ((results[0]%10) == 0) {
+		if (*nrels_mag >= 1) {
+			data->temp_add[nr][2] = TEMP_TO_REG(results[0]);
 			w83792d_write_value(client,
-				W83792D_REG_TEMP_ADD[nr][3],
-				w83792d_read_value(client,
-					W83792D_REG_TEMP_ADD[nr][3])&0x7f);
-		} else { /* consider the 0.5 degree */
-			w83792d_write_value(client,
-				W83792D_REG_TEMP_ADD[nr][3],
-				w83792d_read_value(client,
-					W83792D_REG_TEMP_ADD[nr][3])|0x80);
+					     W83792D_REG_TEMP_ADD[nr][2],
+					     data->temp_add[nr][2]);
+			if ((results[0]%10) == 0) {
+				w83792d_write_value(client,
+					W83792D_REG_TEMP_ADD[nr][3], 0x00);
+			} else { /* consider the 0.5 degree */
+				w83792d_write_value(client,
+					W83792D_REG_TEMP_ADD[nr][3], 0x80);
+			}
 		}
-		if ((results[1]%10) == 0) {
+		if (*nrels_mag >= 2) {
+			data->temp_add[nr][4] = TEMP_TO_REG(results[1]);
 			w83792d_write_value(client,
-				W83792D_REG_TEMP_ADD[nr][5],
-				w83792d_read_value(client,
-					W83792D_REG_TEMP_ADD[nr][5])&0x7f);
-		} else { /* consider the 0.5 degree */
-			w83792d_write_value(client,
-				W83792D_REG_TEMP_ADD[nr][5],
-				w83792d_read_value(client,
-					W83792D_REG_TEMP_ADD[nr][5])|0x80);
+					     W83792D_REG_TEMP_ADD[nr][4],
+					     data->temp_add[nr][4]);
+			if ((results[1]%10) == 0) {
+				w83792d_write_value(client,
+					W83792D_REG_TEMP_ADD[nr][5], 0x00);
+			} else { /* consider the 0.5 degree */
+				w83792d_write_value(client,
+					W83792D_REG_TEMP_ADD[nr][5], 0x80);
+			}
 		}
 	}
 }
@@ -1353,6 +1376,20 @@ void w83792d_sf2_levels(struct i2c_client *client, int operation,
 			w83792d_write_value(client, W83792D_REG_LEVELS[nr][j],
 						level_tmp | mask_tmp);
 		}
+	}
+}
+
+/* get reatime status of all sensors items: voltage, temp, fan */
+void w83792d_alarms(struct i2c_client *client, int operation, int ctl_name,
+		    int *nrels_mag, long *results)
+{
+	struct w83792d_data *data = client->data;
+	if (operation == SENSORS_PROC_REAL_INFO)
+		*nrels_mag = 0;
+	else if (operation == SENSORS_PROC_REAL_READ) {
+		w83792d_update_client(client);
+		results[0] = data->alarms;
+		*nrels_mag = 1;
 	}
 }
 

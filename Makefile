@@ -86,6 +86,16 @@ CC := gcc
 #   /lib/modules/2.4.29
 MODPREF := /lib/modules/$(shell $(CC) -I$(LINUX_HEADERS) -E etc/config.c | grep uts_release |cut -f 2 -d'"')
 
+# Prevent 2.6+ users from using improper targets, as this won't work.
+ifeq (,$(findstring /2.4., $(MODPREF)))
+    ifeq (, $(MAKECMDGOALS))
+        $(error For 2.6 kernels and later, use "make user")
+    endif
+    ifeq (install, $(MAKECMDGOALS))
+        $(error For 2.6 kernels and later, use "make user_install")
+    endif
+endif
+
 # This is the directory where sensors.conf will be installed, if no other
 # configuration file is found
 ETCDIR := /etc
@@ -310,7 +320,7 @@ clean::
 	$(RM) lm_sensors-*
 
 user_uninstall::
-	
+
 uninstall :: user_uninstall
 	@echo "*** Note:"
 	@echo "***  * Kernel modules were not uninstalled."
@@ -409,7 +419,7 @@ manhtml:
 
 %.d: %.c $(LINUX)/.config
 	$(CC) -M -MG $(MODCPPFLAGS) $(MODCFLAGS) $< | \
-       	$(SED) -e 's@^\(.*\)\.o:@$*.d $*.o: Makefile '`dirname $*.d`/Module.mk' @' > $@
+	$(SED) -e 's@^\(.*\)\.o:@$*.d $*.o: Makefile '`dirname $*.d`/Module.mk' @' > $@
 
 
 
@@ -419,7 +429,7 @@ manhtml:
 
 %.rd: %.c
 	$(CC) -M -MG $(PROGCPPFLAGS) $(PROGCFLAGS) $< | \
-       	$(SED) -e 's@^\(.*\)\.o:@$*.rd $*.ro: Makefile '`dirname $*.rd`/Module.mk' @' > $@
+	$(SED) -e 's@^\(.*\)\.o:@$*.rd $*.ro: Makefile '`dirname $*.rd`/Module.mk' @' > $@
 
 
 %: %.ro
@@ -432,7 +442,7 @@ manhtml:
 
 %.ad: %.c
 	$(CC) -M -MG $(ARCPPFLAGS) $(ARCFLAGS) $< | \
-       	$(SED) -e 's@^\(.*\)\.o:@$*.ad $*.ao: Makefile '`dirname $*.ad`/Module.mk' @' > $@
+	$(SED) -e 's@^\(.*\)\.o:@$*.ad $*.ao: Makefile '`dirname $*.ad`/Module.mk' @' > $@
 
 
 # .lo files are used for shared libraries
@@ -441,7 +451,7 @@ manhtml:
 
 %.ld: %.c
 	$(CC) -M -MG $(LIBCPPFLAGS) $(LIBCFLAGS) $< | \
-       	$(SED) -e 's@^\(.*\)\.o:@$*.ld $*.lo: Makefile '`dirname $*.ld`/Module.mk' @' > $@
+	$(SED) -e 's@^\(.*\)\.o:@$*.ld $*.lo: Makefile '`dirname $*.ld`/Module.mk' @' > $@
 
 
 # Flex and Bison

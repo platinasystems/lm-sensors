@@ -17,6 +17,41 @@ ask CVS about it:
 
 -----------------------------------------------------------------------------
 
+2.9.3 (2005????)
+
+2.9.2 (20050906)
+  File doc/chips/*: Big update (2.6 backport)
+  Library: Drop ds1780-specific code (now use adm9240)
+           Fix memory leak in sensors_get_label()
+           Support /sys/class/hwmon (Linux 2.6.14+)
+           Limit stack usage in sensors_read_proc_chips()
+  Makefile: Detect 2.6+ kernels and check targets
+  Man page isaset.8: Fix typos
+  Module adm1031: Fix broken kfree() calls
+  Module i2c-ali1563: New (2.6 backport by Winbond)
+  Modules i2c-ipmb, i2c-ipmi: Support ipmi_request() additional argument
+  Module lm93: Fix memory leak
+  Module smsc47m1: Fix PWM enable polarity on read
+  Modules it87, pc87360, sis5595, smsc47m1, vt1211, vt8231,
+          w83627hf.c: Tag find function __init
+  Program decode-dimms.pl: Support Linux 2.6 (Burkart Lingner)
+  			   Added DDR/DDR2 frequency reporting in convenient
+			   form of DDRxxx PCyyyy
+  Program i2cdump: Properly handle short i2c block reads
+  Program fancontrol.pl: Fix compile errors
+  Program mkpatch: Include i2c-ali1563
+                   Include w83792d
+  Program pwmconfig: Fix unsafe temporary file use
+  Program rrd: Support 2.6 kernels
+  Program sensord: Support pc87360 (Henrik Brix Andersen)
+  Program sensors: Support the VAIO "VGN" prefix for eeprom
+  Program sensors-detect: Add SMSC LPC47M15x/LPC47M192 SMBus detection
+                          Advertise the w83792d driver
+                          Improve IT8705F and IT8712F detection
+                          Merge LM82 and LM83 detection
+                          Add W83687THF detection
+
+
 2.9.1 (20050412)
   File doc/busses/i2c-nforce2: Update
   File doc/chips/it87: Update
@@ -51,7 +86,7 @@ ask CVS about it:
                Support VID on the IT8712F
   Module lm75: Only initialize CMP/INT bit
   Module lm78: Fix bug with setting negative temperature limits
-  Module lm85: Properly differenciate between ADM1027 and ADT7463
+  Module lm85: Properly differentiate between ADM1027 and ADT7463
                Add EMC6D102 support
   Module lm90: Fix MAX6657, MAX6658 and MAX6659 detection
                Add limited ADT7461 support
