@@ -86,8 +86,6 @@ static ctl_table pca9540_dir_table_template[] = {
 	{0}
 };
 
-static int pca9540_id = 0;
-
 static int pca9540_attach_adapter(struct i2c_adapter *adapter)
 {
 	return i2c_detect(adapter, &addr_data, pca9540_detect);
@@ -125,17 +123,14 @@ int pca9540_detect(struct i2c_adapter *adapter, int address,
 		if ((reg & 0xfa) != 0x00
 		 || reg != i2c_smbus_read_byte(new_client)
 		 || reg != i2c_smbus_read_byte(new_client)
-		 || reg != i2c_smbus_read_byte(new_client)) {
-			err = -ENODEV;
+		 || reg != i2c_smbus_read_byte(new_client))
 			goto ERROR1;
-		}
 	}
 
 	kind = pca9540;
 
 	/* Fill in the remaining client fields and put it into the global list */
 	strcpy(new_client->name, "PCA9540 chip");
-	new_client->id = pca9540_id++;
 	init_MUTEX(&data->update_lock);
 
 	/* Tell the I2C layer a new client has arrived */

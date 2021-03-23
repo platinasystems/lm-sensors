@@ -239,7 +239,6 @@ enum sensor_type { fan, temp, vid, pll, lcd, alarm };
    SMBus and not on the ISA bus. */
 struct maxi_data {
 	struct i2c_client client;
-	struct semaphore lock;
 	int sysctl_id;
 	enum maxi_type type;
 
@@ -312,8 +311,6 @@ static struct i2c_driver maxi_driver = {
 	.attach_adapter	= maxi_attach_adapter,
 	.detach_client	= maxi_detach_client,
 };
-
-static int maxi_id = 0;
 
 /* Default firmware version. Use module option "maxi_version"
    to set desired version. Auto detect is not yet working */
@@ -602,10 +599,7 @@ int maxi_detect(struct i2c_adapter *adapter, int address,
 			    ((struct maxi_data *) (new_client->data))->
 			    lcd[i][j] = (u8) 0;
 
-	new_client->id = maxi_id++;
-
 	data->valid = 0;
-	init_MUTEX(&data->lock);
 	init_MUTEX(&data->update_lock);
 
 	/* Tell i2c-core that a new client has arrived */

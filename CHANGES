@@ -17,6 +17,83 @@ ask CVS about it:
 
 -----------------------------------------------------------------------------
 
+2.9.1 (20050412)
+  File doc/busses/i2c-nforce2: Update
+  File doc/chips/it87: Update
+  File doc/chips/lm90: Update for adt7461
+  File doc/chips/mic74: New
+  File etc/sensors.conf.eg: New sections for lm92 and w83792d
+  Library: Add support for 2.6 fscpos driver (Stefan Ott)
+           Fix sis5595 in4 (Aurelien Jarno)
+           Add support for 2.6 gl520sm driver (Maarten Deprez)
+           Add support for 2.6 bmcsensors driver (Yani Ioannou)
+           Add support for w83792d (Chunhao Huang/Winbond)
+           Add support for 2.6 adt7461 (James Chapman)
+           Add support for 2.6 lm92
+           Add support for 2.6 vt1211
+           Add preliminary support for 2.6 w83627ehf
+  Makefile: Support mips, sparc32 and sparc64 (Aurelien Jarno)
+            Use -fno-strict-aliasing on all architectures
+  Man pages pwmconfig, fancontrol: New (Aurelien Jarno)
+  Module bmcsensors: Fix compile error
+                     Support IPMI V0.9 (Yani Ioannou/Vladislav Bogdanov)
+  Module ds1621: Fix detection (Aurelien Jarno)
+  Module eeprom: Discard SPD-centric checksum module parameter
+                 Cleanup detection function (backport from Linux 2.6)
+  Module i2c-ali1535: Add delay loops for reliability (Ubel Walter)
+  Module i2c-i801: Temporarily disable broken I2C block read
+  Module i2c-ipmi: Fix bogus return in a middle of a function (Sergio
+                   Gelato)
+  Module i2c-nforce2: Add nForce4 support (Hans-Frieder Vogt)
+  Module i2c-viapro: Prevent repeated resets
+  Module it87: Improve Super-I/O detection
+               Limit I2C address range
+               Support VID on the IT8712F
+  Module lm75: Only initialize CMP/INT bit
+  Module lm78: Fix bug with setting negative temperature limits
+  Module lm85: Properly differenciate between ADM1027 and ADT7463
+               Add EMC6D102 support
+  Module lm90: Fix MAX6657, MAX6658 and MAX6659 detection
+               Add limited ADT7461 support
+  Module lm93: Fix IN10 (+5V) scaling
+  Module mic74: New
+  Module w83627hf: Support secondary Super-I/O address
+                   Enable temp2 and temp3 if they are disabled
+  Module w83781d: Revert AS99127F temp2 and temp3 computation change
+                  Skip final initialization step for AS99127F chips
+  Module w83792d: New (Chunhao Huang/Winbond)
+  Program ddcmon: New; user-space replacement for the ddcmon driver
+  Program eeprog: Fix missing first char in ascii mode (J. A. McMahan Jr.)
+  Program isadump: Handle Super-I/O keys
+  Program lm_sensors.init: Cleanups (Axel Thimm)
+  Program mkdev.sh: Add basic command-line interface
+  Program mkpatch: Add adm1031, fscher, lm63, lm93 and max1619
+  Program pwmconfig: Secure the creation of temporary files (Aurelien Jarno)
+                     Don't complain about read-only enable files (lm85)
+                     Fix handling of alternate config file name
+  Program sensord: Fix erroneous error message (Aurelien Jarno)
+                   Support sis5595 in4 (Aurelien Jarno)
+                   Support w83627thf
+                   Support the separate it8712 prefix (Aurelien Jarno)
+  Program sensors: Display sis5595 in4 (Aurelien Jarno)
+                   No errors on missing pc87360 fans
+                   Add gl520sm support (Maarten Deprez)
+                   Improve vt1211 error/ignore handling (Michael Carland)
+                   Support w83792d, w83627ehf
+  Program sensors-detect: Fix MAX6657, MAX6658 and MAX6659 detection
+                          Improve IT8705F and IT8712F detection
+                          Improve udev detection
+                          Fix DS1621 detection
+                          Add W83627EHF detection
+                          Add ATI SMBus detection
+                          Add VT1211 alias detection
+                          Warn if chip modules not found
+                          Add i2c-ipmi to list if bmcsensors is on it
+                          Add PC87591 detection
+                          Search for correct udev db file name
+                          Add nForce3 250Gb and nForce4 detection
+
+
 2.9.0 (20041228)
   NOTE: Requires i2c-2.9.0 or newer!
   File README.thinkpad: Update
@@ -189,7 +266,7 @@ ask CVS about it:
   Module i2c-piix4: Don't blacklist IBM with Serverworks chip
   Module i2c-sis645: Add support for SiS655
   Module it87: Discard non-standard Super-I/O exit sequence (Bjorn Mork)
-  Module lm90: Support LM99 and LM89 
+  Module lm90: Support LM99 and LM89
   Module lm92: Support MAX6633, MAX6634, MAX6635 and LM76
                Get rid of useless i2c_probe call
   Module max1619: New (Alexey Fisher)
@@ -385,7 +462,7 @@ ask CVS about it:
                    Cleanup FSC chips prints
   Program sensors-detect: Fix PATH issues
                           Correctly point to the fscher driver
-  
+
 
 2.8.3 (20040115)
   File lm_sensors.spec: Update
@@ -555,7 +632,7 @@ ask CVS about it:
                           Handle the one-address-many-chips-same-driver
                           case
 
-                          
+
 2.8.0 (20030714)
   NOTE: Requires i2c-2.8.0 or newer!!!
   Dropped all kernel 2.2 and 2.3 compatibility; 2.4.9 or later required;
@@ -670,7 +747,7 @@ ask CVS about it:
   Makefile: Take kernel source location from /lib/modules/x.x.x/build;
             add flags for x86_64 compiles
   Module adm1021: Add support for MC1066
-  Module bmcsensors: New	
+  Module bmcsensors: New
   Module dmi_scan: Rename symbol duplicated in kernel; apply fixes from
                    kernel 2.5.43; fix 2.2 kernel compiles
   Module gl518sm: Iterate allowed only for rev 0x00
@@ -862,8 +939,8 @@ ask CVS about it:
                       fscpos, it87, maxilife, mtp008
   Program sensors: Fix w83781d temp precision
   Program sensors-detect: Add ALI1535, Via VT8233, it87 (i2c),
-                          Fujitsu Poseidon and Scylla,  
-                          Intel 82443MX and 82801CA/CAM detection,			
+                          Fujitsu Poseidon and Scylla,
+                          Intel 82443MX and 82801CA/CAM detection,
                           add ITE 8172G detection (driver in kernel 2.4.10)
 
 2.6.1 (20010830)
@@ -1081,7 +1158,7 @@ ask CVS about it:
   Updates and fixes for device detection
 
 2.4.0 (19990920)
-  Too much to list. 
+  Too much to list.
   i2c and smbus parts are split off to a separate i2c package.
   New drivers and other stuff.
 
@@ -1110,7 +1187,7 @@ ask CVS about it:
   Module i2c-proc: Buffer overflow removed: `less /proc/bus-i2c-0' now works
   Module w83781d: Removed deadlock (mutex was not initialized)
   Documentation: A few glitches removed
-  Makefile: default module installation directory is now 
+  Makefile: default module installation directory is now
             /lib/modules/current/extra/misc
   Program sensors-detect: PPC Hydra now detected
   Program sensors: Now prints complete GL518SM information
@@ -1137,7 +1214,7 @@ ask CVS about it:
   Module i2c-dev: Small bug removed if DEBUG=1 was used
   Module sis5595: Now compiles for 2.0 kernels
   Module adm1021: Detection corrected
-  
+
 2.2.0 (19990216)
   All: Set copyrights to include 1999
   All: Small bugfixes
@@ -1155,7 +1232,7 @@ ask CVS about it:
   Program doc-features: NEW
   Program sensors: Added man-page
   Document BUGS: Added cdrom bug and kernel i2c conflict
-  
+
 2.1.2 (19990116)
   Modules lm80.o, w83781d.o: fan-related Segmentation fault corrected
   Module gl518sm.o: yet more bug fixes. It should at long last be usable now
@@ -1178,7 +1255,7 @@ ask CVS about it:
   Module gl518sm.o: new procfile beep, several small updates
   Modules: Now use pin readings, no more scaling within the kernel (use the
            library instead)
-  
+
 2.0.2 (19981214)
   Module eeprom.o: NEW
   Program decode-dimms: NEW

@@ -97,7 +97,7 @@ function pwmdisable()
 	then
 		echo $MAX > $1
 		ENABLE=${1}_enable
-		if [ -f $ENABLE ]
+		if [ -w $ENABLE ]
 		then
 			echo 0 > $ENABLE
 		fi
@@ -112,7 +112,7 @@ function pwmenable()
 	if [ "$SYSFS" = "1" ]
 	then
 		ENABLE=${1}_enable
-		if [ -f $ENABLE ]
+		if [ -w $ENABLE ]
 		then
 			echo 1 > $ENABLE
 		fi
@@ -209,8 +209,8 @@ function pwmdetail()
 
 	if [ "$PLOT" = "y" ]
 	then
-		TMP1=/usr/tmp/pwmtest$$.1
-		TMP2=/usr/tmp/pwmtest$$.2
+		TMP1=`mktemp -t pwmtest1.XXXXXXXXXX` || { echo "$0: Cannot create temporary file" >&2; exit 1; }
+		TMP2=`mktemp -t pwmtest2.XXXXXXXXXX` || { rm -f $TMP1 ; echo "$0: Cannot create temporary file" >&2; exit 1; }
 		echo "set xlabel \"PWM: $P\"" > $TMP1
 		echo "set ylabel \"FAN: $F (RPM)\"" >> $TMP1
 		echo 'set nokey' >> $TMP1
@@ -465,9 +465,9 @@ function TestMinStop {
 function SaveConfig {
 	echo
 	echo "Saving configuration to $FCCONFIG..."
-	egrep -v '(INTERVAL|FCTEMPS|FCFANS|MAXTEMP|MINTEMP|MINSTART|MINSTOP)' /etc/fancontrol >/tmp/fancontrol
+	egrep -v '(INTERVAL|FCTEMPS|FCFANS|MAXTEMP|MINTEMP|MINSTART|MINSTOP)' $FCCONFIG >/tmp/fancontrol
 	echo -e "INTERVAL=$INTERVAL\nFCTEMPS=$FCTEMPS\nFCFANS=$FCFANS\nMINTEMP=$MINTEMP\nMAXTEMP=$MAXTEMP\nMINSTART=$MINSTART\nMINSTOP=$MINSTOP" >>/tmp/fancontrol
-	mv /tmp/fancontrol /etc/fancontrol
+	mv /tmp/fancontrol $FCCONFIG
 	#check if file was written correctly
 	echo 'Configuration saved'
 }

@@ -20,7 +20,7 @@
 </head>
 <body>
 <h1 class="settitle">Sensors FAQ for lm_sensors version 2.14</h1>
-Copyright (C) 1998 - 2004<br>
+Copyright (C) 1998 - 2005<br>
 Frodo Looijaard,<br>
 <a href="mailto:phil..at..netroedge.com">Philip Edelbrock</a>,<br>
 and<br>
@@ -166,6 +166,9 @@ and<br>
 </li></ul>
 <li><a href="#Section-4_002e32">4.32 Problems on particular systems</a>
 <li><a href="#Section-4_002e33">4.33 Problems on 2.6 kernels</a>
+<ul>
+<li><a href="#Section-4_002e33">4.33.1 i2c-viapro and via686a</a>
+</li></ul>
 </li></ul>
 <li><a name="toc_Help" href="#Help">5 How to Ask for Help</a>
 <ul>
@@ -1411,11 +1414,23 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Problems">Problems</a>
 <h3 class="section">4.20 Sensors says <span class="samp">Can't access procfs/sysfs file</span></h3>
 
      <ul>
-<li>(Linux 2.6) Did you <span class="command">modprobe i2c_sensor</span>? Check <span class="command">lsmod</span>. 
-<li>(Linux 2.4) Did you <span class="command">modprobe i2c-proc</span>? Check <span class="command">lsmod</span>. 
-<li>If you did <span class="command">sensors -s</span>, did you run it as root? 
-<li>(Linux 2.6) Do you have sysfs support in your kernel (is <span class="file">/sys</span> there and populated)? 
-<li>(Linux 2.4) Do you have procfs support in your kernel (is <span class="file">/proc</span> there and populated)? 
+<li>Linux 2.6
+          <ul>
+<li>Did you <span class="command">modprobe i2c_sensor</span>? Check <span class="command">lsmod</span>. 
+<li>Do you have sysfs support in your kernel and <span class="file">/sys</span> mounted (is <span class="file">/sys</span> there and populated)? 
+Create /sys with <span class="command">mkdir /sys</span> if needed. Then add the following line to <span class="file">/etc/fstab</span>:
+          <pre class="example">               sys              /sys             sysfs       default          0   0</pre>
+          <p>and <span class="command">mount /sys</span>. 
+</ul>
+     <li>Linux 2.4
+          <ul>
+<li>Did you <span class="command">modprobe i2c-proc</span>? Check <span class="command">lsmod</span>. 
+<li>Do you have procfs support in your kernel and <span class="file">/proc</span> mounted (is <span class="file">/proc</span> there and populated)? 
+Create /proc with <span class="command">mkdir /proc</span> if needed. Then add the following line to <span class="file">/etc/fstab</span>:
+          <pre class="example">               proc             /proc            proc        defaults         0   0</pre>
+          <p>and <span class="command">mount /proc</span>. 
+</ul>
+     <li>If you did <span class="command">sensors -s</span>, did you run it as root? 
 </ul>
 
 <div class="node">
@@ -1739,6 +1754,14 @@ If you would like to port the driver, see the file
 Documentation/i2c/porting-clients in the 2.6 kernel tree for help,
 then send us the ported driver when you are done.
 
+<h4 class="subsection">4.33.1 i2c-viapro and via686a</h4>
+
+<p>Until kernel 2.6.11, there was a PCI resource conflict between
+i2c-viapro (the SMBus driver for VIA bridges) and via686a (the integrated
+sensors driver for VIA bridges). This caused the second loaded driver to
+silently fail working. So do not load both i2c-viapro and via686a together
+unless you have a recent kernel.
+
 <div class="node">
 <p><hr>
 <a name="Help"></a>Next:&nbsp;<a rel="next" accesskey="n" href="#Contribute">Contribute</a>,
@@ -1989,6 +2012,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Contribute">Contribute</a>
 <p>Send us email <a href="mailto:sensors@stimpy.netroedge.com">sensors@stimpy.netroedge.com</a>. Sorry,
 there is no automated subscribe/unsubscribe service yet
 (but we're seriously thinking of switching to majordomo). 
+Therefore there may be some delay before your request is processed. 
 Please note that you do NOT need to be subscribed to the list
 in order to post. If you simply need help as a user, post your
 detailed problem and questions directly. Don't worry, you'll be
@@ -2004,8 +2028,15 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Contribute">Contribute</a>
 
 <h3 class="section">6.5 How to access mailing list archives</h3>
 
-<p>The mailing list archive is at: <a href="http://archives.andrew.net.au/lm-sensors">http://archives.andrew.net.au/lm-sensors</a>
-Sorry, it only contains messages since October 28, 2001.
+<p>The mailing list archive is at: <a href="http://archives.andrew.net.au/lm-sensors">http://archives.andrew.net.au/lm-sensors</a>. 
+It contains messages since October 28, 2001. 
+There is another mailing list archive at:
+<a href="http://news.gmane.org/gmane.linux.drivers.sensors">http://news.gmane.org/gmane.linux.drivers.sensors</a>. 
+It contains messages since December 31, 2004. 
+This archive may also be accessed via a news reader:
+<a href="nntp://news.gmane.org/gmane.linux.drivers.sensors">nntp://news.gmane.org/gmane.linux.drivers.sensors</a>
+and RSS:
+<a href="http://rss.gmane.org/gmane.linux.drivers.sensors">http://rss.gmane.org/gmane.linux.drivers.sensors</a>.
 
 <div class="node">
 <p><hr>

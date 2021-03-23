@@ -376,7 +376,7 @@ static u8 lm93_read_byte(struct i2c_client *client, u8 reg)
 		} else {
 			printk(KERN_WARNING "lm93.o: read byte data failed, "
 				"address 0x%02x.\n", reg);
-			mdelay(i);
+			mdelay(i + 3);
 		}
 
 	}
@@ -411,7 +411,7 @@ static u16 lm93_read_word(struct i2c_client *client, u8 reg)
 		} else {
 			printk(KERN_WARNING "lm93.o: read word data failed, "
 				"address 0x%02x.\n", reg);
-			mdelay(i);
+			mdelay(i + 3);
 		}
 
 	}
@@ -456,7 +456,7 @@ static void lm93_read_block(struct i2c_client *client, u8 fbn, u8 *values)
 			printk(KERN_WARNING "lm93.o: block read data failed, "
 				"command 0x%02x.\n", 
 				lm93_block_read_cmds[fbn].cmd);
-			mdelay(1);
+			mdelay(i + 3);
 		}
 	}
 
@@ -689,7 +689,7 @@ static const unsigned long lm93_vin_val_min[16] = {
 };
 static const unsigned long lm93_vin_val_max[16] = {
 	1236, 1236, 1236, 1600, 2000, 2000, 1600, 1600,
-	4400, 6667, 3333, 2625, 1312, 1312, 1236, 3600,
+	4400, 6500, 3333, 2625, 1312, 1312, 1236, 3600,
 };
 /*
 static const unsigned long lm93_vin_val_nom[16] = {
@@ -2187,7 +2187,7 @@ static struct i2c_driver lm93_driver;
 static int lm93_detect(struct i2c_adapter *adapter, int address,
 		unsigned short flags, int kind)
 {
-	int err, func;
+	int err = 0, func;
 	struct lm93_data *data;
 	struct i2c_client *client;
 	void (*update)(struct lm93_data *, struct i2c_client *);
@@ -2196,7 +2196,6 @@ static int lm93_detect(struct i2c_adapter *adapter, int address,
 	if (i2c_is_isa_adapter(adapter)) {
 		pr_debug("lm93.o: detect failed, "
 				"cannot attach to legacy adapter!\n");
-		err = -ENODEV;
 		goto ERROR0;
 	}
 
@@ -2213,7 +2212,6 @@ static int lm93_detect(struct i2c_adapter *adapter, int address,
 	} else {
 		pr_debug("lm93.o: detect failed, "
 				"smbus byte and/or word data not supported!\n");
-		err = -ENODEV;
 		goto ERROR0;
 	}
 
@@ -2242,7 +2240,6 @@ static int lm93_detect(struct i2c_adapter *adapter, int address,
 		if (mfr != 0x01) {
 			pr_debug("lm93.o: detect failed, "
 				"bad manufacturer id 0x%02x!\n", mfr);
-			err = -ENODEV;
 			goto ERROR1;
 		}
 	}
@@ -2258,7 +2255,6 @@ static int lm93_detect(struct i2c_adapter *adapter, int address,
 			if (kind == 0)
 				pr_debug("lm93.o: "
 					"(ignored 'force' parameter)\n");
-			err = -ENODEV;
 			goto ERROR1;
 		}
 	}

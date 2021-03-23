@@ -35,12 +35,21 @@
  * Among others, it has a higher accuracy than the LM90, much like the
  * LM86 does.
  *
- * This driver also supports the MAX6657 and MAX6658, sensor chips made
- * by Maxim. These chips are similar to the LM86. Complete datasheet
- * can be obtained at Maxim's website at:
+ * This driver also supports the MAX6657, MAX6658 and MAX6659 sensor
+ * chips made by Maxim. These chips are similar to the LM86. Complete
+ * datasheet can be obtained at Maxim's website at:
  *   http://www.maxim-ic.com/quick_view2.cfm/qv_pk/2578
- * Note that there is no way to differenciate between both chips (but
- * no need either).
+ * Note that there is no easy way to differenciate between the three
+ * variants. The extra address and features of the MAX6659 are not
+ * supported by this driver.
+ *
+ * This driver also supports the ADT7461 chip from Analog Devices but
+ * only in its "compatability mode". If an ADT7461 chip is found but
+ * is configured in non-compatible mode (where its temperature
+ * register values are decoded differently) it is ignored by this
+ * driver. Complete datasheet can be obtained from Analog's website
+ * at:
+ *   http://products.analog.com/products/info.asp?product=ADT7461
  *
  * Since the LM90 was the first chipset supported by this driver, most
  * comments will refer to this chipset, but are actually general and
@@ -74,9 +83,12 @@
 
 /*
  * Addresses to scan
- * Address is fully defined internally and cannot be changed.
+ * Address is fully defined internally and cannot be changed except for
+ * MAX6659.
  * LM86, LM89, LM90, LM99, ADM1032, MAX6657 and MAX6658 have address 0x4c.
  * LM89-1, and LM99-1 have address 0x4d.
+ * MAX6659 can have address 0x4c, 0x4d or 0x4e (unsupported).
+ * ADT7461 always has address 0x4c.
  */
 
 static unsigned short normal_i2c[] = { 0x4c, 0x4d, SENSORS_I2C_END };
@@ -88,7 +100,7 @@ static unsigned int normal_isa_range[] = { SENSORS_ISA_END };
  * Insmod parameters
  */
 
-SENSORS_INSMOD_5(lm90, adm1032, lm99, lm86, max6657);
+SENSORS_INSMOD_6(lm90, adm1032, lm99, lm86, max6657, adt7461);
 
 /*
  * The LM90 registers
@@ -147,6 +159,18 @@ SENSORS_INSMOD_5(lm90, adm1032, lm99, lm86, max6657);
 #define HYST_TO_REG(val)	((val) <= 0 ? 0 : \
 				 (val) >= 31 ? 31 : (val))
 
+/* 
+ * ADT7461 is almost identical to LM90 except that attempts to write
+ * values that are outside the range 0 < temp < 127 are treated as
+ * the boundary value. 
+ */
+
+#define TEMP1_TO_REG_ADT7461(val) ((val) <= 0 ? 0 : \
+				 (val) >= 127 ? 127 : (val))
+#define TEMP2_TO_REG_ADT7461(val) ((val) <= 0 ? 0 : \
+				 (val) >= 1277 ? 0x7FC0 : \
+				 ((val) * 100 / 250 * 64))
+
 /*
  * Functions declaration
  */
@@ -195,6 +219,7 @@ struct lm90_data
 	struct semaphore update_lock;
 	char valid; /* zero until following fields are valid */
 	unsigned long last_updated; /* in jiffies */
+	int kind;
 
 	/* registers values */
 	s8 local_temp, local_high, local_low;
@@ -248,12 +273,6 @@ static ctl_table lm90_dir_table_template[] =
 	 &i2c_proc_real, &i2c_sysctl_real, NULL, &lm90_alarms},
 	{0}
 };
-
-/*
- * Internal variables
- */
-
-static int lm90_id = 0;
 
 /*
  * Real code
@@ -369,11 +388,26 @@ static int lm90_detect(struct i2c_adapter *adapter, int address,
 			 && (reg_config1 & 0x3F) == 0x00
 			 && reg_convrate <= 0x0A)
 				kind = adm1032;
+			else
+			if (address == 0x4c
+			 && chip_id == 0x51 /* ADT7461 */
+			 && (reg_config1 & 0x1F) == 0x00 /* check compat mode */
+			 && reg_convrate <= 0x0A) 
+				kind = adt7461;
 		}
 		else if (man_id == 0x4D) /* Maxim */
 		{
-			if (address == 0x4C
-			 && (reg_config1 & 0x1F) == 0
+ 			/*
+ 			 * The Maxim variants do NOT have a chip_id register.
+ 			 * Reading from that address will return the last read
+ 			 * value, which in our case is those of the man_id
+ 			 * register. Likewise, the config1 register seems to
+ 			 * lack a low nibble, so the value will be those of the
+ 			 * previous read, so in our case those of the man_id
+ 			 * register.
+ 			 */
+			if (chip_id == man_id
+			 && (reg_config1 & 0x1F) == (man_id & 0x0F)
 			 && reg_convrate <= 0x09)
 				kind = max6657;
 		}
@@ -410,6 +444,11 @@ static int lm90_detect(struct i2c_adapter *adapter, int address,
 		type_name = "max6657";
 		client_name = "MAX6657 chip";
 	}
+	else if (kind == adt7461)
+	{
+		type_name = "adt7461";
+		client_name = "ADT7561 chip";
+	}
 	else
 	{
 		printk("lm90.o: Unknown kind %d.\n", kind);
@@ -422,8 +461,8 @@ static int lm90_detect(struct i2c_adapter *adapter, int address,
 	 */
 
 	strcpy(new_client->name, client_name);
-	new_client->id = lm90_id++;
 	data->valid = 0;
+	data->kind = kind;
 	init_MUTEX(&data->update_lock);
 
 	/*
@@ -595,13 +634,19 @@ static void lm90_local_temp(struct i2c_client *client, int operation,
 	{
 		if (*nrels_mag >= 1)
 		{
-			data->local_high = TEMP1_TO_REG(results[0]);
+			if (data->kind == adt7461)
+				data->local_high = TEMP1_TO_REG_ADT7461(results[0]);
+			else
+				data->local_high = TEMP1_TO_REG(results[0]);
 			i2c_smbus_write_byte_data(client, LM90_REG_W_LOCAL_HIGH,
 				data->local_high);
 		}
 		if (*nrels_mag >= 2)
 		{
-			data->local_low = TEMP1_TO_REG(results[1]);
+			if (data->kind == adt7461)
+				data->local_low = TEMP1_TO_REG_ADT7461(results[1]);
+			else
+				data->local_low = TEMP1_TO_REG(results[1]);
 			i2c_smbus_write_byte_data(client, LM90_REG_W_LOCAL_LOW,
 				data->local_low);
 		}
@@ -627,7 +672,10 @@ static void lm90_remote_temp(struct i2c_client *client, int operation,
 	{
 		if (*nrels_mag >= 1)
 		{
-			data->remote_high = TEMP2_TO_REG(results[0]);
+			if (data->kind == adt7461)
+				data->remote_high = TEMP2_TO_REG_ADT7461(results[0]);
+			else 
+				data->remote_high = TEMP2_TO_REG(results[0]);
 			i2c_smbus_write_byte_data(client, LM90_REG_W_REMOTE_HIGHH,
 				data->remote_high >> 8);
 			i2c_smbus_write_byte_data(client, LM90_REG_W_REMOTE_HIGHL,
@@ -635,7 +683,10 @@ static void lm90_remote_temp(struct i2c_client *client, int operation,
 		}
 		if (*nrels_mag >= 2)
 		{
-			data->remote_low = TEMP2_TO_REG(results[1]);
+			if (data->kind == adt7461)
+				data->remote_low = TEMP2_TO_REG_ADT7461(results[1]);
+			else 
+				data->remote_low = TEMP2_TO_REG(results[1]);
 			i2c_smbus_write_byte_data(client, LM90_REG_W_REMOTE_LOWH,
 				data->remote_low >> 8);
 			i2c_smbus_write_byte_data(client, LM90_REG_W_REMOTE_LOWL,
@@ -661,7 +712,10 @@ static void lm90_local_tcrit(struct i2c_client *client, int operation,
 	{
 		if (*nrels_mag >= 1)
 		{
-			data->local_crit = TEMP1_TO_REG(results[0]);
+			if (data->kind == adt7461)
+				data->local_crit = TEMP1_TO_REG_ADT7461(results[0]);
+			else
+				data->local_crit = TEMP1_TO_REG(results[0]);
 			i2c_smbus_write_byte_data(client, LM90_REG_W_LOCAL_CRIT,
 				data->local_crit);
 		}
@@ -685,7 +739,10 @@ static void lm90_remote_tcrit(struct i2c_client *client, int operation,
 	{
 		if (*nrels_mag >= 1)
 		{
-			data->remote_crit = TEMP1_TO_REG(results[0]);
+			if (data->kind == adt7461)
+				data->remote_crit = TEMP1_TO_REG_ADT7461(results[0]);
+			else
+				data->remote_crit = TEMP1_TO_REG(results[0]);
 			i2c_smbus_write_byte_data(client, LM90_REG_W_REMOTE_CRIT,
 				data->remote_crit);
 		}

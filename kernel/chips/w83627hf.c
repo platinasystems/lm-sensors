@@ -70,9 +70,9 @@ MODULE_PARM(init, "i");
 MODULE_PARM_DESC(init, "Set to zero to bypass chip initialization");
 
 /* modified from kernel/include/traps.c */
-#define	REG	0x2e	/* The register to read/write */
+static int REG;		/* The register to read/write */
 #define	DEV	0x07	/* Register: Logical device select */
-#define	VAL	0x2f	/* The value to read/write */
+static int VAL;		/* The value to read/write */
 
 /* logical device numbers for superio_select (below) */
 #define W83627HF_LD_FDC		0x00
@@ -93,9 +93,9 @@ MODULE_PARM_DESC(init, "Set to zero to bypass chip initialization");
 
 #define	DEVID	0x20	/* Register: Device ID */
 
+#define W83627THF_GPIO5_EN	0x30 /* w83627thf only */
 #define W83627THF_GPIO5_IOSR	0xf3 /* w83627thf only */
 #define W83627THF_GPIO5_DR	0xf4 /* w83627thf only */
-#define W83627THF_GPIO5_INVR	0xf5 /* w83627thf only */
 
 static inline void
 superio_outb(int reg, int val)
@@ -310,7 +310,6 @@ struct w83627hf_data {
 	u32 beeps;		/* Register encoding, combined */
 	u8 beep_enable;		/* Boolean */
 	u8 pwm[3];		/* Register value */
-	u8 pwmenable[3];	/* bool */
 	u16 sens[3];		/* 782D/783S only.
 				   1 = pentium diode; 2 = 3904 diode;
 				   3000-5000 = thermistor beta.
@@ -355,8 +354,6 @@ static void w83627hf_pwm(struct i2c_client *client, int operation,
 			int ctl_name, int *nrels_mag, long *results);
 static void w83627hf_sens(struct i2c_client *client, int operation,
 			 int ctl_name, int *nrels_mag, long *results);
-
-static int w83627hf_id = 0;
 
 static struct i2c_driver w83627hf_driver = {
 	.name		= "W83627HF sensor driver",
@@ -590,9 +587,12 @@ static int w83627hf_attach_adapter(struct i2c_adapter *adapter)
 	return i2c_detect(adapter, &addr_data, w83627hf_detect);
 }
 
-static int w83627hf_find(int *address)
+static int w83627hf_find(int sioaddr, int *address)
 {
 	u16 val;
+
+	REG = sioaddr;
+	VAL = sioaddr + 1;
 
 	superio_enter();
 	val= superio_inb(DEVID);
@@ -700,7 +700,6 @@ int w83627hf_detect(struct i2c_adapter *adapter, int address,
 	/* Fill in the remaining client fields and put it into the global list */
 	strcpy(new_client->name, client_name);
 	data->type = kind;
-	new_client->id = w83627hf_id++;
 	data->valid = 0;
 	init_MUTEX(&data->update_lock);
 
@@ -804,15 +803,36 @@ static int w83627hf_read_value(struct i2c_client *client, u16 reg)
 
 static int w83627thf_read_gpio5(struct i2c_client *client)
 {
-	int res, inv;
+	int res = 0xff, sel;
 
-	down(&(((struct w83627hf_data *) (client->data))->lock));
 	superio_enter();
 	superio_select(W83627HF_LD_GPIO5);
-	res = superio_inb(W83627THF_GPIO5_DR);
-	inv = superio_inb(W83627THF_GPIO5_INVR);
+
+	/* Make sure these GPIO pins are enabled */
+	if (!(superio_inb(W83627THF_GPIO5_EN) & (1<<3))) {
+#ifdef DEBUG
+		printk(KERN_DEBUG "w83627hf: GPIO5 disabled, no VID "
+		       "function\n");
+#endif
+		goto exit;
+	}
+
+	/* Make sure the pins are configured for input
+	   There must be at least five (VRM 9), and possibly 6 (VRM 10) */
+	sel = superio_inb(W83627THF_GPIO5_IOSR);
+	if ((sel & 0x1f) != 0x1f) {
+#ifdef DEBUG
+		printk(KERN_DEBUG "w83627hf: GPIO5 not configured for "
+		       "VID function\n");
+#endif
+		goto exit;
+	}
+
+	printk(KERN_INFO "w83627hf: Reading VID from GPIO5\n");
+	res = superio_inb(W83627THF_GPIO5_DR) & sel;
+
+exit:
 	superio_exit();
-	up(&(((struct w83627hf_data *) (client->data))->lock));
 	return res;
 }
 
@@ -869,7 +889,7 @@ static void w83627hf_init_client(struct i2c_client *client)
 		int hi = w83627hf_read_value(client, W83781D_REG_CHIPID);
 		data->vid = (lo & 0x0f) | ((hi & 0x01) << 4);
 	} else if (w83627thf == data->type) {
-		data->vid = w83627thf_read_gpio5(client) & 0x1f;
+		data->vid = w83627thf_read_gpio5(client) & 0x3f;
 	}
 
 	/* Read VRM & OVT Config only once */
@@ -898,11 +918,29 @@ static void w83627hf_init_client(struct i2c_client *client)
 			break;
 	}
 
-	data->pwmenable[0] = 1;
-	data->pwmenable[1] = 1;
-	data->pwmenable[2] = 1;
-
 	if(init) {
+		/* Enable temp2 */
+		tmp = w83627hf_read_value(client, W83781D_REG_TEMP2_CONFIG);
+		if (tmp & 0x01) {
+			printk(KERN_WARNING "w83627hf: temp2 was disabled, "
+			       "readings might not make sense\n");
+			w83627hf_write_value(client, W83781D_REG_TEMP2_CONFIG,
+				tmp & 0xfe);
+		}
+
+		/* Enable temp3 */
+		if (type != w83697hf) {
+			tmp = w83627hf_read_value(client,
+				W83781D_REG_TEMP3_CONFIG);
+			if (tmp & 0x01) {
+				printk(KERN_WARNING "w83627hf: temp3 was "
+				       "disabled, readings might not make "
+				       "sense\n");
+				w83627hf_write_value(client,
+					W83781D_REG_TEMP3_CONFIG, tmp & 0xfe);
+			}
+		}
+
 		if (type == w83627hf) {
 			/* enable PWM2 control (can't hurt since PWM reg
 		           should have been reset to 0xff) */
@@ -1304,8 +1342,7 @@ void w83627hf_pwm(struct i2c_client *client, int operation, int ctl_name,
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		w83627hf_update_client(client);
 		results[0] = data->pwm[nr - 1];
-		results[1] = data->pwmenable[nr - 1];
-		*nrels_mag = 2;
+		*nrels_mag = 1;
 	} else if (operation == SENSORS_PROC_REAL_WRITE) {
 		if (*nrels_mag >= 1) {
 			if (data->type == w83627thf) {
@@ -1395,7 +1432,8 @@ static int __init sm_w83627hf_init(void)
 	int addr;
 
 	printk(KERN_INFO "w83627hf.o version %s (%s)\n", LM_VERSION, LM_DATE);
-	if (w83627hf_find(&addr)) {
+	if (w83627hf_find(0x2e, &addr)
+	 && w83627hf_find(0x4e, &addr)) {
 		printk("w83627hf.o: W83627/697 not detected, module not inserted.\n");
 		return -ENODEV;
 	}

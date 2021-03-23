@@ -78,9 +78,8 @@ SENSORS_INSMOD_3(lm78, lm78j, lm79);
 
 static inline u8 FAN_TO_REG(long rpm, int div)
 {
-	if (rpm == 0)
+	if (rpm <= 0)
 		return 255;
-	rpm = SENSORS_LIMIT(rpm, 1, 1000000);
 	return SENSORS_LIMIT((1350000 + rpm * div / 2) / (rpm * div), 1,
 			     254);
 }
@@ -88,12 +87,11 @@ static inline u8 FAN_TO_REG(long rpm, int div)
 #define FAN_FROM_REG(val,div) ((val)==0?-1:(val)==255?0:1350000/((val)*(div)))
 
 #define TEMP_TO_REG(val) (SENSORS_LIMIT(((val)<0?(((val)-5)/10):\
-                                                 ((val)+5)/10),0,255))
-#define TEMP_FROM_REG(val) (((val)>0x80?(val)-0x100:(val))*10)
+                                                 ((val)+5)/10), -128, 127))
+#define TEMP_FROM_REG(val) ((val)*10)
 
 #define VID_FROM_REG(val) ((val)==0x1f?0:(val)>=0x10?510-(val)*10:\
                            205-(val)*5)
-#define ALARMS_FROM_REG(val) (val)
 
 #define DIV_TO_REG(val) ((val)==8?3:(val)==4?2:(val)==1?0:1)
 #define DIV_FROM_REG(val) (1 << (val))
@@ -132,9 +130,9 @@ struct lm78_data {
 	u8 in_min[7];		/* Register value */
 	u8 fan[3];		/* Register value */
 	u8 fan_min[3];		/* Register value */
-	u8 temp;		/* Register value */
-	u8 temp_over;		/* Register value */
-	u8 temp_hyst;		/* Register value */
+	s8 temp;		/* Register value */
+	s8 temp_over;		/* Register value */
+	s8 temp_hyst;		/* Register value */
 	u8 fan_div[3];		/* Register encoding, shifted right */
 	u8 vid;			/* Register encoding, combined */
 	u16 alarms;		/* Register encoding, combined */
@@ -173,8 +171,6 @@ static struct i2c_driver lm78_driver = {
 	.attach_adapter	= lm78_attach_adapter,
 	.detach_client	= lm78_detach_client,
 };
-
-static int lm78_id = 0;
 
 /* The /proc/sys entries */
 
@@ -379,8 +375,6 @@ int lm78_detect(struct i2c_adapter *adapter, int address,
 	/* Fill in the remaining client fields and put it into the global list */
 	strcpy(new_client->name, client_name);
 	data->type = kind;
-
-	new_client->id = lm78_id++;
 	data->valid = 0;
 	init_MUTEX(&data->update_lock);
 
@@ -659,7 +653,7 @@ void lm78_alarms(struct i2c_client *client, int operation, int ctl_name,
 		*nrels_mag = 0;
 	else if (operation == SENSORS_PROC_REAL_READ) {
 		lm78_update_client(client);
-		results[0] = ALARMS_FROM_REG(data->alarms);
+		results[0] = data->alarms;
 		*nrels_mag = 1;
 	}
 }

@@ -326,6 +326,8 @@ static const FeatureDescriptor sis5595_features[] = {
     { SENSORS_SIS5595_IN2, SENSORS_SIS5595_IN2_MIN, SENSORS_SIS5595_IN2_MAX, -1 } },
   { fmtVolts_2, rrdF2, DataType_voltage, SIS5595_ALARM_IN3, 0,
     { SENSORS_SIS5595_IN3, SENSORS_SIS5595_IN3_MIN, SENSORS_SIS5595_IN3_MAX, -1 } },
+  { fmtVolts_2, rrdF2, DataType_voltage, SIS5595_ALARM_IN4, 0,
+    { SENSORS_SIS5595_IN4, SENSORS_SIS5595_IN4_MIN, SENSORS_SIS5595_IN4_MAX, -1 } },
   { fmtFans_0, rrdF0, DataType_rpm, SIS5595_ALARM_FAN1, 0,
     { SENSORS_SIS5595_FAN1, SENSORS_SIS5595_FAN1_MIN, SENSORS_SIS5595_FAN1_DIV, -1 } },
   { fmtFans_0, rrdF0, DataType_rpm, SIS5595_ALARM_FAN2, 0,
@@ -544,7 +546,7 @@ static const ChipDescriptor lm80_chip = {
 /** IT87 (thanks to Mike Black) **/
 
 static const char *it87_names[] = {
-  SENSORS_IT87_PREFIX, NULL
+  SENSORS_IT87_PREFIX, SENSORS_IT8712_PREFIX, NULL
 };
 
 static const FeatureDescriptor it87_features[] = {
@@ -718,7 +720,7 @@ fmtTemps_W8378x_1
 }
 
 static const char *w83782d_names[] = {
-  SENSORS_W83782D_PREFIX, SENSORS_W83627HF_PREFIX, NULL
+  SENSORS_W83782D_PREFIX, SENSORS_W83627HF_PREFIX, SENSORS_W83627THF_PREFIX, NULL
 };
 
 static const FeatureDescriptor w83782d_features[] = {
